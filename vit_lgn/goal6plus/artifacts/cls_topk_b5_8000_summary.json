@@ -1,0 +1,14 @@
+{
+  "baseline_hard_acc": 0.6243,
+  "baseline_soft_acc": 0.6243,
+  "best_hard_acc": 0.6308,
+  "best_soft_acc": 0.6308,
+  "best_variant_by_hard_acc": "static_weighted",
+  "best_variant_by_soft_acc": "static_weighted",
+  "device": "cuda",
+  "out_dir": "runs/cls_topk_token_mixer_current_best_b5_8000/20260628_225013_578427_pid2571248",
+  "result_count": 13,
+  "results_csv": "results.csv",
+  "route_diagnostics_csv": "route_diagnostics.csv",
+  "route_row_count": 72
+}

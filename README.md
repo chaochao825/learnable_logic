@@ -64,3 +64,42 @@ The most important report directories are:
 - `/home/spco/sow_linear/hard_lgn_gap_proto/runs/lightlogic_distill_report_goal56_v2`
 - `/home/spco/sow_linear/hard_lgn_gap_proto/reports/lightlogic_b_lut_goal7_v2_configdoc_v1`
 - `/home/spco/sow_linear/hard_lgn_gap_proto/reports/lut_xag_backend_v1`
+
+## ViT-LGN attention and token-mixer extension
+
+This repository also includes a curated ViT-LGN import from the 210 server under
+`vit_lgn/`. It is a source/report snapshot, not a raw run dump.
+
+Included directories and reports:
+
+- `vit_lgn/goal6plus/`: earlier ViT-LGN Goal6plus baseline, CLS Top-K
+  token-mixer ablations, and selected small JSON/CSV artifacts.
+- `vit_lgn/attention_clean/`: packed-XNOR/popcount Top-K selector-majority
+  attention source snapshot and 200k result summaries.
+- `vit_lgn/sctm_scale/`: SCTM sparse CLS token mixer, auxiliary accumulator,
+  and value-discretization source snapshot.
+- `docs/vit_lgn_method_results_20260710.md`: earlier Goal6plus, CLS Top-K,
+  and attention-clean summary.
+- `docs/reports/vit_lgn_attention_sctm_report_20260710.md`: consolidated
+  current method, configuration, result, directory, and checkpoint-location
+  report.
+- `docs/tables/vit_lgn_attention_clean_200k.csv`: parsed 200k attention-clean
+  results.
+- `docs/tables/vit_lgn_sctm_results.csv`: selected SCTM/auxiliary run
+  summaries.
+- `docs/tables/vit_lgn_weight_manifest_210.csv`: 210 checkpoint manifest.
+
+Highlights:
+
+- CLS-only static top-k mixers can replace late attention blocks in the
+  goal6plus ViT-LGN 8k baseline with no accuracy collapse; best imported row is
+  `b4,b5/static_weighted/K=8`, hard accuracy `0.6360` versus full-attention
+  `0.6243`.
+- The attention-clean `K8 aug const` run reaches best valid accuracy `0.7913`
+  at 150k steps and final CIFAR-10 test/eval `0.7893` at 200k steps, with
+  zero eval/inference hard-path gap.
+- The strongest hardware-oriented SCTM line is currently the auxiliary VQ3
+  long16k d16/e1024/h32 run at `0.7288` hard/soft accuracy.
+- Attention-clean 200k checkpoints were not saved; SCTM checkpoint binaries are
+  intentionally kept on 210 and listed in the weight manifest instead of being
+  committed to GitHub.
