@@ -88,7 +88,7 @@ Selected parsed results are in `docs/tables/vit_lgn_sctm_results.csv`. Main take
 - Large SCTM scale run `d16/e1024/h32/K8/local3x3/aug/16k` reached `teacher_hard_acc=teacher_soft_acc=0.7192`, with zero hard/soft gap, peak memory about `22510 MB`, and train time about `8182 s`.
 - Wider/deeper alternatives at the same 16k scale were weaker: `d12/e1536/h48=0.7154`, `d20/e1024/h32=0.7086`.
 - Auxiliary accumulator is useful only when it preserves the SCTM low-bit weighted V aggregation. Replacing the feature stream with a hard saturating/sign state was too lossy in short probes.
-- Value discretization was more promising than sign(V): the 8000-step d6/e192/h6 no-augmentation auxiliary baseline was around `0.633`, VQ4 reached `0.6448`, VQ3 stayed near `0.6303`, and bitplane matched the low-bit aggregation numerically with zero bitplane match error in the parsed summaries.
+- Value discretization was more promising than sign(V): the 8000-step d6/e192/h6 no-augmentation auxiliary baseline was around `0.633`, VQ4 reached `0.6448`, VQ3 stayed near `0.6303`, and bitplane matched the low-bit aggregation numerically with near-zero bitplane match error (`2.15e-7` in the parsed summaries).
 
 ## Checkpoints And Weights
 
