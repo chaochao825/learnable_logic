@@ -1,0 +1,7 @@
+dataset,source_run,calibration_mode,seed,k,teacher_acc,raw_lut_acc,minimized_blif_acc,abc_and_count,abc_level,raw_lut_gate_estimate
+binarized_mnist,mnist_fixed,fixed,0,4,0.9046666666666666,0.7866666666666666,0.7866666913032532,1613,6,7200
+cifar10_small,cifar10_per_layer,per_layer,0,2,0.339,0.2075,0.20749999582767487,2461,6,14400
+digits,digits_fixed,fixed,1,4,0.9555555555555556,0.9222222222222223,0.9222221970558167,547,6,3840
+majority9,bool_per_neuron,per_neuron,2,2,1.0,0.7421875,0.7421875,37,3,1536
+parity8,bool_fixed,fixed,1,8,0.25,0.53125,0.53125,2,2,1536
+random_sparse10,bool_per_layer,per_layer,2,2,1.0,0.9375,0.9375,100,5,1536

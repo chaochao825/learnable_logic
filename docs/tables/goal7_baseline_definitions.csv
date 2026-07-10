@@ -1,0 +1,6 @@
+dataset,baseline_source_run,baseline_run_dir,baseline_calibration_mode,baseline_seed,baseline_k,baseline_width,baseline_layers,baseline_epochs,baseline_train_test,baseline_raw_lut_acc,baseline_minimized_blif_acc,baseline_abc_and_count,baseline_abc_level,baseline_raw_lut_gate_estimate,comparison_note
+binarized_mnist,mnist_fixed,runs/lightlogic_lut_min_goal8_mnist_scale_v1,fixed,0,4,800,3,80,12000/3000,0.7866666666666666,0.7866666913032532,1613.0,6.0,7200.0,matched on width/layers/epochs/train/test
+digits,digits_fixed,runs/lightlogic_lut_min_goal8_digits_multiseed_v1,fixed,1,4,320,4,150,4000/1000,0.9222222222222223,0.9222221970558167,547.0,6.0,3840.0,"best Goal 8 row; differs on width:320->240, epochs:150->60"
+majority9,bool_per_neuron,runs/lightlogic_lut_min_goal8_bool_multiseed_per_neuron_v1,per_neuron,2,2,128,4,120,4000/1000,0.7421875,0.7421875,37.0,3.0,1536.0,"best Goal 8 row; differs on width:128->160, epochs:120->60"
+parity8,bool_fixed,runs/lightlogic_lut_min_goal8_bool_multiseed_fixed_v1,fixed,1,8,128,4,120,4000/1000,0.53125,0.53125,2.0,2.0,1536.0,"best Goal 8 row; differs on width:128->160, epochs:120->60"
+random_sparse10,bool_per_layer,runs/lightlogic_lut_min_goal8_bool_multiseed_per_layer_v1,per_layer,2,2,128,4,120,4000/1000,0.9375,0.9375,100.0,5.0,1536.0,"best Goal 8 row; differs on width:128->160, epochs:120->60"

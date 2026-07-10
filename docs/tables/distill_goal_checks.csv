@@ -1,0 +1,6 @@
+goal,status,evidence,note
+Goal 6 seed0 sweep plus seed1/2 confirmation is implemented,PASS,"rows=56; dataset_seed_count=6; full_sweep_dataset_seeds=2; k4_fixed_confirmation_dataset_seeds=6; k_values=2,4; init_modes=fixed,per_neuron; alphas=0,0.5,2; taus=1,2",Teacher is continuous LightLogic; student is K-expanded hard network with learnable thresholds. Only dataset/seeds counted as full_sweep have the full K/init/alpha/tau grid.
+Distillation/tuning improves deployable hard student accuracy,PARTIAL,improved_groups=11/12; worsened_groups=1/12,Best row per dataset/seed/K/init is compared against the same group's initial hard student.
+Teacher-KL improves beyond CE-only threshold tuning,PARTIAL,kl_wins=10/12; kl_losses=2/12,Alpha=0 rows are CE-only; alpha>0 rows use teacher-logit KL.
+Goal 5 data-weighted K rounding changes q to r/K under current constraints,DEGENERATE,"weighted_rounding_changed_ratio_range=[0,0]","With independent per-entry integer choices, data weights do not change nearest rounding; Goal 5 needs coupled or task-aware constraints."
+Best distilled student beats the matching K-expanded/calibrated hard baseline,PARTIAL,exact_k_wins=7/8; dataset_best_wins=6/8; missing_exact=4,Exact comparison matches dataset/seed/K/init; dataset-best comparison is stricter.

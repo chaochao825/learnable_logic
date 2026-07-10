@@ -1,0 +1,4 @@
+goal,status,evidence,note
+Goal 3 K-gate truth-table expansion is implemented and swept,PASS,"rows=45; k_values=2,4,8,16,32; calibration_modes=fixed,per_layer,per_neuron",Local q vs r/K error is reported separately from full-network thresholded accuracy.
+K expansion reduces local truth-table approximation error as K grows,PASS,"checked_groups=9; all local_mae trends are non-increasing with K; local_mae_range=[0.00379145,0.0529127]",Lower local error does not imply full-network accuracy improvement after thresholding.
+Goal 4 layer-wise/per-neuron calibration improves fixed-threshold expansion,PARTIAL,wins=4/30,Calibration is useful only where delta_acc is positive under the same dataset/seed/K.

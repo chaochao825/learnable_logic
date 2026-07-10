@@ -1,0 +1,13 @@
+run,datasets,b_values,seeds,width,layers,epochs,train_test,train_forward_mode,warmup,distill,device,rows
+lightlogic_b_lut_min_goal7_bool_multiseed_v1,"parity8,majority9,random_sparse10","3,4","0,1,2",160,4,60,4000/1000,st,off,off,cpu,18
+lightlogic_b_lut_min_goal7_digits_multiseed_v1,digits,"3,4","0,1,2",240,4,60,4000/1000,st,off,off,cuda,6
+lightlogic_b_lut_min_goal7_mnist_seed0_v1,binarized_mnist,"3,4",0,240,4,60,4000/1000,st,off,off,cuda,2
+lightlogic_b_lut_min_goal7_mnist_b3_w360_v1,binarized_mnist,3,0,360,4,90,4000/1000,st,off,off,cuda,1
+lightlogic_b_lut_min_goal7_mnist_b4_w360_v1,binarized_mnist,4,0,360,4,90,4000/1000,st,off,off,cuda,1
+lightlogic_b_lut_min_goal7_mnist_b3_w360_e150_v1,binarized_mnist,3,0,360,4,150,4000/1000,st,off,off,cuda,1
+lightlogic_b_lut_min_goal7_mnist_b3_w360_warmup_v1,binarized_mnist,3,0,360,4,90,4000/1000,st,30ep:continuous,off,cuda,1
+lightlogic_b_lut_min_goal7_mnist_b4_w360_warmup_v1,binarized_mnist,4,0,360,4,90,4000/1000,st,30ep:continuous,off,cuda,1
+lightlogic_b_lut_min_goal7_mnist_b3_distill_v1,binarized_mnist,3,0,360,4,90,4000/1000,st,off,"w=0.5,tau=2,teacher=128x0/60",cuda,1
+lightlogic_b_lut_min_goal7_mnist_matched_b3_v1,binarized_mnist,3,0,800,3,80,12000/3000,st,off,off,cuda,1
+lightlogic_b_lut_min_goal7_mnist_matched_b4_v1,binarized_mnist,4,0,800,3,80,12000/3000,st,off,off,cuda,1
+lightlogic_b_lut_min_goal7_mnist_matched_b3_multiseed_v1,binarized_mnist,3,"1,2",800,3,80,12000/3000,st,off,off,cuda,2
