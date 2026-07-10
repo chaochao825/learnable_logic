@@ -7,3 +7,14 @@ runs/
 remote_runs/
 trash/
 .codex_uploads/
+# ViT-LGN raw artifacts / local training outputs
+logs/
+data/
+checkpoints/
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+*.so
+*.launched
+*.log

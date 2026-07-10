@@ -1,0 +1,8 @@
+# 核心依赖
+torch>=1.12.0
+torchvision>=0.13.0
+numpy>=1.21.0
+tqdm>=4.64.0
+
+# 可视化依赖（用于 logs/figure.py）
+matplotlib>=3.5.0
