@@ -3,6 +3,17 @@ set -euo pipefail
 
 ROOT=/home/spco/sow_linear/learnable_logic_full_discrete_20260713
 GPU_INDEX=${GPU_INDEX:-0}
+if [[ ! "$GPU_INDEX" =~ ^[0-9]+$ ]] || \
+   ! nvidia-smi --id="$GPU_INDEX" --query-gpu=index --format=csv,noheader,nounits >/dev/null 2>&1; then
+  echo "Invalid GPU_INDEX=$GPU_INDEX" >&2
+  exit 2
+fi
+OUTPUT_LOCK=/tmp/codex_lgn_vit_full_discrete_d12e384_smoke.lock
+exec 8>"$OUTPUT_LOCK"
+if ! flock -n 8; then
+  echo "full_discrete_d12e384_smoke is already running" >&2
+  exit 3
+fi
 LOCK=/tmp/codex_lgn_vit_50k_gpu${GPU_INDEX}.lock
 exec 9>"$LOCK"
 flock 9
