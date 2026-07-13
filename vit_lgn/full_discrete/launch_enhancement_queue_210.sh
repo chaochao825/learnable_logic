@@ -12,7 +12,7 @@ case "$VARIANT_SET" in
     exit 2
     ;;
 esac
-if [[ ! "$GPU_INDEX" =~ ^[0-9]+$ ]] || \
+if [[ ! "$GPU_INDEX" =~ ^(0|[1-9][0-9]*)$ ]] || \
    ! nvidia-smi --id="$GPU_INDEX" --query-gpu=index --format=csv,noheader,nounits >/dev/null 2>&1; then
   echo "Invalid GPU_INDEX=$GPU_INDEX" >&2
   exit 2
