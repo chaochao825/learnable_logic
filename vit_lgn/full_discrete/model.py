@@ -76,7 +76,8 @@ class HardXNORScoreGapAttention(nn.Module):
 
     def __init__(self, dim: int, heads: int, topk: int, weight_bits: int = 4,
                  activation_bits: int = 8, qk_lanes: int = 7,
-                 gap_shift: int = 1, max_gap_bucket: int = 3) -> None:
+                 gap_shift: int = 1, max_gap_bucket: int = 3,
+                 gap_lut: nn.Module | None = None) -> None:
         super().__init__()
         if dim % heads:
             raise ValueError("embedding dimension must be divisible by heads")
@@ -87,6 +88,7 @@ class HardXNORScoreGapAttention(nn.Module):
         self.qk_lanes = int(qk_lanes)
         self.gap_shift = int(gap_shift)
         self.max_gap_bucket = int(max_gap_bucket)
+        self.gap_lut = gap_lut
         self.qkv = ShiftAddLinear(dim, 3 * dim, weight_bits, activation_bits)
         self.proj = ShiftAddLinear(dim, dim, weight_bits, activation_bits)
         self.value_quantizer = PowerOfTwoActivationQuantizer(activation_bits)
@@ -146,11 +148,15 @@ class HardXNORScoreGapAttention(nn.Module):
         minimum = torch.iinfo(torch.int64).min
         selected_scores = hard_scores.to(torch.int64).masked_fill(hard_selector == 0, minimum)
         best = selected_scores.max(dim=-1, keepdim=True).values
-        gap = torch.bitwise_right_shift(best - hard_scores.to(torch.int64), self.gap_shift)
-        bucket = gap.clamp(0, self.max_gap_bucket)
-        integer_weight = torch.bitwise_left_shift(
-            torch.ones_like(bucket), self.max_gap_bucket - bucket
-        ).to(v.dtype)
+        raw_gap = best - hard_scores.to(torch.int64)
+        if self.gap_lut is None:
+            gap = torch.bitwise_right_shift(raw_gap, self.gap_shift)
+            bucket = gap.clamp(0, self.max_gap_bucket)
+            integer_weight = torch.bitwise_left_shift(
+                torch.ones_like(bucket), self.max_gap_bucket - bucket
+            ).to(v.dtype)
+        else:
+            integer_weight = self.gap_lut(raw_gap, head_axis=1).to(v.dtype)
         routing_weight = selector * integer_weight
         soft_numerator = torch.matmul(routing_weight, v)
         soft_denominator = routing_weight.sum(dim=-1, keepdim=True).clamp_min(1.0)

@@ -16,7 +16,7 @@ from torch.utils.data import DataLoader, Sampler, Subset
 from torchvision.datasets import CIFAR10
 from torchvision.transforms import v2
 
-from vit_lgn.full_discrete.model import FullDiscreteViT
+from vit_lgn.full_discrete.enhanced_model import EnhancedFullDiscreteViT
 
 
 class StatefulBatchSampler(Sampler):
@@ -66,6 +66,16 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--weight-magnitude-bits", type=int, default=7)
     parser.add_argument("--activation-bits", type=int, default=8)
     parser.add_argument("--qk-lanes", type=int, default=7)
+    parser.add_argument("--learned-gap", action="store_true")
+    parser.add_argument("--group-lut-groups", type=int, default=0)
+    parser.add_argument("--local-layers", type=int, default=0)
+    parser.add_argument("--logic-expert-width", type=int, default=0)
+    parser.add_argument("--logic-expert-count", type=int, default=1)
+    parser.add_argument(
+        "--state-control", choices=["none", "dynamic", "static", "random", "script"],
+        default="none",
+    )
+    parser.add_argument("--state-expert-width", type=int, default=0)
     parser.add_argument("--learning-rate", type=float, default=3e-4)
     parser.add_argument("--min-learning-rate", type=float, default=1e-5)
     parser.add_argument("--warmup-steps", type=int, default=2_000)
@@ -102,7 +112,11 @@ def protocol(args: argparse.Namespace) -> dict:
     canonical_args.pop("resume")
     sources = {
         name: sha256(source_root / name)
-        for name in ("model.py", "shiftadd.py", "train_cifar.py")
+        for name in (
+            "model.py", "enhanced_model.py", "enhancements_lut.py",
+            "enhancements_spatial.py", "enhancements_expert.py",
+            "shiftadd.py", "train_cifar.py",
+        )
     }
     archive = args.data_root / "cifar-10-python.tar.gz"
     payload = {
@@ -138,15 +152,22 @@ def lr_factor(step: int, args: argparse.Namespace) -> float:
 
 
 @torch.inference_mode()
-def evaluate(model: torch.nn.Module, loader: DataLoader, device: torch.device) -> float:
+def evaluate(model: torch.nn.Module, loader: DataLoader, device: torch.device) -> dict:
     model.eval()
+    if hasattr(model, "reset_state_statistics"):
+        model.reset_state_statistics()
     correct = count = 0
     for images, labels in loader:
         images, labels = images.to(device), labels.to(device)
         correct += int((model(images).argmax(-1) == labels).sum())
         count += labels.numel()
     model.train()
-    return correct / count
+    result = {"validation_accuracy": correct / count}
+    if hasattr(model, "state_statistics"):
+        statistics = model.state_statistics()
+        if statistics:
+            result["state_histogram_per_block"] = statistics
+    return result
 
 
 def atomic_save(path: Path, payload: object) -> None:
@@ -167,11 +188,23 @@ def main() -> None:
     protocol_path = args.out_dir / "protocol.json"
     protocol_path.write_text(json.dumps(run_protocol, indent=2, sort_keys=True), encoding="utf-8")
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = FullDiscreteViT(
+    model = EnhancedFullDiscreteViT(
         dim=args.dim, depth=args.depth, heads=args.heads, topk=args.topk,
         mlp_ratio=args.mlp_ratio, weight_bits=args.weight_magnitude_bits,
         activation_bits=args.activation_bits, qk_lanes=args.qk_lanes,
+        learned_gap=args.learned_gap,
+        group_lut_groups=args.group_lut_groups,
+        local_layers=args.local_layers,
+        logic_expert_width=args.logic_expert_width,
+        logic_expert_count=args.logic_expert_count,
+        state_control=args.state_control,
+        state_expert_width=args.state_expert_width,
     ).to(device)
+    # Model variants consume different numbers of initialization draws.  Reset
+    # the data/runtime RNG after construction so paired variants see identical
+    # crop/flip streams and sampler order.  Current queued controls are
+    # deterministic in forward; random-state controls require recorded replay.
+    seed_all(args.seed + 30_000)
     train_set, valid_set = make_data(args)
     sampler = StatefulBatchSampler(len(train_set), args.batch_size, args.seed + 10_000)
     train_loader = DataLoader(train_set, batch_sampler=sampler, num_workers=0,
@@ -212,8 +245,8 @@ def main() -> None:
         scheduler.step()
         completed = step + 1
         if completed % args.eval_every == 0 or completed == args.steps:
-            accuracy = evaluate(model, valid_loader, device)
-            row = {"step": completed, "validation_accuracy": accuracy,
+            evaluation = evaluate(model, valid_loader, device)
+            row = {"step": completed, **evaluation,
                    "train_loss": float(loss.detach()),
                    "next_learning_rate": optimizer.param_groups[0]["lr"]}
             history.append(row)
@@ -237,7 +270,11 @@ def main() -> None:
         "elapsed_seconds": time.perf_counter() - started,
         "source_sha256": {
             name: sha256(source_root / name)
-            for name in ("model.py", "shiftadd.py", "train_cifar.py")
+            for name in (
+                "model.py", "enhanced_model.py", "enhancements_lut.py",
+                "enhancements_spatial.py", "enhancements_expert.py",
+                "shiftadd.py", "train_cifar.py",
+            )
         },
         "protocol_sha256": run_protocol["sha256"],
     }
