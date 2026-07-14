@@ -6,6 +6,7 @@ import torch
 import torch.nn as nn
 
 from .enhancements_expert import FourModeStateSelectedFFN, ParallelBitSliceLogicFFN
+from .enhancements_logic_tree import SharedLogicTreeConv3x3
 from .enhancements_lut import GroupwiseDiscreteActivationLUT, MonotonicHeadGapLUT
 from .enhancements_spatial import DiscreteDepthwiseLocalBranch
 from .model import DiscreteGatedFFN, FullDiscreteViT
@@ -84,6 +85,7 @@ class EnhancedFullDiscreteViT(FullDiscreteViT):
         gap_max: int = 63,
         group_lut_groups: int = 0,
         local_layers: int = 0,
+        local_operator: str = "depthwise_shiftadd",
         local_branch_shift: int = 2,
         logic_expert_width: int = 0,
         logic_expert_count: int = 1,
@@ -94,6 +96,8 @@ class EnhancedFullDiscreteViT(FullDiscreteViT):
         super().__init__(*args, **kwargs)
         if state_control not in {"none", "dynamic", "static", "random", "script"}:
             raise ValueError("unsupported state_control")
+        if local_operator not in {"depthwise_shiftadd", "logic_tree3x3"}:
+            raise ValueError("unsupported local_operator")
         if sum((group_lut_groups > 0, logic_expert_width > 0, state_control != "none")) > 1:
             raise ValueError("FFN enhancement families must be evaluated separately")
         depth = len(self.blocks)
@@ -141,8 +145,14 @@ class EnhancedFullDiscreteViT(FullDiscreteViT):
                 _copy_common_ffn(original_ffn, selected)
                 block.ffn = StateSelectedFFNAdapter(selected, state_control, index)
 
-        self.local_branches = nn.ModuleDict({
-            str(index): DiscreteDepthwiseLocalBranch(
+        if local_operator == "logic_tree3x3":
+            local_branch_factory = lambda: SharedLogicTreeConv3x3(
+                dim=dim,
+                grid_size=grid_size,
+                activation_bits=activation_bits,
+            )
+        else:
+            local_branch_factory = lambda: DiscreteDepthwiseLocalBranch(
                 dim=dim,
                 grid_size=grid_size,
                 weight_bits=min(weight_bits, 4),
@@ -150,12 +160,14 @@ class EnhancedFullDiscreteViT(FullDiscreteViT):
                 branch_shift=local_branch_shift,
                 zero_init=True,
             )
-            for index in range(local_layers)
-        })
+        self.local_branches = nn.ModuleDict(
+            {str(index): local_branch_factory() for index in range(local_layers)}
+        )
         self.enhancement_config = {
             "learned_gap": learned_gap,
             "group_lut_groups": group_lut_groups,
             "local_layers": local_layers,
+            "local_operator": local_operator,
             "logic_expert_width": logic_expert_width,
             "logic_expert_count": logic_expert_count,
             "state_control": state_control,

@@ -47,3 +47,40 @@ accumulator/residual-to-A8 exponent-only requantizer; the Python reference
 still carries powers of two in floating tensors there.  Packed high-throughput
 device kernels, a cycle-accurate executor, fixed-width residual/exponent
 alignment, and synthesis/PPA are also still required.
+
+## Minimal shared 3x3 logic-tree branch
+
+`SharedLogicTreeConv3x3` is a deliberately narrower alternative to the older
+learned dense LogicExpert.  It splits every signed-magnitude A8 channel into
+eight bitplanes and instantiates one fixed depth-three tree per
+`(channel, bitplane)`:
+
+- eight leaves are gathered from a local zero-padded 3x3 window;
+- leaf zero is always the same channel/bitplane at the centre;
+- the other seven leaves cover seven neighbours, with the omitted direction
+  rotating deterministically over channel and bitplane;
+- seven two-input 4-bit LUTs use the fixed `8 -> 4 -> 2 -> 1` topology;
+- LUT parameters are shared over H/W and no connection logits exist;
+- the hard address is `(A << 1) | B`, so projection A is packed as `0xC`;
+- every hard LUT starts as A, making the root bit-exactly equal to the centre
+  bitplane at initialization;
+- CLS bypasses the tree and the root has no learned W7 projection.
+
+The Boolean executor uses fixed gather/slice routing plus LUT shift/mask
+indexing and has tests that forbid `matmul`, `F.linear`, and `conv2d`.  Training
+returns that exact hard value and uses a separate soft derivative surrogate.
+A small alternating sub-threshold B probe is present only in shadow logits;
+all exported hard tables remain `0xC`, while all seven gates receive gradient
+from the first optimization step.
+
+The surrounding PyTorch carrier bridge still calls the existing activation
+quantizer to obtain an A8 code and power-of-two scale.  Thus this branch proves
+the local tree itself is LUT/gather-only; it does not yet claim that exponent
+selection and transaction decode are a packed RTL executor.
+
+The paired 50k protocol is `launch_logic_tree_pair_210.sh`.  It runs
+`local_layers=3`, `1`, and `0` from the same source and seed.  This separates a
+single local injection from repeated early-layer application and its matched
+control.  Every 5k validation also evaluates a temporary forced-`0xC` version
+and records hard LUT flips plus root-bit changes.  No accuracy or mechanism
+conclusion is valid before each row reaches 50,000 steps.

@@ -37,6 +37,7 @@ from .enhancements_expert import (
     ParallelBitSliceLogicFFN,
 )
 from .enhancements_lut import GroupwiseDiscreteActivationLUT
+from .enhancements_logic_tree import SITE_OFFSETS, SharedLogicTreeConv3x3
 from .enhancements_spatial import DiscreteDepthwiseLocalBranch
 from .model import (
     DiscreteRMSNorm,
@@ -376,6 +377,50 @@ def _local_branch_payload(
 
 
 @torch.no_grad()
+def _logic_tree_local_payload(
+    name: str, module: SharedLogicTreeConv3x3
+) -> dict[str, object]:
+    truth_entries = module.hard_truth_table_bits().cpu().to(torch.uint8)
+    truth_nibbles = module.hard_truth_nibbles().cpu().to(torch.uint8)
+    leaf_site = module.leaf_site.detach().cpu().to(torch.int8)
+    site_offsets = module.site_offsets.detach().cpu().to(torch.int8)
+    gate_children = torch.tensor(
+        [
+            [0, 1], [2, 3], [4, 5], [6, 7],
+            [8, 9], [10, 11], [12, 13],
+        ],
+        dtype=torch.int8,
+    )
+    return {
+        "name": name,
+        "operator": "shared_logic_tree3x3_bitplane",
+        "grid_height": module.grid_size,
+        "grid_width": module.grid_size,
+        "channels": module.dim,
+        "activation_bits": module.activation_bits,
+        "input_encoding": "signed_magnitude_sign_then_lsb_planes_per_channel",
+        "tree_depth": module.TREE_DEPTH,
+        "leaf_count": module.NUM_LEAVES,
+        "gate_count": module.NUM_GATES,
+        "truth_address": "(A<<1)|B_little_address_endian",
+        "truth_table_00_01_10_11": truth_entries,
+        "truth_nibble_lsb_address": truth_nibbles,
+        "site_offsets_dy_dx": site_offsets,
+        "leaf_site": leaf_site,
+        "leaf_offsets_dy_dx": site_offsets[leaf_site.to(torch.long)],
+        "gate_children_node_index": gate_children,
+        "root_gate_node_index": 14,
+        "padding": "constant_logic_0",
+        "spatial_sharing": True,
+        "learned_connections": False,
+        "cls_path": "exact_bypass",
+        "root_state": "boolean_bitplanes",
+        "output_projection": "none",
+        "output_scale": "reuse_per_token_input_power_of_two_scale",
+    }
+
+
+@torch.no_grad()
 def _logic_expert_payload(name: str, module: BitSliceBooleanLogicExpert) -> dict[str, object]:
     return {
         "name": name,
@@ -581,11 +626,14 @@ def export_logic_payload(
         for name, module in named_modules
         if isinstance(module, GroupwiseDiscreteActivationLUT)
     ]
-    local_branches = [
-        _local_branch_payload(name, module, requantize_magnitude_bits)
-        for name, module in named_modules
-        if isinstance(module, DiscreteDepthwiseLocalBranch)
-    ]
+    local_branches = []
+    for name, module in named_modules:
+        if isinstance(module, DiscreteDepthwiseLocalBranch):
+            local_branches.append(
+                _local_branch_payload(name, module, requantize_magnitude_bits)
+            )
+        elif isinstance(module, SharedLogicTreeConv3x3):
+            local_branches.append(_logic_tree_local_payload(name, module))
     logic_experts = [
         _logic_expert_payload(name, module)
         for name, module in named_modules
@@ -751,6 +799,113 @@ def validate_logic_payload(payload: Mapping[str, object]) -> None:
             int(item["address_max"]) + 1,
         ):
             raise ValueError(f"rms_luts[{index}] table shape mismatch")
+    if not isinstance(payload["local_branches"], list):
+        raise ValueError("local_branches must be a list")
+    for index, branch in enumerate(payload["local_branches"]):
+        item = require_keys(
+            branch,
+            ("name", "operator", "grid_height", "grid_width", "channels", "activation_bits"),
+            f"local_branches[{index}]",
+        )
+        if item["operator"] == "zero_padded_depthwise_3x3_shift_add":
+            require_keys(
+                item,
+                ("kernel_code", "kernel_sign", "kernel_magnitude_planes_lsb_first",
+                 "kernel_effective_scale_exponent", "target_magnitude_bits"),
+                f"local_branches[{index}]",
+            )
+            continue
+        if item["operator"] != "shared_logic_tree3x3_bitplane":
+            raise ValueError(f"local_branches[{index}] unsupported operator")
+        tree = require_keys(
+            item,
+            (
+                "input_encoding", "tree_depth", "leaf_count", "gate_count",
+                "truth_address", "truth_table_00_01_10_11",
+                "truth_nibble_lsb_address", "site_offsets_dy_dx", "leaf_site",
+                "leaf_offsets_dy_dx", "gate_children_node_index",
+                "root_gate_node_index", "padding", "spatial_sharing",
+                "learned_connections", "cls_path", "root_state",
+                "output_projection", "output_scale",
+            ),
+            f"local_branches[{index}]",
+        )
+        channels = int(tree["channels"])
+        activation_bits = int(tree["activation_bits"])
+        if (activation_bits, int(tree["tree_depth"]), int(tree["leaf_count"]),
+                int(tree["gate_count"])) != (8, 3, 8, 7):
+            raise ValueError(f"local_branches[{index}] logic-tree topology mismatch")
+        expected_truth_shape = (channels, activation_bits, 7, 4)
+        truth = tree["truth_table_00_01_10_11"]
+        if not isinstance(truth, torch.Tensor) or tuple(truth.shape) != expected_truth_shape:
+            raise ValueError(f"local_branches[{index}] truth-table shape mismatch")
+        if bool(((truth != 0) & (truth != 1)).any()):
+            raise ValueError(f"local_branches[{index}] truth-table is not binary")
+        nibbles = tree["truth_nibble_lsb_address"]
+        if not isinstance(nibbles, torch.Tensor) or tuple(nibbles.shape) != (
+            channels, activation_bits, 7
+        ):
+            raise ValueError(f"local_branches[{index}] truth-nibble shape mismatch")
+        shifts = torch.arange(4, dtype=torch.uint8)
+        expected_nibbles = torch.sum(
+            torch.bitwise_left_shift(truth.to(torch.uint8), shifts), dim=-1
+        ).to(torch.uint8)
+        if not torch.equal(nibbles.to(torch.uint8), expected_nibbles):
+            raise ValueError(f"local_branches[{index}] truth packing mismatch")
+        leaf_site = tree["leaf_site"]
+        expected_leaf_shape = (channels, activation_bits, 8)
+        if not isinstance(leaf_site, torch.Tensor) or tuple(leaf_site.shape) != expected_leaf_shape:
+            raise ValueError(f"local_branches[{index}] leaf-site shape mismatch")
+        if not bool((leaf_site[..., 0] == 0).all()):
+            raise ValueError(f"local_branches[{index}] leaf zero is not the centre")
+        if bool(((leaf_site < 0) | (leaf_site > 8)).any()):
+            raise ValueError(f"local_branches[{index}] leaf-site index out of range")
+        expected_leaf_site = torch.empty(
+            channels, activation_bits, 8, dtype=torch.int8
+        )
+        for channel in range(channels):
+            for bitplane in range(activation_bits):
+                omitted = 1 + ((channel + bitplane) % 8)
+                expected_leaf_site[channel, bitplane] = torch.tensor(
+                    [0, *[site for site in range(1, 9) if site != omitted]],
+                    dtype=torch.int8,
+                )
+        if not torch.equal(leaf_site.to(torch.int8), expected_leaf_site):
+            raise ValueError(f"local_branches[{index}] fixed leaf-map ABI mismatch")
+        offsets = tree["site_offsets_dy_dx"]
+        expected_offsets = torch.tensor(SITE_OFFSETS, dtype=torch.int8)
+        if not isinstance(offsets, torch.Tensor) or not torch.equal(
+            offsets.to(torch.int8), expected_offsets
+        ):
+            raise ValueError(f"local_branches[{index}] site-offset ABI mismatch")
+        leaf_offsets = tree["leaf_offsets_dy_dx"]
+        if not isinstance(leaf_offsets, torch.Tensor) or not torch.equal(
+            leaf_offsets.to(torch.int8), expected_offsets[leaf_site.to(torch.long)]
+        ):
+            raise ValueError(f"local_branches[{index}] leaf-offset payload mismatch")
+        expected_children = torch.tensor(
+            [[0, 1], [2, 3], [4, 5], [6, 7], [8, 9], [10, 11], [12, 13]],
+            dtype=torch.int8,
+        )
+        children = tree["gate_children_node_index"]
+        if not isinstance(children, torch.Tensor) or not torch.equal(
+            children.to(torch.int8), expected_children
+        ):
+            raise ValueError(f"local_branches[{index}] gate topology mismatch")
+        if (
+            tree["root_gate_node_index"] != 14
+            or tree["output_projection"] != "none"
+            or tree["cls_path"] != "exact_bypass"
+            or tree["learned_connections"] is not False
+            or tree["spatial_sharing"] is not True
+            or tree["truth_address"] != "(A<<1)|B_little_address_endian"
+            or tree["padding"] != "constant_logic_0"
+            or tree["root_state"] != "boolean_bitplanes"
+            or tree["output_scale"] != "reuse_per_token_input_power_of_two_scale"
+            or tree["input_encoding"]
+            != "signed_magnitude_sign_then_lsb_planes_per_channel"
+        ):
+            raise ValueError(f"local_branches[{index}] logic-tree ABI mismatch")
     arithmetic = require_keys(
         payload["arithmetic_contract"], ("a8_by_u4_product_rom",),
         "arithmetic_contract",
@@ -805,6 +960,7 @@ def _model_kwargs_from_checkpoint_args(args: Mapping[str, Any]) -> dict[str, obj
         "learned_gap": bool(args.get("learned_gap", False)),
         "group_lut_groups": int(args.get("group_lut_groups", 0)),
         "local_layers": int(args.get("local_layers", 0)),
+        "local_operator": str(args.get("local_operator", "depthwise_shiftadd")),
         "logic_expert_width": int(args.get("logic_expert_width", 0)),
         "logic_expert_count": int(args.get("logic_expert_count", 1)),
         "state_control": str(args.get("state_control", "none")),

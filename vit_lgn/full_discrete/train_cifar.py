@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+from contextlib import contextmanager
 import hashlib
 import json
 import math
@@ -17,11 +18,12 @@ from torchvision.datasets import CIFAR10
 from torchvision.transforms import v2
 
 from vit_lgn.full_discrete.enhanced_model import EnhancedFullDiscreteViT
+from vit_lgn.full_discrete.enhancements_logic_tree import SharedLogicTreeConv3x3
 
 
 PROTOCOL_SOURCE_FILES = (
     "model.py", "enhanced_model.py", "enhancements_lut.py",
-    "enhancements_spatial.py", "enhancements_expert.py",
+    "enhancements_spatial.py", "enhancements_logic_tree.py", "enhancements_expert.py",
     "__init__.py", "logic_backend.py", "shiftadd.py", "train_cifar.py",
 )
 CIFAR10_PAYLOAD_FILES = (
@@ -90,6 +92,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--learned-gap", action="store_true")
     parser.add_argument("--group-lut-groups", type=int, default=0)
     parser.add_argument("--local-layers", type=int, default=0)
+    parser.add_argument(
+        "--local-operator",
+        choices=["depthwise_shiftadd", "logic_tree3x3"],
+        default="depthwise_shiftadd",
+    )
     parser.add_argument("--logic-expert-width", type=int, default=0)
     parser.add_argument("--logic-expert-count", type=int, default=1)
     parser.add_argument(
@@ -207,6 +214,42 @@ def evaluate(model: torch.nn.Module, loader: DataLoader, device: torch.device) -
     return result
 
 
+@contextmanager
+def forced_projection_a(model: torch.nn.Module):
+    """Temporarily force every logic-tree LUT to hard projection A (0xC)."""
+
+    branches = [
+        module for module in model.modules()
+        if isinstance(module, SharedLogicTreeConv3x3)
+    ]
+    snapshots = [branch.truth_table_logits.detach().clone() for branch in branches]
+    try:
+        with torch.no_grad():
+            for branch in branches:
+                pattern = branch.truth_table_logits.new_tensor([-1.0, -1.0, 1.0, 1.0])
+                branch.truth_table_logits.copy_(
+                    pattern.expand_as(branch.truth_table_logits)
+                )
+        yield
+    finally:
+        with torch.no_grad():
+            for branch, snapshot in zip(branches, snapshots):
+                branch.truth_table_logits.copy_(snapshot)
+
+
+def logic_tree_gradient_l2(model: torch.nn.Module) -> float:
+    squared = None
+    for module in model.modules():
+        if not isinstance(module, SharedLogicTreeConv3x3):
+            continue
+        gradient = module.truth_table_logits.grad
+        if gradient is None:
+            continue
+        value = gradient.detach().float().square().sum()
+        squared = value if squared is None else squared + value
+    return float(torch.sqrt(squared)) if squared is not None else 0.0
+
+
 def atomic_save(path: Path, payload: object) -> None:
     temporary = path.with_suffix(path.suffix + ".tmp")
     torch.save(payload, temporary)
@@ -268,6 +311,7 @@ def main() -> None:
         learned_gap=args.learned_gap,
         group_lut_groups=args.group_lut_groups,
         local_layers=args.local_layers,
+        local_operator=args.local_operator,
         logic_expert_width=args.logic_expert_width,
         logic_expert_count=args.logic_expert_count,
         state_control=args.state_control,
@@ -302,22 +346,63 @@ def main() -> None:
 
     iterator = iter(train_loader)
     model.train()
+    has_logic_tree = any(
+        isinstance(module, SharedLogicTreeConv3x3) for module in model.modules()
+    )
     started = time.perf_counter()
+    interval_started = started
+    interval_start_step = start_step
+    if device.type == "cuda":
+        torch.cuda.reset_peak_memory_stats(device)
     for step in range(start_step, args.steps):
         images, labels = next(iterator)
         images, labels = images.to(device), labels.to(device)
         optimizer.zero_grad(set_to_none=True)
         loss = criterion(model(images), labels)
         loss.backward()
-        torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+        unclipped_gradient = torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+        completed = step + 1
+        evaluation_due = completed % args.eval_every == 0 or completed == args.steps
+        tree_gradient = logic_tree_gradient_l2(model) if evaluation_due else 0.0
         optimizer.step()
         scheduler.step()
-        completed = step + 1
-        if completed % args.eval_every == 0 or completed == args.steps:
+        if evaluation_due:
+            if device.type == "cuda":
+                torch.cuda.synchronize(device)
+            training_interval_seconds = time.perf_counter() - interval_started
+            interval_steps = completed - interval_start_step
+            peak_allocated_gib = (
+                torch.cuda.max_memory_allocated(device) / (1024 ** 3)
+                if device.type == "cuda" else 0.0
+            )
             evaluation = evaluate(model, valid_loader, device)
+            if has_logic_tree:
+                with forced_projection_a(model):
+                    forced = evaluate(model, valid_loader, device)
+                evaluation["forced_a_validation_accuracy"] = forced[
+                    "validation_accuracy"
+                ]
+                evaluation["forced_a_logic_tree_statistics"] = {
+                    name: statistics
+                    for name, statistics in forced.get(
+                        "normalization_statistics", {}
+                    ).items()
+                    if name.startswith("local_branches.")
+                }
+            unclipped_value = float(unclipped_gradient.detach())
             row = {"step": completed, **evaluation,
                    "train_loss": float(loss.detach()),
-                   "next_learning_rate": optimizer.param_groups[0]["lr"]}
+                   "next_learning_rate": optimizer.param_groups[0]["lr"],
+                   "unclipped_global_gradient_l2": unclipped_value,
+                   "gradient_clip_coefficient": min(
+                       1.0, 1.0 / (unclipped_value + 1e-6)
+                   ),
+                   "logic_tree_gradient_l2_after_clip": tree_gradient,
+                   "training_interval_seconds": training_interval_seconds,
+                   "training_seconds_per_step": (
+                       training_interval_seconds / max(interval_steps, 1)
+                   ),
+                   "peak_allocated_gib": peak_allocated_gib}
             history.append(row)
             print(json.dumps(row, sort_keys=True), flush=True)
         if completed % args.checkpoint_every == 0 or completed == args.steps:
@@ -331,6 +416,23 @@ def main() -> None:
                 "source_sha256": run_protocol["sources"],
                 "args": {**vars(args), "data_root": str(args.data_root), "out_dir": str(args.out_dir)},
             })
+            atomic_save(args.out_dir / f"model_step_{completed:05d}.pt", {
+                "step": completed,
+                "model": model.state_dict(),
+                "history_row": history[-1] if history else None,
+                "protocol_sha256": run_protocol["sha256"],
+                "source_sha256": run_protocol["sources"],
+                "args": {
+                    **vars(args),
+                    "data_root": str(args.data_root),
+                    "out_dir": str(args.out_dir),
+                },
+            })
+        if evaluation_due:
+            interval_started = time.perf_counter()
+            interval_start_step = completed
+            if device.type == "cuda":
+                torch.cuda.reset_peak_memory_stats(device)
 
     final_source_hashes = verify_current_sources(run_protocol)
     result = {

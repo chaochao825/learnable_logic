@@ -234,6 +234,83 @@ class LogicPayloadExportTest(unittest.TestCase):
             (6, 256),
         )
 
+    def test_logic_tree_local_payload_is_fixed_routing_and_integer_only(self) -> None:
+        model = EnhancedFullDiscreteViT(
+            dim=24,
+            depth=1,
+            heads=3,
+            topk=4,
+            mlp_ratio=2.0,
+            weight_bits=7,
+            activation_bits=8,
+            local_layers=1,
+            local_operator="logic_tree3x3",
+        ).eval()
+        payload = export_logic_payload(model)
+        self.assertEqual(len(payload["local_branches"]), 1)
+        branch = payload["local_branches"][0]
+        self.assertEqual(branch["operator"], "shared_logic_tree3x3_bitplane")
+        self.assertEqual(tuple(branch["truth_table_00_01_10_11"].shape), (24, 8, 7, 4))
+        self.assertEqual(tuple(branch["truth_nibble_lsb_address"].shape), (24, 8, 7))
+        self.assertTrue(bool((branch["truth_nibble_lsb_address"] == 0xC).all()))
+        self.assertEqual(tuple(branch["leaf_site"].shape), (24, 8, 8))
+        self.assertTrue(bool((branch["leaf_site"][..., 0] == 0).all()))
+        self.assertEqual(branch["output_projection"], "none")
+        self.assertFalse(branch["learned_connections"])
+        validate_logic_payload(payload)
+        for path, value in _walk(branch, "local_branch"):
+            if isinstance(value, torch.Tensor):
+                self.assertFalse(value.is_floating_point(), path)
+            self.assertFalse(isinstance(value, float), path)
+
+        corrupted = export_logic_payload(model)
+        corrupted["local_branches"][0]["truth_table_00_01_10_11"][0, 0, 0, 0] = 2
+        with self.assertRaisesRegex(ValueError, "not binary"):
+            validate_logic_payload(corrupted)
+        corrupted = export_logic_payload(model)
+        corrupted["local_branches"][0]["leaf_site"][0, 0, 0] = 1
+        with self.assertRaisesRegex(ValueError, "leaf zero"):
+            validate_logic_payload(corrupted)
+        corrupted = export_logic_payload(model)
+        corrupted["local_branches"][0]["leaf_site"][0, 0, 1] = 0
+        with self.assertRaisesRegex(ValueError, "fixed leaf-map"):
+            validate_logic_payload(corrupted)
+        corrupted = export_logic_payload(model)
+        corrupted["local_branches"][0]["gate_children_node_index"][6, 0] = 11
+        with self.assertRaisesRegex(ValueError, "gate topology"):
+            validate_logic_payload(corrupted)
+
+    def test_checkpoint_reconstructs_logic_tree_operator_strictly(self) -> None:
+        model = EnhancedFullDiscreteViT(
+            dim=24, depth=1, heads=3, topk=4, mlp_ratio=2.0,
+            weight_bits=7, activation_bits=8, local_layers=1,
+            local_operator="logic_tree3x3",
+        ).eval()
+        args = {
+            "dim": 24, "depth": 1, "heads": 3, "topk": 4,
+            "mlp_ratio": 2.0, "weight_magnitude_bits": 7,
+            "activation_bits": 8, "qk_lanes": 7,
+            "norm_kind": "rms_lut", "final_norm_kind": "same",
+            "learned_gap": False, "group_lut_groups": 0,
+            "local_layers": 1, "local_operator": "logic_tree3x3",
+            "logic_expert_width": 0, "logic_expert_count": 1,
+            "state_control": "none", "state_expert_width": 0,
+        }
+        checkpoint = {
+            "step": 50_000,
+            "model": model.state_dict(),
+            "args": args,
+            "protocol_sha256": "logic-tree-protocol",
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            checkpoint_path = Path(directory) / "checkpoint.pt"
+            output_path = Path(directory) / "payload.pt"
+            torch.save(checkpoint, checkpoint_path)
+            exported = export_checkpoint(checkpoint_path, output_path)
+        branch = exported["local_branches"][0]
+        self.assertEqual(branch["operator"], "shared_logic_tree3x3_bitplane")
+        self.assertTrue(bool((branch["truth_nibble_lsb_address"] == 0xC).all()))
+
     def test_checkpoint_export_drops_optimizer_and_rng(self) -> None:
         args = {
             "dim": 24,

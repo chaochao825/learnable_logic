@@ -5,6 +5,7 @@ import unittest
 import torch
 
 from vit_lgn.full_discrete.enhanced_model import EnhancedFullDiscreteViT
+from vit_lgn.full_discrete.enhancements_logic_tree import SharedLogicTreeConv3x3
 from vit_lgn.full_discrete.shiftadd import ShiftAddLinear
 
 
@@ -20,6 +21,7 @@ class EnhancedModelTest(unittest.TestCase):
             {"learned_gap": True},
             {"group_lut_groups": 4},
             {"local_layers": 1},
+            {"local_layers": 1, "local_operator": "logic_tree3x3"},
             {"logic_expert_width": 32},
             {"state_control": "dynamic", "state_expert_width": 32},
             {"state_control": "script", "state_expert_width": 32},
@@ -37,6 +39,10 @@ class EnhancedModelTest(unittest.TestCase):
     def test_ffn_families_are_mutually_exclusive(self) -> None:
         with self.assertRaises(ValueError):
             self._model(group_lut_groups=4, logic_expert_width=32)
+
+    def test_invalid_local_operator_is_rejected(self) -> None:
+        with self.assertRaisesRegex(ValueError, "local_operator"):
+            self._model(local_layers=1, local_operator="dense_connection_selector")
 
     def test_replacement_ffns_inherit_logic_lut_backend(self) -> None:
         variants = [
@@ -85,6 +91,16 @@ class EnhancedModelTest(unittest.TestCase):
         images = torch.rand(2, 3, 32, 32)
         torch.testing.assert_close(local(images), baseline(images))
 
+    def test_logic_tree_local_branch_is_identity_at_initialization(self) -> None:
+        torch.manual_seed(11)
+        baseline = self._model()
+        torch.manual_seed(11)
+        local = self._model(local_layers=1, local_operator="logic_tree3x3")
+        self.assertIsInstance(local.local_branches["0"], SharedLogicTreeConv3x3)
+        baseline.eval(), local.eval()
+        images = torch.rand(2, 3, 32, 32)
+        torch.testing.assert_close(local(images), baseline(images), rtol=0.0, atol=0.0)
+
     def test_local_grid_is_derived_from_patch_embedding(self) -> None:
         model = EnhancedFullDiscreteViT(
             image_size=16, patch_size=4, dim=24, depth=1, heads=3,
@@ -94,6 +110,16 @@ class EnhancedModelTest(unittest.TestCase):
         self.assertEqual(model(torch.rand(2, 3, 16, 16)).shape, (2, 10))
         model(torch.rand(2, 3, 16, 16)).square().mean().backward()
         self.assertGreater(float(model.local_branches["0"].kernel.grad.abs().sum()), 0.0)
+
+        logic_tree = EnhancedFullDiscreteViT(
+            image_size=16, patch_size=4, dim=24, depth=1, heads=3,
+            mlp_ratio=2.0, local_layers=1, local_operator="logic_tree3x3",
+        )
+        self.assertEqual(logic_tree.local_branches["0"].grid_size, 4)
+        logic_tree(torch.rand(2, 3, 16, 16)).square().mean().backward()
+        gradient = logic_tree.local_branches["0"].truth_table_logits.grad
+        self.assertIsNotNone(gradient)
+        self.assertGreater(float(gradient.abs().sum()), 0.0)
 
     def test_contract_reports_actual_gap_and_ffn(self) -> None:
         learned = self._model(learned_gap=True)
