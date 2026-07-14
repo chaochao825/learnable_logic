@@ -5,6 +5,7 @@ import unittest
 import torch
 
 from vit_lgn.full_discrete.enhanced_model import EnhancedFullDiscreteViT
+from vit_lgn.full_discrete.shiftadd import ShiftAddLinear
 
 
 class EnhancedModelTest(unittest.TestCase):
@@ -36,6 +37,23 @@ class EnhancedModelTest(unittest.TestCase):
     def test_ffn_families_are_mutually_exclusive(self) -> None:
         with self.assertRaises(ValueError):
             self._model(group_lut_groups=4, logic_expert_width=32)
+
+    def test_replacement_ffns_inherit_logic_lut_backend(self) -> None:
+        variants = [
+            {"group_lut_groups": 4},
+            {"logic_expert_width": 32},
+            {"state_control": "dynamic", "state_expert_width": 32},
+        ]
+        for config in variants:
+            model = self._model(inference_backend="logic_lut", **config)
+            layers = [
+                module for module in model.modules()
+                if isinstance(module, ShiftAddLinear)
+            ]
+            self.assertTrue(layers, config)
+            self.assertTrue(all(
+                layer.inference_backend == "logic_lut" for layer in layers
+            ), config)
 
     def test_common_ffn_branch_preserves_baseline_initialization(self) -> None:
         for config in (

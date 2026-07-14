@@ -166,6 +166,10 @@ class EnhancedFullDiscreteViT(FullDiscreteViT):
                 state_expert_width or max(dim, 256) if state_control != "none" else 0
             ),
         }
+        # super().__init__ propagates the requested backend before enhancement
+        # FFNs are installed.  Re-run propagation so every replacement
+        # ShiftAddLinear shares the same inference ABI.
+        self.set_inference_backend(self.inference_backend)
 
     def forward(self, images: torch.Tensor) -> torch.Tensor:
         tokens = self.patch_embed(images)

@@ -19,6 +19,17 @@ from torchvision.transforms import v2
 from vit_lgn.full_discrete.enhanced_model import EnhancedFullDiscreteViT
 
 
+PROTOCOL_SOURCE_FILES = (
+    "model.py", "enhanced_model.py", "enhancements_lut.py",
+    "enhancements_spatial.py", "enhancements_expert.py",
+    "__init__.py", "logic_backend.py", "shiftadd.py", "train_cifar.py",
+)
+CIFAR10_PAYLOAD_FILES = (
+    "batches.meta", "data_batch_1", "data_batch_2", "data_batch_3",
+    "data_batch_4", "data_batch_5", "test_batch",
+)
+
+
 class StatefulBatchSampler(Sampler):
     def __init__(self, size: int, batch_size: int, seed: int) -> None:
         self.size, self.batch_size = int(size), int(batch_size)
@@ -66,6 +77,16 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--weight-magnitude-bits", type=int, default=7)
     parser.add_argument("--activation-bits", type=int, default=8)
     parser.add_argument("--qk-lanes", type=int, default=7)
+    parser.add_argument(
+        "--norm-kind",
+        choices=["rms_lut", "shift_rms", "requant", "none"],
+        default="rms_lut",
+    )
+    parser.add_argument(
+        "--final-norm-kind",
+        choices=["same", "rms_lut", "shift_rms", "requant", "none"],
+        default="same",
+    )
     parser.add_argument("--learned-gap", action="store_true")
     parser.add_argument("--group-lut-groups", type=int, default=0)
     parser.add_argument("--local-layers", type=int, default=0)
@@ -102,6 +123,24 @@ def sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def source_hashes(source_root: Path) -> dict[str, str]:
+    return {name: sha256(source_root / name) for name in PROTOCOL_SOURCE_FILES}
+
+
+def dataset_hashes(data_root: Path) -> dict[str, object]:
+    archive = data_root / "cifar-10-python.tar.gz"
+    extracted = data_root / "cifar-10-batches-py"
+    missing = [name for name in CIFAR10_PAYLOAD_FILES if not (extracted / name).is_file()]
+    if missing:
+        raise FileNotFoundError(f"CIFAR-10 extracted payload is incomplete: {missing}")
+    return {
+        "archive_sha256": sha256(archive) if archive.is_file() else None,
+        "extracted_files_sha256": {
+            name: sha256(extracted / name) for name in CIFAR10_PAYLOAD_FILES
+        },
+    }
+
+
 def protocol(args: argparse.Namespace) -> dict:
     source_root = Path(__file__).resolve().parent
     canonical_args = {
@@ -110,19 +149,11 @@ def protocol(args: argparse.Namespace) -> dict:
         "out_dir": str(args.out_dir.resolve()),
     }
     canonical_args.pop("resume")
-    sources = {
-        name: sha256(source_root / name)
-        for name in (
-            "model.py", "enhanced_model.py", "enhancements_lut.py",
-            "enhancements_spatial.py", "enhancements_expert.py",
-            "shiftadd.py", "train_cifar.py",
-        )
-    }
-    archive = args.data_root / "cifar-10-python.tar.gz"
+    sources = source_hashes(source_root)
     payload = {
         "args": canonical_args,
         "sources": sources,
-        "dataset_archive_sha256": sha256(archive) if archive.exists() else "missing",
+        "dataset": dataset_hashes(args.data_root),
         "split": {"seed": 20260711, "valid_size": args.valid_size},
         "torch": torch.__version__,
         "cuda": torch.version.cuda,
@@ -154,6 +185,8 @@ def lr_factor(step: int, args: argparse.Namespace) -> float:
 @torch.inference_mode()
 def evaluate(model: torch.nn.Module, loader: DataLoader, device: torch.device) -> dict:
     model.eval()
+    if hasattr(model, "reset_evaluation_statistics"):
+        model.reset_evaluation_statistics()
     if hasattr(model, "reset_state_statistics"):
         model.reset_state_statistics()
     correct = count = 0
@@ -163,6 +196,10 @@ def evaluate(model: torch.nn.Module, loader: DataLoader, device: torch.device) -
         count += labels.numel()
     model.train()
     result = {"validation_accuracy": correct / count}
+    if hasattr(model, "evaluation_statistics"):
+        statistics = model.evaluation_statistics()
+        if statistics:
+            result["normalization_statistics"] = statistics
     if hasattr(model, "state_statistics"):
         statistics = model.state_statistics()
         if statistics:
@@ -176,6 +213,32 @@ def atomic_save(path: Path, payload: object) -> None:
     os.replace(temporary, path)
 
 
+def atomic_write_json(path: Path, payload: object) -> None:
+    temporary = path.with_suffix(path.suffix + ".tmp")
+    temporary.write_text(
+        json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8"
+    )
+    os.replace(temporary, path)
+
+
+def freeze_protocol_manifest(path: Path, run_protocol: dict) -> None:
+    if path.exists():
+        existing_protocol = json.loads(path.read_text(encoding="utf-8"))
+        if existing_protocol.get("sha256") != run_protocol["sha256"]:
+            raise RuntimeError(
+                "existing protocol manifest does not match; it was left untouched"
+            )
+        return
+    atomic_write_json(path, run_protocol)
+
+
+def verify_current_sources(run_protocol: dict) -> dict[str, str]:
+    current = source_hashes(Path(__file__).resolve().parent)
+    if current != run_protocol["sources"]:
+        raise RuntimeError("training source changed after the protocol was frozen")
+    return current
+
+
 def main() -> None:
     args = parse_args()
     if not 0 < args.valid_size < 50_000:
@@ -186,12 +249,22 @@ def main() -> None:
     seed_all(args.seed)
     run_protocol = protocol(args)
     protocol_path = args.out_dir / "protocol.json"
-    protocol_path.write_text(json.dumps(run_protocol, indent=2, sort_keys=True), encoding="utf-8")
+    checkpoint_path = args.out_dir / "checkpoint.pt"
+    saved = None
+    if checkpoint_path.exists():
+        if not args.resume:
+            raise RuntimeError("checkpoint exists; pass --resume instead of overwriting it")
+        saved = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
+        if saved.get("protocol_sha256") != run_protocol["sha256"]:
+            raise RuntimeError("checkpoint protocol/source/data hash does not match this run")
+    freeze_protocol_manifest(protocol_path, run_protocol)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = EnhancedFullDiscreteViT(
         dim=args.dim, depth=args.depth, heads=args.heads, topk=args.topk,
         mlp_ratio=args.mlp_ratio, weight_bits=args.weight_magnitude_bits,
         activation_bits=args.activation_bits, qk_lanes=args.qk_lanes,
+        norm_kind=args.norm_kind,
+        final_norm_kind=args.final_norm_kind,
         learned_gap=args.learned_gap,
         group_lut_groups=args.group_lut_groups,
         local_layers=args.local_layers,
@@ -216,12 +289,8 @@ def main() -> None:
                                   weight_decay=args.weight_decay)
     scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lambda step: lr_factor(step, args))
     criterion = torch.nn.CrossEntropyLoss(label_smoothing=0.1)
-    checkpoint_path = args.out_dir / "checkpoint.pt"
     history, start_step = [], 0
-    if args.resume and checkpoint_path.exists():
-        saved = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
-        if saved.get("protocol_sha256") != run_protocol["sha256"]:
-            raise RuntimeError("checkpoint protocol/source/data hash does not match this run")
+    if saved is not None:
         model.load_state_dict(saved["model"])
         optimizer.load_state_dict(saved["optimizer"])
         scheduler.load_state_dict(saved["scheduler"])
@@ -252,35 +321,28 @@ def main() -> None:
             history.append(row)
             print(json.dumps(row, sort_keys=True), flush=True)
         if completed % args.checkpoint_every == 0 or completed == args.steps:
+            verify_current_sources(run_protocol)
             atomic_save(checkpoint_path, {
                 "step": completed, "model": model.state_dict(), "optimizer": optimizer.state_dict(),
                 "scheduler": scheduler.state_dict(), "sampler": sampler.state_dict(),
                 "python_rng": random.getstate(), "torch_rng": torch.get_rng_state(),
                 "cuda_rng": torch.cuda.get_rng_state_all(), "history": history,
                 "protocol_sha256": run_protocol["sha256"],
+                "source_sha256": run_protocol["sources"],
                 "args": {**vars(args), "data_root": str(args.data_root), "out_dir": str(args.out_dir)},
             })
 
-    source_root = Path(__file__).resolve().parent
+    final_source_hashes = verify_current_sources(run_protocol)
     result = {
         "final_validation_accuracy": history[-1]["validation_accuracy"],
         "history": history,
         "deployment_contract": model.deployment_contract(),
         "parameters": sum(parameter.numel() for parameter in model.parameters()),
         "elapsed_seconds": time.perf_counter() - started,
-        "source_sha256": {
-            name: sha256(source_root / name)
-            for name in (
-                "model.py", "enhanced_model.py", "enhancements_lut.py",
-                "enhancements_spatial.py", "enhancements_expert.py",
-                "shiftadd.py", "train_cifar.py",
-            )
-        },
+        "source_sha256": final_source_hashes,
         "protocol_sha256": run_protocol["sha256"],
     }
-    temporary = args.out_dir / "result.json.tmp"
-    temporary.write_text(json.dumps(result, indent=2, sort_keys=True), encoding="utf-8")
-    os.replace(temporary, args.out_dir / "result.json")
+    atomic_write_json(args.out_dir / "result.json", result)
 
 
 if __name__ == "__main__":

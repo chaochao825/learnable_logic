@@ -6,6 +6,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from .logic_backend import lut_linear_accumulator
+
 
 def _ste(hard: torch.Tensor, soft: torch.Tensor) -> torch.Tensor:
     return soft + (hard - soft).detach()
@@ -69,6 +71,7 @@ class ShiftAddLinear(nn.Module):
         output_bits: int = 8,
         input_bits: int | None = None,
         bias: bool = False,
+        inference_backend: str = "fake_quant",
     ) -> None:
         super().__init__()
         if magnitude_bits < 1 or magnitude_bits > 8:
@@ -77,6 +80,9 @@ class ShiftAddLinear(nn.Module):
         self.out_features = int(out_features)
         self.magnitude_bits = int(magnitude_bits)
         self.qmax = (1 << magnitude_bits) - 1
+        if inference_backend not in {"fake_quant", "logic_lut"}:
+            raise ValueError("inference_backend must be fake_quant or logic_lut")
+        self.inference_backend = inference_backend
         self.weight = nn.Parameter(torch.empty(out_features, in_features))
         self.bias = nn.Parameter(torch.zeros(out_features)) if bias else None
         self.input_quantizer = PowerOfTwoActivationQuantizer(
@@ -96,9 +102,35 @@ class ShiftAddLinear(nn.Module):
         return _ste(code * scale, self.weight)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        if not self.training and self.inference_backend == "logic_lut":
+            if self.bias is not None:
+                raise ValueError("logic_lut reference requires bias=False")
+            if x.device.type != "cpu":
+                raise ValueError(
+                    "logic_lut is a CPU transaction reference; a packed device kernel "
+                    "has not been implemented"
+                )
+            input_code, input_scale = self.input_quantizer.integer_code_and_scale(x)
+            weight_code, weight_scale = self.integer_weight_and_scale()
+            accumulator = lut_linear_accumulator(
+                input_code.to(torch.int16),
+                weight_code.to(torch.int16),
+                magnitude_bits=self.magnitude_bits,
+            )
+            # The accumulator is bit-exact.  Phase 1 intentionally keeps the
+            # existing power-of-two float carrier at the requantizer boundary;
+            # the hardened payload stores integer exponents instead.
+            combined_scale = input_scale * weight_scale.squeeze(-1)
+            hard_prequant = accumulator.to(x.dtype) * combined_scale
+            return self.output_quantizer(hard_prequant)
         quantized_input = self.input_quantizer(x)
         output = F.linear(quantized_input, self.quantized_weight(), self.bias)
         return self.output_quantizer(output)
+
+    def set_inference_backend(self, backend: str) -> None:
+        if backend not in {"fake_quant", "logic_lut"}:
+            raise ValueError("backend must be fake_quant or logic_lut")
+        self.inference_backend = backend
 
     def integer_accumulator(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         if self.bias is not None:
@@ -129,5 +161,10 @@ class ShiftAddLinear(nn.Module):
             "magnitude_bit_values": [1 << bit for bit in range(self.magnitude_bits)],
             "per_output_scale": "signed power of two",
             "runtime": "bit-plane gate/XNOR or conditional shift plus integer accumulation",
+            "reference_backends": ["fake_quant", "logic_lut"],
+            "logic_lut": (
+                "A8 by U4 magnitude ROM; wider magnitudes use 4-bit chunks, "
+                "fixed shifts, addition, and conditional sign negation"
+            ),
             "general_multipliers": 0,
         }
