@@ -103,3 +103,25 @@ Highlights:
 - Attention-clean 200k checkpoints were not saved; SCTM checkpoint binaries are
   intentionally kept on 210 and listed in the weight manifest instead of being
   committed to GitHub.
+
+## Fully discrete ViT and logic-gate audit (2026-07-15)
+
+The cumulative `vit_lgn/full_discrete/` branch now includes the scalable
+Wmag/A8 model, enhancement ablations, integer transaction backend, minimal
+shared 3x3 logic tree, and both scale launchers.  Completed 50k results and the
+current deployment boundary are consolidated in:
+
+- [`docs/full_discrete_logic_gate_report_20260715.md`](docs/full_discrete_logic_gate_report_20260715.md)
+- [`docs/tables/full_discrete_50k_results_20260715.csv`](docs/tables/full_discrete_50k_results_20260715.csv)
+- [`docs/tables/score_gap_50k_results_20260715.csv`](docs/tables/score_gap_50k_results_20260715.csv)
+- [`docs/tables/full_discrete_scale_probe_20260715.csv`](docs/tables/full_discrete_scale_probe_20260715.csv)
+- [`docs/repro/score_gap_50k_20260712/`](docs/repro/score_gap_50k_20260712/README.md): exact source snapshot and six raw results
+- [`docs/repro/full_discrete_scale_probe_20260715/`](docs/repro/full_discrete_scale_probe_20260715/README.md): executable bounded probe and raw JSON
+
+Current headline: the d6/e192 hard-discrete model reaches 75.30% on the fixed
+5,000-example CIFAR-10 validation split, but its main capacity is still dense
+Wmag7 shift/add projection.  The learned local logic-tree tables never left
+identity in 50k, and the independent whole-model integer/RTL executor is not
+yet complete.  The report deliberately separates a hard-discrete numerical
+model, a transaction-level integer specification, and a complete logic-gate
+executor.

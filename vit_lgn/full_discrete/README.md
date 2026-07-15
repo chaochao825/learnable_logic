@@ -32,8 +32,11 @@ constant comparisons `S >= dim * 2**(2*k-1)`.  Its deployed output keeps the
 A8 code and replaces the exponent with `-k`; it has no reciprocal ROM or
 per-element normalization multiply.  A frozen 50k checkpoint probe retained
 73.60% versus 74.68% for Q15 RMS, while deleting every norm collapsed to
-15.30%.  This is diagnostic evidence only: the paired from-scratch 50k queue
-must finish before Shift-RMS or no-norm is judged effective.
+15.30%.  The completed from-scratch 50k queue gives 75.30% for Q15 RMS,
+71.80% for Shift-RMS in both block and final positions, 74.60% for Shift-RMS
+blocks with no final norm, 70.10% for requant-only, and 70.64% for no norm.
+Thus block range conditioning remains necessary, while exponent-only
+Shift-RMS plus a repaired final calibration path remains promising.
 
 The training graph retains floating shadow parameters, AdamW state, and STE
 surrogates.  `export_logic_payload.py` removes those objects and exports only
@@ -82,5 +85,12 @@ The paired 50k protocol is `launch_logic_tree_pair_210.sh`.  It runs
 `local_layers=3`, `1`, and `0` from the same source and seed.  This separates a
 single local injection from repeated early-layer application and its matched
 control.  Every 5k validation also evaluates a temporary forced-`0xC` version
-and records hard LUT flips plus root-bit changes.  No accuracy or mechanism
-conclusion is valid before each row reaches 50,000 steps.
+and records hard LUT flips plus root-bit changes.  All three rows completed:
+the control reached 75.30%, one tree layer reached 75.76%, and three layers
+reached 58.28%.  Learned-hard and forced-`0xC` accuracies were identical,
+every hard LUT remained `0xC`, and every root-code change rate was zero.  The
+tree therefore added no deployed hard expression in this protocol; the
+one-layer difference is a training-surrogate effect or single-seed noise.
+
+The complete method/result/probe audit is
+[`docs/full_discrete_logic_gate_report_20260715.md`](../../docs/full_discrete_logic_gate_report_20260715.md).

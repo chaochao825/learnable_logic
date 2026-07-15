@@ -30,6 +30,12 @@ norm nearly preserves argmax accuracy but substantially worsens calibration,
 which is consistent with a bias-free classifier being approximately invariant
 to a positive scalar while its logit magnitude is not.
 
-Formal effectiveness decisions are deferred to `launch_logic_norm_queue_210.sh`;
-each queued configuration runs 50,000 steps with a paired control and identical
-post-construction data RNG reset.
+The formal `launch_logic_norm_queue_210.sh` experiments have now completed.
+From-scratch final validation accuracy is 75.30% for Wmag7/RMS, 71.80% for
+Shift-RMS in both block and final positions, 74.60% for Shift-RMS blocks with
+no final norm, 74.74% for RMS blocks with no final norm, 70.10% for
+requant-only, and 70.64% for no norm.  The frozen-checkpoint counterfactual
+above remains useful because it shows immediate sensitivity, while the formal
+queue measures how much training can adapt.  See
+[`docs/full_discrete_logic_gate_report_20260715.md`](../../docs/full_discrete_logic_gate_report_20260715.md)
+for the result hashes and interpretation.

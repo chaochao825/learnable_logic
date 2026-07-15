@@ -1,0 +1,5 @@
+# Reproduction artifacts carry SHA256 identifiers over their exact bytes.
+docs/repro/score_gap_50k_20260712/source_snapshot/** -text diff whitespace=cr-at-eol
+docs/repro/score_gap_50k_20260712/results/** -text diff whitespace=cr-at-eol
+docs/repro/full_discrete_scale_probe_20260715/probe_scale_checkpoint.py -text
+docs/repro/full_discrete_scale_probe_20260715/probe_result.json -text

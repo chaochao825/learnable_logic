@@ -1,10 +1,27 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Historical reproduction launcher for the standalone 68.06% d12/e384 run.
+# Do not execute it from the cumulative results branch: its protocol predates
+# the enhancement/backend/logic-tree commits and is pinned below.
+EXPECTED_COMMIT=2984167c3b32aa0b3d85962c3cf1cbf9b5dc49bb
 ROOT=${ROOT:-/home/wangmeiqi/learnable_logic_full_discrete_d12_20260713}
 DATA_ROOT=${DATA_ROOT:-/home/wangmeiqi/ViT-LGN_goal6plus_nobias_retry_20260630/data/cifar-10}
 PYTHON_BIN=${PYTHON_BIN:-python}
 GPU_INDEX=${GPU_INDEX:-0}
+
+assert_source_tree_frozen() {
+  local current_commit
+  current_commit=$(git -C "$ROOT" rev-parse HEAD)
+  if [[ "$current_commit" != "$EXPECTED_COMMIT" ]]; then
+    echo "Historical launcher requires commit $EXPECTED_COMMIT; got $current_commit" >&2
+    exit 2
+  fi
+  if [[ -n $(git -C "$ROOT" status --porcelain=v1 --untracked-files=all) ]]; then
+    echo "Historical launcher requires a completely clean source checkout" >&2
+    exit 2
+  fi
+}
 
 if [[ ! "$GPU_INDEX" =~ ^(0|[1-9][0-9]*)$ ]] || \
    ! nvidia-smi --id="$GPU_INDEX" --query-gpu=index --format=csv,noheader,nounits >/dev/null 2>&1; then
@@ -16,6 +33,7 @@ if ! git -C "$ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1 || \
   echo "Missing repository or CIFAR-10 data" >&2
   exit 2
 fi
+assert_source_tree_frozen
 
 OUTPUT_LOCK=/tmp/codex_lgn_vit_full_discrete_d12e384_seed42.lock
 GPU_LOCK=/tmp/codex_lgn_vit_50k_gpu${GPU_INDEX}.lock
@@ -35,6 +53,7 @@ while true; do
   sleep 60
 done
 
+assert_source_tree_frozen
 cd "$ROOT"
 export CUDA_VISIBLE_DEVICES="$GPU_INDEX"
 export CUBLAS_WORKSPACE_CONFIG=:4096:8
