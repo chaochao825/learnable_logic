@@ -17,6 +17,7 @@ from vit_lgn.full_discrete.train_cifar import (
     freeze_protocol_manifest,
     forced_projection_a,
     optimizer_parameter_groups,
+    optimizer_role_gradient_l2,
     protocol,
     source_hashes,
 )
@@ -125,6 +126,33 @@ class TrainProtocolTest(unittest.TestCase):
             {id(parameter) for parameter in model.parameters() if parameter.requires_grad},
         )
         self.assertEqual(len(grouped_parameters), len({id(p) for p in grouped_parameters}))
+
+    def test_optimizer_role_gradient_norms_are_measured_before_shared_clip(self) -> None:
+        model = EnhancedFullDiscreteViT(
+            image_size=8, patch_size=4, dim=8, depth=1, heads=2, topk=2,
+            mlp_ratio=2.0, weight_bits=4, activation_bits=8, qk_lanes=2,
+            global_mixer="parallel_lut_tree", global_lut_group_size=4,
+        )
+        optimizer = torch.optim.AdamW(
+            optimizer_parameter_groups(model, weight_decay=0.05), lr=1e-3
+        )
+        base = optimizer.param_groups[0]["params"][0]
+        lut = optimizer.param_groups[1]["params"][0]
+        base.grad = torch.full_like(base, 3.0)
+        lut.grad = torch.full_like(lut, 4.0)
+        observed = optimizer_role_gradient_l2(optimizer)
+        self.assertAlmostEqual(
+            observed["base_model"], 3.0 * base.numel() ** 0.5, places=5
+        )
+        self.assertAlmostEqual(
+            observed["global_lut_payload"], 4.0 * lut.numel() ** 0.5, places=4
+        )
+        global_norm = float(torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0))
+        self.assertAlmostEqual(
+            global_norm,
+            (observed["base_model"] ** 2 + observed["global_lut_payload"] ** 2) ** 0.5,
+            places=4,
+        )
 
 
 if __name__ == "__main__":

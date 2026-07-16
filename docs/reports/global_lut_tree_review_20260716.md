@@ -24,7 +24,7 @@ first launcher used a private GPU lock and could race the established 210
 queues.  It now holds a pair-specific duplicate guard and the shared
 `codex_lgn_vit_50k_gpuN` lock while waiting for three consecutive idle samples
 and while running both rows.  The final ordered training source-set hash is
-`0b5c9a9ad714612c3e55dbaec67415c8fe18ac8cec3e5e72c8fd671fcff9ef96`.
+`f0e552495671556d8777b39d8bc6de056822556dfd8a81df90dfd281dde1d8c9`.
 
 ## Adversarial findings fixed
 
@@ -38,6 +38,11 @@ and while running both rows.  The final ordered training source-set hash is
   and create spurious flips.  LUT payload parameters now use a zero-decay
   optimizer group; a partition test proves every trainable parameter appears
   exactly once.
+- Candidate evaluations record base-model and LUT-payload gradient L2 norms
+  separately before the shared global clip.  This exposes whether the 18.9M
+  d6/e192 table shadows suppress the base-network update.  The first queue was
+  stopped before step 1 after this review finding; the new run names preserve
+  that abandoned protocol manifest rather than overwriting it.
 - Hard-change statistics compare reduce, context and broadcast tables against
   their exact initialized integer payload at every validation point.  Accuracy
   without hard flips can therefore be rejected as a surrogate-only effect.
@@ -63,7 +68,7 @@ and while running both rows.  The final ordered training source-set hash is
   transaction component to 129 cycles/block.  Channel sharing is a storage
   property, not free read bandwidth.
 - These are ROM payload bytes, not a standard-cell gate count.
-- Full isolated schema-v4 suite on 434: 129/129 tests passed.
+- Full isolated schema-v4 suite on 434: 130/130 tests passed.
 - Both launchers pass `bash -n`; remote and local ordered source hashes match.
 
 The schema now makes the exponent selection and parallel/residual merge

@@ -293,6 +293,27 @@ def optimizer_parameter_groups(
     return groups
 
 
+def optimizer_role_gradient_l2(
+    optimizer: torch.optim.Optimizer,
+) -> dict[str, float]:
+    """Measure each optimizer role before the shared global clip is applied."""
+
+    result: dict[str, float] = {}
+    for index, group in enumerate(optimizer.param_groups):
+        role = str(group.get("parameter_role", f"group_{index}"))
+        if role in result:
+            raise ValueError(f"duplicate optimizer parameter role: {role}")
+        squared = None
+        for parameter in group["params"]:
+            gradient = parameter.grad
+            if gradient is None:
+                continue
+            value = gradient.detach().float().square().sum()
+            squared = value if squared is None else squared + value
+        result[role] = float(torch.sqrt(squared)) if squared is not None else 0.0
+    return result
+
+
 def atomic_save(path: Path, payload: object) -> None:
     temporary = path.with_suffix(path.suffix + ".tmp")
     torch.save(payload, temporary)
@@ -411,9 +432,12 @@ def main() -> None:
         optimizer.zero_grad(set_to_none=True)
         loss = criterion(model(images), labels)
         loss.backward()
-        unclipped_gradient = torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
         completed = step + 1
         evaluation_due = completed % args.eval_every == 0 or completed == args.steps
+        role_gradient = (
+            optimizer_role_gradient_l2(optimizer) if evaluation_due else {}
+        )
+        unclipped_gradient = torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
         tree_gradient = logic_tree_gradient_l2(model) if evaluation_due else 0.0
         optimizer.step()
         scheduler.step()
@@ -454,6 +478,10 @@ def main() -> None:
                        training_interval_seconds / max(interval_steps, 1)
                    ),
                    "peak_allocated_gib": peak_allocated_gib}
+            row.update({
+                f"preclip_{role}_gradient_l2": value
+                for role, value in role_gradient.items()
+            })
             history.append(row)
             print(json.dumps(row, sort_keys=True), flush=True)
         if completed % args.checkpoint_every == 0 or completed == args.steps:

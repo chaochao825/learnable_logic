@@ -7,7 +7,7 @@ PYTHON_BIN=${PYTHON_BIN:-python}
 GPU_INDEX=${GPU_INDEX:-2}
 GPU_POLL_SECONDS=${GPU_POLL_SECONDS:-60}
 GPU_IDLE_SAMPLES=${GPU_IDLE_SAMPLES:-3}
-EXPECTED_SOURCE_SET_SHA256=0b5c9a9ad714612c3e55dbaec67415c8fe18ac8cec3e5e72c8fd671fcff9ef96
+EXPECTED_SOURCE_SET_SHA256=f0e552495671556d8777b39d8bc6de056822556dfd8a81df90dfd281dde1d8c9
 
 SOURCE_FILES=(
   model.py
@@ -103,8 +103,8 @@ export CUBLAS_WORKSPACE_CONFIG=:4096:8
 printf '%s\n' "$EXPECTED_SOURCE_SET_SHA256" >global_lut_smoke_source_set_sha256.txt
 
 names=(
-  glut_attention_local6_d6e192_seed42_1k
-  glut_parallel_tree_local6_d6e192_seed42_1k
+  glut_attention_local6_d6e192_seed42_gradprobe_1k
+  glut_parallel_tree_local6_d6e192_seed42_gradprobe_1k
 )
 mixers=(attention parallel_lut_tree)
 
