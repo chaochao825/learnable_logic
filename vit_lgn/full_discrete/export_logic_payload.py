@@ -282,6 +282,15 @@ def _hadamard_payload(
         "normalization_right_shift": module.normalization_shift,
         "branch_right_shift": module.branch_shift,
         "rounding": "nearest_half_way_magnitude_away_from_zero",
+        "input_code_signed_bits": module.activation_bits,
+        "first_butterfly_signed_bits": module.first_butterfly_signed_bits,
+        "second_butterfly_signed_bits": module.second_butterfly_signed_bits,
+        "normalized_global_signed_bits": module.normalized_global_signed_bits,
+        "patch_pre_branch_signed_bits": module.patch_pre_branch_signed_bits,
+        "branch_output_accumulator_signed_bits": (
+            module.branch_output_accumulator_signed_bits
+        ),
+        "output_boundary": "wide_branch_then_enclosing_residual_a8_requantizer",
         "sign_mask_int8": module.sign_mask.detach().cpu().to(torch.int8),
         "butterfly_stages_per_transform": module.normalization_shift,
         "transform_count": 2,
@@ -829,6 +838,10 @@ def validate_logic_payload(payload: Mapping[str, object]) -> None:
                 "name", "operator", "patch_tokens", "block_index",
                 "activation_bits", "group_size", "runtime_scale_groups",
                 "normalization_right_shift", "branch_right_shift", "rounding",
+                "input_code_signed_bits", "first_butterfly_signed_bits",
+                "second_butterfly_signed_bits", "normalized_global_signed_bits",
+                "patch_pre_branch_signed_bits",
+                "branch_output_accumulator_signed_bits", "output_boundary",
                 "sign_mask_int8", "butterfly_stages_per_transform",
                 "transform_count", "patch_add_sub_per_channel", "cls_path",
                 "learned_parameters", "general_multipliers",
@@ -840,6 +853,15 @@ def validate_logic_payload(payload: Mapping[str, object]) -> None:
                 or patch_tokens < 2 or patch_tokens & (patch_tokens - 1)):
             raise ValueError(f"global_mixers[{index}] operator/topology mismatch")
         stages = patch_tokens.bit_length() - 1
+        activation_bits = int(item["activation_bits"])
+        qmax = (1 << (activation_bits - 1)) - 1
+        maximum_pre_branch = (patch_tokens + 1) * qmax
+        branch_shift = int(item["branch_right_shift"])
+        maximum_branch_output = (
+            (maximum_pre_branch + (1 << (branch_shift - 1))) >> branch_shift
+            if branch_shift
+            else maximum_pre_branch
+        )
         if (
             int(item["normalization_right_shift"]) != stages
             or int(item["butterfly_stages_per_transform"]) != stages
@@ -847,6 +869,16 @@ def validate_logic_payload(payload: Mapping[str, object]) -> None:
             or int(item["patch_add_sub_per_channel"]) != 2 * patch_tokens * stages
             or int(item["learned_parameters"]) != 0
             or int(item["general_multipliers"]) != 0
+            or int(item["input_code_signed_bits"]) != activation_bits
+            or int(item["first_butterfly_signed_bits"]) != activation_bits + stages
+            or int(item["second_butterfly_signed_bits"]) != activation_bits + 2 * stages
+            or int(item["normalized_global_signed_bits"]) != activation_bits + stages
+            or int(item["patch_pre_branch_signed_bits"])
+            != maximum_pre_branch.bit_length() + 1
+            or int(item["branch_output_accumulator_signed_bits"])
+            != maximum_branch_output.bit_length() + 1
+            or item["output_boundary"]
+            != "wide_branch_then_enclosing_residual_a8_requantizer"
         ):
             raise ValueError(f"global_mixers[{index}] arithmetic ABI mismatch")
         sign_mask = item["sign_mask_int8"]

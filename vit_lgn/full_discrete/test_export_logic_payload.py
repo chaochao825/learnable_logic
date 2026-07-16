@@ -309,6 +309,11 @@ class LogicPayloadExportTest(unittest.TestCase):
             self.assertEqual(mixer["block_index"], index)
             self.assertEqual(mixer["normalization_right_shift"], 4)
             self.assertEqual(mixer["patch_add_sub_per_channel"], 128)
+            self.assertEqual(mixer["input_code_signed_bits"], 8)
+            self.assertEqual(mixer["first_butterfly_signed_bits"], 12)
+            self.assertEqual(mixer["second_butterfly_signed_bits"], 16)
+            self.assertEqual(mixer["patch_pre_branch_signed_bits"], 13)
+            self.assertEqual(mixer["branch_output_accumulator_signed_bits"], 11)
             self.assertEqual(tuple(mixer["sign_mask_int8"].shape), (16,))
             self.assertEqual(set(mixer["sign_mask_int8"].tolist()), {-1, 1})
         validate_logic_payload(payload)
@@ -470,7 +475,7 @@ class LogicPayloadExportTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "ROM payload"):
             validate_logic_payload(payload)
 
-    def test_schema_v1_rejects_non_a8_product_operands(self) -> None:
+    def test_schema_rejects_non_a8_product_operands(self) -> None:
         model = FullDiscreteViT(
             dim=24, depth=1, heads=3, mlp_ratio=2.0, activation_bits=9
         ).eval()

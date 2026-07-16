@@ -61,6 +61,13 @@ class FixedHadamardGlobalMixerTest(unittest.TestCase):
         contract = mixer.deployment_contract()
         self.assertEqual(contract["patch_add_sub_per_channel"], 768)
         self.assertEqual(contract["runtime_scale_groups"], 6)
+        self.assertEqual(contract["input_code_signed_bits"], 8)
+        self.assertEqual(contract["first_butterfly_signed_bits"], 14)
+        self.assertEqual(contract["second_butterfly_signed_bits"], 20)
+        self.assertEqual(contract["normalized_global_signed_bits"], 14)
+        self.assertEqual(contract["patch_pre_branch_signed_bits"], 15)
+        self.assertEqual(contract["branch_output_accumulator_signed_bits"], 13)
+        self.assertIn("requantizes to A8", contract["output_boundary"])
         self.assertEqual(contract["general_multipliers"], 0)
         self.assertEqual(contract["learned_parameters"], 0)
 

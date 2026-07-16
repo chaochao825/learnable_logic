@@ -94,6 +94,11 @@ channel, 64 sign controls, a `>>6` normalization and no multiplier.  A common
 power-of-two A8 scale is shared by each 32-channel group.  The training value
 is exactly the integer reference; a floating butterfly only supplies the STE
 gradient.  The exporter stores the sign masks and structural ABI as schema v2.
+The branch input is A8, but its butterfly and branch values use explicitly
+bounded wide accumulators (14/20 bits through the two 64-token transforms and
+13 bits after `branch_shift=2` in the worst case).  The enclosing block, not
+the mixer itself, performs the residual merge and requantizes that result to
+A8.  This boundary is now part of the exported ABI.
 
 The 1k-step paired probes show that hardware simplicity did not imply useful
 visual content routing:
@@ -122,6 +127,14 @@ At 5k the candidate reaches 59.58%, versus 55.54% for the historical
 d12/e384-h6 row and 59.52% for d12/e192.  This is encouraging intermediate
 evidence only.  A method conclusion requires the 50k result and the h12
 no-local control.
+
+The active run is frozen to source commit `54229c1`, ordered source-set hash
+`9e8af5d0bd8a42e3b3e913d6a94cbdb9f654c14f005c4db5e6697bb0c6997c94`
+and protocol hash
+`fe9b968f3be661a3ed8cbf77649978774ba525afddf725fe79c127523ec37198`.
+Post-launch exporter/ABI review fixes are intentionally separate from this
+training snapshot.  The review record is
+[`docs/reports/logic_hadamard_review_20260716.md`](reports/logic_hadamard_review_20260716.md).
 
 ## Hardware interpretation
 
@@ -159,4 +172,3 @@ bilinear surrogate can train table entries, but hard-forward lookup and input
 address gradients must be tested carefully.  This should be pursued only after
 the current h12/local4 50k pair establishes how much accuracy can be recovered
 without replacing content-dependent routing.
-

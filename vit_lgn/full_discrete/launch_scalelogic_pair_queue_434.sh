@@ -35,4 +35,3 @@ code=$?
 set -e
 printf '%s\n' "$code" >"$CONTROL_EXIT"
 exit "$code"
-
