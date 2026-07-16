@@ -138,6 +138,12 @@ contention increased the second interval from 0.412 to 0.550 seconds/step; the
 process and checkpoint remain healthy.  Exact live rows are in
 [`docs/tables/scalelogic_50k_live_20260716.csv`](tables/scalelogic_50k_live_20260716.csv).
 
+The curve continues to 68.30% at 15k and 69.60% at 20k.  The third interval
+slowed to 0.780 seconds/step under sharing, then recovered to 0.414 seconds/step
+without a memory increase (peak remains 11.756 GiB).  This supports run health,
+not final method efficacy: only the 50k local4/local0 pair can attribute the
+gain to the spatial branch rather than the corrected 12-head score width.
+
 The active run is frozen to source commit `54229c1`, ordered source-set hash
 `9e8af5d0bd8a42e3b3e913d6a94cbdb9f654c14f005c4db5e6697bb0c6997c94`
 and protocol hash
