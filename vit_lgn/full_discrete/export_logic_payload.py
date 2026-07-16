@@ -53,7 +53,7 @@ from .shiftadd import ShiftAddLinear, _power_of_two_scale
 
 
 SCHEMA_NAME = "learnable-logic-full-discrete-inference"
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 5
 SCHEMA_TOP_LEVEL_KEYS = (
     "schema",
     "source",
@@ -355,6 +355,11 @@ def _global_lut_tree_payload(
                 "elementwise_min(content_per_token_exponent,lut_per_group_exponent)"
             ),
             "intermediate_requantization": "none",
+            "accumulator_width_rule": "8 + exponent_span + 1 signed bits",
+            "overflow_policy": (
+                "no_wrap; widen_before_add; saturation_only_at_outer_A8_requantizer"
+            ),
+            "fixed_width_status": "requires_system_exponent_range_contract",
         },
         "outer_residual_boundary": {
             "residual_branch": f"{parent_block}.residual_input",
@@ -367,6 +372,11 @@ def _global_lut_tree_payload(
             "scale_floor_exponent": -24,
             "code_rounding": "nearest_ties_to_even",
             "saturation": "only_at_final_A8_requantization",
+            "accumulator_width_rule": "8 + exponent_span + 2 signed bits",
+            "overflow_policy": (
+                "no_wrap; widen_before_add; saturation_only_at_final_A8_requantizer"
+            ),
+            "fixed_width_status": "requires_system_exponent_range_contract",
         },
         "address_bias": 128,
         "address_axis_bits": 8,
@@ -455,6 +465,8 @@ def _model_topology(model: FullDiscreteViT) -> dict[str, object]:
     )
     patch_features = model.patch_embed.projection.in_features
     patch_area = model.patch_embed.patch_size * model.patch_embed.patch_size
+    enhancement_config = getattr(model, "enhancement_config", {})
+    global_mixer_mode = str(enhancement_config.get("global_mixer", "attention"))
     return {
         "model_type": type(model).__name__,
         "patch_size": model.patch_embed.patch_size,
@@ -469,6 +481,7 @@ def _model_topology(model: FullDiscreteViT) -> dict[str, object]:
         "qk_lanes": int(first_attention.qk_lanes) if first_attention is not None else 0,
         "classes": model.head.out_features,
         "activation_bits": model.activation_bits,
+        "global_mixer_mode": global_mixer_mode,
         "norm_kind": model.norm_kind,
         "final_norm_kind": model.final_norm_kind,
         "block_order": [f"blocks.{index}" for index in range(len(model.blocks))],
@@ -691,7 +704,7 @@ def export_logic_payload(
         raise TypeError("model must be FullDiscreteViT or EnhancedFullDiscreteViT")
     if model.activation_bits != 8:
         raise ValueError(
-            "schema v4 defines an A8-by-U4 product ROM; activation_bits must be 8"
+            "schema v5 defines an A8-by-U4 product ROM; activation_bits must be 8"
         )
     if requantize_magnitude_bits is not None and not (
         1 <= requantize_magnitude_bits <= 8
@@ -879,7 +892,7 @@ def validate_logic_payload(payload: Mapping[str, object]) -> None:
         payload["topology"],
         (
             "patch_tokens", "sequence_tokens", "embedding_dim", "depth",
-            "activation_bits", "block_order",
+            "activation_bits", "global_mixer_mode", "block_order",
         ),
         "topology",
     )
@@ -887,16 +900,20 @@ def validate_logic_payload(payload: Mapping[str, object]) -> None:
     topology_sequence_tokens = int(topology["sequence_tokens"])
     topology_dim = int(topology["embedding_dim"])
     topology_depth = int(topology["depth"])
+    global_mixer_mode = str(topology["global_mixer_mode"])
     if (
         topology_patch_tokens < 1
         or topology_sequence_tokens != topology_patch_tokens + 1
         or topology_dim < 1
         or topology_depth < 1
         or int(topology["activation_bits"]) != 8
+        or global_mixer_mode not in {
+            "attention", "hadamard", "hybrid", "parallel", "parallel_lut_tree"
+        }
         or topology["block_order"]
         != [f"blocks.{index}" for index in range(topology_depth)]
     ):
-        raise ValueError("topology dimensions/order do not match schema v4")
+        raise ValueError("topology dimensions/order do not match schema v5")
     parameters = require_keys(payload["parameters"], ("cls_token", "position"), "parameters")
     for parameter_name in ("cls_token", "position"):
         require_keys(
@@ -940,6 +957,7 @@ def validate_logic_payload(payload: Mapping[str, object]) -> None:
             raise ValueError(f"shift_add_layers[{index}].scale exponent shape mismatch")
     if not isinstance(payload["attention"], list):
         raise ValueError("attention must be a list")
+    attention_names: set[str] = set()
     for index, attention in enumerate(payload["attention"]):
         item = require_keys(
             attention,
@@ -948,6 +966,10 @@ def validate_logic_payload(payload: Mapping[str, object]) -> None:
              "threshold_fraction_denominator_shift", "gap"),
             f"attention[{index}]",
         )
+        attention_name = str(item["name"])
+        if attention_name in attention_names:
+            raise ValueError(f"attention[{index}] duplicate name")
+        attention_names.add(attention_name)
         if item["topk_tie_rule"] != "score_descending_then_key_index_ascending":
             raise ValueError(f"attention[{index}] Top-K tie ABI mismatch")
         numerator = item["threshold_fraction_numerator"]
@@ -1061,6 +1083,7 @@ def validate_logic_payload(payload: Mapping[str, object]) -> None:
                 or item["parent_block"] != f"blocks.{block_index}"
                 or item["parent_parallel_wrapper"] != f"blocks.{block_index}.attn"
                 or item["content_branch"] != f"blocks.{block_index}.attn.content"
+                or item["content_branch"] not in attention_names
             ):
                 raise ValueError(f"{path} cross-topology linkage mismatch")
             global_lut_block_indices.add(block_index)
@@ -1138,6 +1161,8 @@ def validate_logic_payload(payload: Mapping[str, object]) -> None:
                 (
                     "operation", "content_branch", "lut_branch",
                     "common_exponent", "intermediate_requantization",
+                    "accumulator_width_rule", "overflow_policy",
+                    "fixed_width_status",
                 ),
                 f"{path}.parallel_merge",
             )
@@ -1150,6 +1175,15 @@ def validate_logic_payload(payload: Mapping[str, object]) -> None:
                 or parallel_merge["common_exponent"]
                 != "elementwise_min(content_per_token_exponent,lut_per_group_exponent)"
                 or parallel_merge["intermediate_requantization"] != "none"
+                or parallel_merge["accumulator_width_rule"]
+                != "8 + exponent_span + 1 signed bits"
+                or parallel_merge["overflow_policy"]
+                != (
+                    "no_wrap; widen_before_add; "
+                    "saturation_only_at_outer_A8_requantizer"
+                )
+                or parallel_merge["fixed_width_status"]
+                != "requires_system_exponent_range_contract"
             ):
                 raise ValueError(f"{path} parallel merge ABI mismatch")
             residual = require_keys(
@@ -1158,7 +1192,8 @@ def validate_logic_payload(payload: Mapping[str, object]) -> None:
                     "residual_branch", "operation", "output_requantizer",
                     "maximum_reduction_axis", "output_scale_granularity",
                     "signed_code_min", "signed_code_max", "scale_floor_exponent",
-                    "code_rounding", "saturation",
+                    "code_rounding", "saturation", "accumulator_width_rule",
+                    "overflow_policy", "fixed_width_status",
                 ),
                 f"{path}.outer_residual_boundary",
             )
@@ -1175,6 +1210,15 @@ def validate_logic_payload(payload: Mapping[str, object]) -> None:
                 or int(residual["scale_floor_exponent"]) != -24
                 or residual["code_rounding"] != "nearest_ties_to_even"
                 or residual["saturation"] != "only_at_final_A8_requantization"
+                or residual["accumulator_width_rule"]
+                != "8 + exponent_span + 2 signed bits"
+                or residual["overflow_policy"]
+                != (
+                    "no_wrap; widen_before_add; "
+                    "saturation_only_at_final_A8_requantizer"
+                )
+                or residual["fixed_width_status"]
+                != "requires_system_exponent_range_contract"
             ):
                 raise ValueError(f"{path} outer residual ABI mismatch")
             expected_shapes = {
@@ -1192,12 +1236,27 @@ def validate_logic_payload(payload: Mapping[str, object]) -> None:
                     raise ValueError(f"{path}.{table_name} value range mismatch")
         else:
             raise ValueError(f"{path} unsupported operator")
-    if global_lut_block_indices and global_lut_block_indices != set(
-        range(topology_depth)
-    ):
+    expected_lut_blocks = (
+        set(range(topology_depth))
+        if global_mixer_mode == "parallel_lut_tree"
+        else set()
+    )
+    if global_lut_block_indices != expected_lut_blocks:
         raise ValueError(
-            "parallel global LUT topology must export exactly one mixer per block"
+            "global mixer mode and per-block LUT payloads are inconsistent"
         )
+    if global_mixer_mode == "parallel_lut_tree":
+        expected_content = {
+            f"blocks.{index}.attn.content" for index in range(topology_depth)
+        }
+        if (
+            attention_names != expected_content
+            or len(payload["global_mixers"]) != topology_depth
+        ):
+            raise ValueError(
+                "parallel global LUT topology must bind one content router and "
+                "one LUT tree per block"
+            )
     if not isinstance(payload["rms_norms"], list):
         raise ValueError("rms_norms must be a list")
     for index, rms_norm in enumerate(payload["rms_norms"]):

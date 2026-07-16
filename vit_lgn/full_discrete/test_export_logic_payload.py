@@ -386,7 +386,7 @@ class LogicPayloadExportTest(unittest.TestCase):
             global_lut_branch_shift=2,
         ).eval()
         payload = export_logic_payload(model)
-        self.assertEqual(payload["schema"]["version"], 4)
+        self.assertEqual(payload["schema"]["version"], 5)
         self.assertEqual(len(payload["attention"]), 1)
         self.assertEqual(len(payload["global_mixers"]), 1)
         mixer = payload["global_mixers"][0]
@@ -454,6 +454,18 @@ class LogicPayloadExportTest(unittest.TestCase):
             "intermediate_requantization"
         ] = "A8"
         with self.assertRaisesRegex(ValueError, "parallel merge"):
+            validate_logic_payload(corrupted)
+        corrupted = export_logic_payload(model)
+        corrupted["global_mixers"].clear()
+        with self.assertRaisesRegex(ValueError, "mode and per-block LUT"):
+            validate_logic_payload(corrupted)
+        corrupted = export_logic_payload(model)
+        corrupted["attention"].clear()
+        with self.assertRaisesRegex(ValueError, "cross-topology"):
+            validate_logic_payload(corrupted)
+        corrupted = export_logic_payload(model)
+        corrupted["attention"][0]["name"] = "blocks.0.attn.renamed"
+        with self.assertRaisesRegex(ValueError, "cross-topology"):
             validate_logic_payload(corrupted)
 
         args = {

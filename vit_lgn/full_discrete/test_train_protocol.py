@@ -154,6 +154,22 @@ class TrainProtocolTest(unittest.TestCase):
             places=4,
         )
 
+    def test_global_lut_pair_lock_precedes_shared_exit_sentinel(self) -> None:
+        source = Path(__file__).with_name(
+            "launch_global_lut_smoke_pair_210.sh"
+        ).read_text(encoding="utf-8")
+        pair_lock = source.index(
+            'exec 8>"/tmp/codex_global_lut_smoke_pair_gpu${GPU_INDEX}.lock"'
+        )
+        duplicate_guard = source.index("flock -n 8", pair_lock)
+        exit_sentinel = source.index('queue_exit="$ROOT/global_lut_smoke_pair.exit"')
+        shared_lock = source.index(
+            'exec 9>"/tmp/codex_lgn_vit_50k_gpu${GPU_INDEX}.lock"'
+        )
+        self.assertLess(pair_lock, duplicate_guard)
+        self.assertLess(duplicate_guard, exit_sentinel)
+        self.assertLess(exit_sentinel, shared_lock)
+
 
 if __name__ == "__main__":
     unittest.main()

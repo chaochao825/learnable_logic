@@ -46,12 +46,13 @@ and while running both rows.  The final ordered training source-set hash is
 - Hard-change statistics compare reduce, context and broadcast tables against
   their exact initialized integer payload at every validation point.  Accuracy
   without hard flips can therefore be rejected as a surrogate-only effect.
-- Schema v4 exports all int8 tables, validates shapes/ranges/ROM-bit counts and
+- Schema v5 exports all int8 tables, validates shapes/ranges/ROM-bit counts and
   reconstructs the model strictly from a checkpoint.  It additionally freezes
   the group input requantizer, signed branch-shift rounding, content/LUT
   exponent-aligned add, enclosing three-way residual add and final A8
   requantizer.  Block, token, group and embedding dimensions are linked back to
-  the main topology; corruption tests fail closed.  No FP32 shadow, dither or
+  the main topology.  Expected mixer mode also forces one content router and
+  one LUT tree per block; deleting or renaming either fails closed.  No FP32 shadow, dither or
   optimizer state enters the deployment payload.
 - Hard lookup inputs now fail on signed-A8 overflow instead of silently
   clamping an invalid independent-executor transaction.
@@ -68,7 +69,7 @@ and while running both rows.  The final ordered training source-set hash is
   transaction component to 129 cycles/block.  Channel sharing is a storage
   property, not free read bandwidth.
 - These are ROM payload bytes, not a standard-cell gate count.
-- Full isolated schema-v4 suite on 434: 130/130 tests passed.
+- Full isolated schema-v5 suite on 434: 131/131 tests passed.
 - Both launchers pass `bash -n`; remote and local ordered source hashes match.
 
 The schema now makes the exponent selection and parallel/residual merge
@@ -77,6 +78,11 @@ self-describing, but the PyTorch reference still transports exact
 no floating inference state; it also explicitly declares that a packed
 C++/CUDA/RTL executor is not included.  Thus this is a bit-exact transaction
 specification, not yet a cycle-accurate whole-model hardware implementation.
+The exponent-aligned add explicitly forbids wrap and requires
+`8 + exponent_span + ceil(log2(branches))` signed bits.  Because the current
+system contract has only a minimum exponent and no maximum, a fixed-width RTL
+implementation still needs a maximum exponent range or a defined saturation
+policy.
 
 The mechanism is not promoted to a 50k method until its matched 1k row beats
 the attention-only control and shows nonzero deployed hard-table changes.

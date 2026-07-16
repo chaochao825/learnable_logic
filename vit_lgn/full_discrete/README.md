@@ -137,13 +137,17 @@ forward value remains the exact hard lookup.  At d12/e384, one block contains
 96 ROMs, 6,291,456 learned A8 entries (6 MiB), and 12 blocks contain 72 MiB of
 hard table payload.  These bytes are not reported as standard-cell gate count.
 
-The current exporter is schema v4 and serializes every int8 reduce/context/
+The current exporter is schema v5 and serializes every int8 reduce/context/
 broadcast table together with the input group-requantizer, signed branch shift,
 content/LUT exponent alignment, and enclosing residual A8 requantization.  It
-cross-checks group, token and block linkage against the model topology.  The
+cross-checks group, token, block, expected mixer mode, and content-router
+linkage against the model topology.  The
 contract reports 49,536 ROM reads per d12/e384 block and 4,128 cycles when
 groups are parallel but each active ROM is single-ported; 32 ports per active
 table reduce that component to 129 cycles.  Sharing the table payload therefore
 does not imply free throughput.  This branch is evaluated in parallel with hard
 Top-K rather than replacing content routing, because the fixed-mixer ablation
 showed that a global path without content dependence is insufficient.
+Exponent-aligned adders must use `8 + exponent_span + ceil(log2(branches))`
+signed bits with no wrap.  A fixed-width implementation therefore still needs
+a system-level maximum exponent range or an explicit saturation contract.

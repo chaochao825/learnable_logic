@@ -47,15 +47,15 @@ if [[ "$observed_source" != "$EXPECTED_SOURCE_SET_SHA256" ]]; then
   exit 2
 fi
 
-queue_exit="$ROOT/global_lut_smoke_pair.exit"
-printf '%s\n' running >"$queue_exit"
-trap 'status=$?; printf "%s\n" "$status" >"$queue_exit"' EXIT
-
 exec 8>"/tmp/codex_global_lut_smoke_pair_gpu${GPU_INDEX}.lock"
 if ! flock -n 8; then
   echo "Global LUT smoke pair is already queued or running" >&2
   exit 3
 fi
+
+queue_exit="$ROOT/global_lut_smoke_pair.exit"
+printf '%s\n' running >"$queue_exit"
+trap 'status=$?; printf "%s\n" "$status" >"$queue_exit"' EXIT
 
 # Serialize with every other LGN-ViT queue on this GPU.  The pair-specific
 # lock above prevents duplicate submissions; this shared lock prevents a
