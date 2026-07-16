@@ -139,6 +139,7 @@ a useful negative hardware ablation rather than the primary accuracy path.
 - [`docs/tables/logic_hadamard_smoke_20260716.csv`](docs/tables/logic_hadamard_smoke_20260716.csv)
 - [`docs/reports/logic_hadamard_review_20260716.md`](docs/reports/logic_hadamard_review_20260716.md)
 - [`docs/reports/global_lut_tree_review_20260716.md`](docs/reports/global_lut_tree_review_20260716.md)
+- [`docs/tables/global_lut_smoke_20260716.csv`](docs/tables/global_lut_smoke_20260716.csv)
 - [`docs/tables/scalelogic_50k_live_20260716.csv`](docs/tables/scalelogic_50k_live_20260716.csv)
 
 The first formal 5k point is recorded only as an intermediate diagnostic.  A

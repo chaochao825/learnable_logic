@@ -165,9 +165,10 @@ The hard operator set is:
 - a comparator/MUX for the hard FFN gate.
 
 Training may use FP32 shadows, AdamW and sigmoid STEs.  None of those belong in
-the hardened payload.  Remaining deployment work is exponent-aligned residual
-addition, the selected-V divider/LUT, packed kernels and whole-model bit-exact
-C++/RTL validation.
+the hardened payload.  Schema v5 now specifies exponent-aligned residual
+addition, but fixed-width hardware still needs a maximum exponent range or
+saturation rule.  Other remaining work is the selected-V divider/LUT, packed
+kernels and whole-model bit-exact C++/RTL validation.
 
 ## Implemented nonlinear global option
 
@@ -194,7 +195,11 @@ gate count.
 Hard forward has an independent scalar oracle and exports every int8 table.
 Training uses four-entry bilinear interpolation only as a surrogate; the
 returned value is the exact hard lookup.  It is added in parallel with hard
-Top-K, not used as a replacement.  A matched 1k probe must beat the attention
-control before this mechanism is admitted to a 50k queue.
+Top-K, not used as a replacement.  The matched 1k gate is negative: 45.58%
+versus 48.80% for attention alone, despite 42,953 deployed table changes.
+Its LUT gradient norm is only 0.00372 versus 6.222 for the base network, so the
+loss is not caused by the shared gradient clip.  The mechanism is therefore
+rejected from the 50k queue; raw pair-ROM capacity is not sample-efficient
+global capacity under this protocol.
 The implementation review is
 [`docs/reports/global_lut_tree_review_20260716.md`](reports/global_lut_tree_review_20260716.md).

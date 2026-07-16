@@ -84,5 +84,31 @@ system contract has only a minimum exponent and no maximum, a fixed-width RTL
 implementation still needs a maximum exponent range or a defined saturation
 policy.
 
-The mechanism is not promoted to a 50k method until its matched 1k row beats
-the attention-only control and shows nonzero deployed hard-table changes.
+## Matched 1k decision
+
+The frozen paired run has now completed:
+
+| method | 500-step acc. | 1k acc. | parameters | GiB | sec/step at 1k |
+|---|---:|---:|---:|---:|---:|
+| hard attention control | 40.70% | **48.80%** | 3.57M | 3.18 | 0.165 |
+| attention + A8 global LUT tree | 36.46% | 45.58% | 22.45M | 4.48 | 0.345 |
+
+The LUT tree misses the promotion gate by 3.22 percentage points and is not
+scheduled for 50k.  This is not a frozen-hard-function failure: 42,953 of
+18,874,368 deployed table entries changed by step 1k.  Nor is it a global-clip
+artifact: the LUT pre-clip gradient norm is 0.00372 versus 6.222 for the base
+model (about 0.06%).  The added branch also doubles reference training time and
+adds 1.31 GiB peak allocation.
+
+The flip distribution is highly concentrated: blocks 0--1 account for 34,445
+of 42,953 changes (80.2%), while the four deeper trees together change only
+8,508 entries.  A 65,536-entry pair ROM fragments the training signal over an
+enormous address space; increasing raw table capacity therefore increases
+nominal expressivity without providing useful sample-efficient capacity.  Its
+initial average/root-broadcast behavior also injects a global low-pass bias,
+which is harmful beside the already content-selective Top-K path.
+
+The practical conclusion is to retain hard content routing and use LUTs for
+well-covered scalar functions or small factorized corrections, rather than a
+full A8-by-A8 ROM at every stage/group/block.  Exact rows and hashes are in
+[`docs/tables/global_lut_smoke_20260716.csv`](../tables/global_lut_smoke_20260716.csv).

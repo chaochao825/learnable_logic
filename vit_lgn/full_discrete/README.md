@@ -151,3 +151,10 @@ showed that a global path without content dependence is insufficient.
 Exponent-aligned adders must use `8 + exponent_span + ceil(log2(branches))`
 signed bits with no wrap.  A fixed-width implementation therefore still needs
 a system-level maximum exponent range or an explicit saturation contract.
+
+The matched d6/e192 1k gate rejects this branch for long training: 45.58%
+versus 48.80% for attention alone.  It changes 42,953 hard entries, so the
+negative result is not a frozen-table artifact; its LUT gradient norm is only
+0.00372 versus 6.222 for the base model, ruling out global-gradient clipping as
+the cause.  The full A8-by-A8 address space is expressive but too sparsely
+covered to be sample-efficient.
