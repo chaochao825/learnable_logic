@@ -297,7 +297,7 @@ class LogicPayloadExportTest(unittest.TestCase):
             local_layers=1,
         ).eval()
         payload = export_logic_payload(model)
-        self.assertEqual(payload["schema"]["version"], 2)
+        self.assertEqual(payload["schema"]["version"], SCHEMA_VERSION)
         self.assertEqual(payload["attention"], [])
         self.assertEqual(len(payload["global_mixers"]), 2)
         for index, mixer in enumerate(payload["global_mixers"]):
@@ -368,6 +368,83 @@ class LogicPayloadExportTest(unittest.TestCase):
         self.assertEqual(payload["topology"]["topk"], 4)
         self.assertEqual(payload["topology"]["qk_lanes"], 7)
         validate_logic_payload(payload)
+
+    def test_global_lut_tree_exports_all_learned_integer_roms(self) -> None:
+        model = EnhancedFullDiscreteViT(
+            image_size=8,
+            patch_size=4,
+            dim=8,
+            depth=1,
+            heads=2,
+            topk=2,
+            mlp_ratio=2.0,
+            weight_bits=7,
+            activation_bits=8,
+            qk_lanes=2,
+            global_mixer="parallel_lut_tree",
+            global_lut_group_size=4,
+            global_lut_branch_shift=2,
+        ).eval()
+        payload = export_logic_payload(model)
+        self.assertEqual(payload["schema"]["version"], 3)
+        self.assertEqual(len(payload["attention"]), 1)
+        self.assertEqual(len(payload["global_mixers"]), 1)
+        mixer = payload["global_mixers"][0]
+        self.assertEqual(
+            mixer["operator"], "group_shared_a8_pair_lut_global_tree"
+        )
+        self.assertEqual(mixer["reduction_stages"], 2)
+        self.assertEqual(mixer["runtime_scale_groups"], 2)
+        self.assertEqual(mixer["tables_per_block"], 8)
+        self.assertEqual(mixer["hard_payload_bits"], 4_194_304)
+        self.assertEqual(tuple(mixer["reduce_table_int8"].shape), (2, 2, 256, 256))
+        self.assertEqual(tuple(mixer["context_table_int8"].shape), (2, 256, 256))
+        self.assertEqual(tuple(mixer["broadcast_table_int8"].shape), (2, 256, 256))
+        self.assertTrue(all(
+            table.dtype == torch.int8
+            for table in (
+                mixer["reduce_table_int8"],
+                mixer["context_table_int8"],
+                mixer["broadcast_table_int8"],
+            )
+        ))
+        validate_logic_payload(payload)
+
+        corrupted = export_logic_payload(model)
+        corrupted["global_mixers"][0]["broadcast_table_int8"][0, 0, 0] = -128
+        with self.assertRaisesRegex(ValueError, "value range"):
+            validate_logic_payload(corrupted)
+
+        args = {
+            "image_size": 8, "patch_size": 4,
+            "dim": 8, "depth": 1, "heads": 2, "topk": 2,
+            "mlp_ratio": 2.0, "weight_magnitude_bits": 7,
+            "activation_bits": 8, "qk_lanes": 2,
+            "norm_kind": "rms_lut", "final_norm_kind": "same",
+            "learned_gap": False, "group_lut_groups": 0,
+            "local_layers": 0, "local_operator": "depthwise_shiftadd",
+            "global_mixer": "parallel_lut_tree",
+            "global_lut_group_size": 4, "global_lut_branch_shift": 2,
+            "logic_expert_width": 0, "logic_expert_count": 1,
+            "state_control": "none", "state_expert_width": 0,
+        }
+        checkpoint = {
+            "step": 1_000,
+            "model": model.state_dict(),
+            "args": args,
+            "protocol_sha256": "global-lut-protocol",
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            checkpoint_path = Path(directory) / "checkpoint.pt"
+            output_path = Path(directory) / "payload.pt"
+            torch.save(checkpoint, checkpoint_path)
+            exported = export_checkpoint(checkpoint_path, output_path)
+        self.assertEqual(len(exported["attention"]), 1)
+        self.assertEqual(len(exported["global_mixers"]), 1)
+        self.assertEqual(
+            exported["global_mixers"][0]["operator"],
+            "group_shared_a8_pair_lut_global_tree",
+        )
 
     def test_checkpoint_reconstructs_logic_tree_operator_strictly(self) -> None:
         model = EnhancedFullDiscreteViT(

@@ -101,7 +101,7 @@ The complete method/result/probe audit is
 global branch.  Its hard value is computed by two FWHT butterfly networks,
 one frozen sign mask, rounded power-of-two shifts, a rounded patch mean for
 CLS, and a CLS broadcast to every patch.  The exporter records the complete
-sign mask and arithmetic ABI in payload schema v2.
+sign mask and arithmetic ABI in the integer payload schema.
 
 The fixed branch is available as a full attention replacement, a periodic
 hybrid, or a weak parallel side branch.  All three 1k probes underperform the
@@ -117,3 +117,27 @@ frozen 50k paired protocol are documented in
 The report deliberately treats 5k accuracy as an intermediate diagnostic; the
 method conclusion requires both the 50k local4 candidate and its local0 paired
 control.
+
+## Nonlinear A8 global LUT tree
+
+`enhancements_global_lut.py` implements the hardware-expensive nonlinear
+alternative to a fixed FFT/Hadamard.  In every enabled block it:
+
+1. quantizes all tokens with one power-of-two scale per 32-channel group;
+2. reduces 64 patches through six balanced stages of two-input A8-by-A8 ROMs;
+3. fuses the root with CLS through another ROM;
+4. broadcasts that context to CLS and every patch through a final ROM and a
+   rounded right shift.
+
+ROMs are shared across spatial tree nodes and channels within a group, while
+stages, channel groups and blocks have independent payloads.  Hard forward is
+only signed-code biasing, address concatenation, ROM indexing, fixed wiring and
+shifts.  A four-entry bilinear interpolation is training-only and the returned
+forward value remains the exact hard lookup.  At d12/e384, one block contains
+96 ROMs, 6,291,456 learned A8 entries (6 MiB), and 12 blocks contain 72 MiB of
+hard table payload.  These bytes are not reported as standard-cell gate count.
+
+The current exporter is schema v3 and serializes every int8 reduce/context/
+broadcast table.  This branch is evaluated in parallel with hard Top-K rather
+than replacing content routing, because the fixed-mixer ablation showed that a
+global path without content dependence is insufficient.

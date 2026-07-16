@@ -138,7 +138,15 @@ a useful negative hardware ablation rather than the primary accuracy path.
 - [`docs/logic_vit_scaling_design_20260716.md`](docs/logic_vit_scaling_design_20260716.md)
 - [`docs/tables/logic_hadamard_smoke_20260716.csv`](docs/tables/logic_hadamard_smoke_20260716.csv)
 - [`docs/reports/logic_hadamard_review_20260716.md`](docs/reports/logic_hadamard_review_20260716.md)
+- [`docs/reports/global_lut_tree_review_20260716.md`](docs/reports/global_lut_tree_review_20260716.md)
+- [`docs/tables/scalelogic_50k_live_20260716.csv`](docs/tables/scalelogic_50k_live_20260716.csv)
 
 The first formal 5k point is recorded only as an intermediate diagnostic.  A
 claim about scaling or the local inductive bias waits for the paired 50k
 candidate/control results.
+
+The same branch now also contains an accuracy-expensive nonlinear global
+option: a six-stage group-shared A8-by-A8 ROM reduction tree, root/CLS fusion
+ROM, and broadcast ROM in parallel with hard Top-K.  At d12/e384 its 12-block
+hard table payload is 72 MiB.  It is fully exported as schema v3 and is kept out
+of the 50k queue until a matched 1k probe demonstrates value over attention.

@@ -36,6 +36,7 @@ from .enhancements_expert import (
     FourModeStateSelectedFFN,
     ParallelBitSliceLogicFFN,
 )
+from .enhancements_global_lut import A8GlobalLUTTreeMixer, LUT_ENTRIES
 from .enhancements_hadamard import FixedHadamardGlobalMixer
 from .enhancements_lut import GroupwiseDiscreteActivationLUT
 from .enhancements_logic_tree import SITE_OFFSETS, SharedLogicTreeConv3x3
@@ -52,7 +53,7 @@ from .shiftadd import ShiftAddLinear, _power_of_two_scale
 
 
 SCHEMA_NAME = "learnable-logic-full-discrete-inference"
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 SCHEMA_TOP_LEVEL_KEYS = (
     "schema",
     "source",
@@ -300,6 +301,40 @@ def _hadamard_payload(
         "cls_path": "rounded_patch_mean_then_broadcast",
         "learned_parameters": 0,
         "general_multipliers": 0,
+    }
+
+
+@torch.no_grad()
+def _global_lut_tree_payload(
+    name: str, module: A8GlobalLUTTreeMixer
+) -> dict[str, object]:
+    tables = module.hard_table_payloads()
+    contract = module.deployment_contract()
+    return {
+        "name": name,
+        "operator": "group_shared_a8_pair_lut_global_tree",
+        "patch_tokens": module.patch_tokens,
+        "block_index": module.block_index,
+        "activation_bits": module.activation_bits,
+        "group_size": module.group_size,
+        "runtime_scale_groups": module.groups,
+        "reduction_stages": module.stages,
+        "branch_right_shift": module.branch_shift,
+        "address_bias": 128,
+        "address_axis_bits": 8,
+        "entries_per_table": LUT_ENTRIES,
+        "payload_bits_per_entry": 8,
+        "tables_per_block": int(contract["tables_per_block"]),
+        "hard_payload_bits": int(contract["hard_payload_bits"]),
+        "reduce_table_int8": tables["reduce_table_int8"].cpu(),
+        "context_table_int8": tables["context_table_int8"].cpu(),
+        "broadcast_table_int8": tables["broadcast_table_int8"].cpu(),
+        "spatial_sharing": "one_table_per_stage_group_across_tree_nodes",
+        "channel_sharing": "one_table_across_channels_inside_group",
+        "output_code_signed_bits": 8,
+        "learned_payload_entries": int(contract["tables_per_block"]) * LUT_ENTRIES,
+        "learned_connections": False,
+        "general_multipliers_hard_forward": 0,
     }
 
 
@@ -592,7 +627,7 @@ def export_logic_payload(
         raise TypeError("model must be FullDiscreteViT or EnhancedFullDiscreteViT")
     if model.activation_bits != 8:
         raise ValueError(
-            "schema v2 defines an A8-by-U4 product ROM; activation_bits must be 8"
+            "schema v3 defines an A8-by-U4 product ROM; activation_bits must be 8"
         )
     if requantize_magnitude_bits is not None and not (
         1 <= requantize_magnitude_bits <= 8
@@ -615,6 +650,11 @@ def export_logic_payload(
         for name, module in named_modules
         if isinstance(module, FixedHadamardGlobalMixer)
     ]
+    global_mixers.extend(
+        _global_lut_tree_payload(name, module)
+        for name, module in named_modules
+        if isinstance(module, A8GlobalLUTTreeMixer)
+    )
     norms: list[dict[str, object]] = []
     for name, module in named_modules:
         if isinstance(module, DiscreteRMSNorm):
@@ -754,7 +794,7 @@ def validate_logic_payload(payload: Mapping[str, object]) -> None:
     """Reject training-only keys, floating tensors and floating scalar state."""
 
     if tuple(payload) != SCHEMA_TOP_LEVEL_KEYS:
-        raise ValueError("payload top-level schema does not match version 2")
+        raise ValueError(f"payload top-level schema does not match version {SCHEMA_VERSION}")
 
     def require_keys(value: object, required: tuple[str, ...], path: str) -> Mapping[str, object]:
         if not isinstance(value, Mapping):
@@ -766,9 +806,9 @@ def validate_logic_payload(payload: Mapping[str, object]) -> None:
 
     schema = require_keys(payload["schema"], ("name", "version", "encoding"), "schema")
     if schema["name"] != SCHEMA_NAME or schema["version"] != SCHEMA_VERSION:
-        raise ValueError("payload schema identity does not match version 2")
+        raise ValueError(f"payload schema identity does not match version {SCHEMA_VERSION}")
     if schema["encoding"] != "torch_save_integer_tensors_and_structural_metadata":
-        raise ValueError("payload schema encoding does not match version 2")
+        raise ValueError(f"payload schema encoding does not match version {SCHEMA_VERSION}")
     parameters = require_keys(payload["parameters"], ("cls_token", "position"), "parameters")
     for parameter_name in ("cls_token", "position"):
         require_keys(
@@ -832,62 +872,126 @@ def validate_logic_payload(payload: Mapping[str, object]) -> None:
     if not isinstance(payload["global_mixers"], list):
         raise ValueError("global_mixers must be a list")
     for index, mixer in enumerate(payload["global_mixers"]):
-        item = require_keys(
-            mixer,
-            (
-                "name", "operator", "patch_tokens", "block_index",
-                "activation_bits", "group_size", "runtime_scale_groups",
-                "normalization_right_shift", "branch_right_shift", "rounding",
-                "input_code_signed_bits", "first_butterfly_signed_bits",
-                "second_butterfly_signed_bits", "normalized_global_signed_bits",
-                "patch_pre_branch_signed_bits",
-                "branch_output_accumulator_signed_bits", "output_boundary",
-                "sign_mask_int8", "butterfly_stages_per_transform",
-                "transform_count", "patch_add_sub_per_channel", "cls_path",
-                "learned_parameters", "general_multipliers",
-            ),
-            f"global_mixers[{index}]",
-        )
-        patch_tokens = int(item["patch_tokens"])
-        if (item["operator"] != "fixed_hadamard_sign_hadamard_global_mixer"
-                or patch_tokens < 2 or patch_tokens & (patch_tokens - 1)):
-            raise ValueError(f"global_mixers[{index}] operator/topology mismatch")
-        stages = patch_tokens.bit_length() - 1
-        activation_bits = int(item["activation_bits"])
-        qmax = (1 << (activation_bits - 1)) - 1
-        maximum_pre_branch = (patch_tokens + 1) * qmax
-        branch_shift = int(item["branch_right_shift"])
-        maximum_branch_output = (
-            (maximum_pre_branch + (1 << (branch_shift - 1))) >> branch_shift
-            if branch_shift
-            else maximum_pre_branch
-        )
-        if (
-            int(item["normalization_right_shift"]) != stages
-            or int(item["butterfly_stages_per_transform"]) != stages
-            or int(item["transform_count"]) != 2
-            or int(item["patch_add_sub_per_channel"]) != 2 * patch_tokens * stages
-            or int(item["learned_parameters"]) != 0
-            or int(item["general_multipliers"]) != 0
-            or int(item["input_code_signed_bits"]) != activation_bits
-            or int(item["first_butterfly_signed_bits"]) != activation_bits + stages
-            or int(item["second_butterfly_signed_bits"]) != activation_bits + 2 * stages
-            or int(item["normalized_global_signed_bits"]) != activation_bits + stages
-            or int(item["patch_pre_branch_signed_bits"])
-            != maximum_pre_branch.bit_length() + 1
-            or int(item["branch_output_accumulator_signed_bits"])
-            != maximum_branch_output.bit_length() + 1
-            or item["output_boundary"]
-            != "wide_branch_then_enclosing_residual_a8_requantizer"
-        ):
-            raise ValueError(f"global_mixers[{index}] arithmetic ABI mismatch")
-        sign_mask = item["sign_mask_int8"]
-        if not isinstance(sign_mask, torch.Tensor) or tuple(sign_mask.shape) != (
-            patch_tokens,
-        ):
-            raise ValueError(f"global_mixers[{index}] sign mask shape mismatch")
-        if bool(((sign_mask != -1) & (sign_mask != 1)).any()) or int(sign_mask[0]) != 1:
-            raise ValueError(f"global_mixers[{index}] sign mask value mismatch")
+        path = f"global_mixers[{index}]"
+        item = require_keys(mixer, ("name", "operator"), path)
+        operator = item["operator"]
+        if operator == "fixed_hadamard_sign_hadamard_global_mixer":
+            item = require_keys(
+                item,
+                (
+                    "patch_tokens", "block_index", "activation_bits", "group_size",
+                    "runtime_scale_groups", "normalization_right_shift",
+                    "branch_right_shift", "rounding", "input_code_signed_bits",
+                    "first_butterfly_signed_bits", "second_butterfly_signed_bits",
+                    "normalized_global_signed_bits", "patch_pre_branch_signed_bits",
+                    "branch_output_accumulator_signed_bits", "output_boundary",
+                    "sign_mask_int8", "butterfly_stages_per_transform",
+                    "transform_count", "patch_add_sub_per_channel", "cls_path",
+                    "learned_parameters", "general_multipliers",
+                ),
+                path,
+            )
+            patch_tokens = int(item["patch_tokens"])
+            if patch_tokens < 2 or patch_tokens & (patch_tokens - 1):
+                raise ValueError(f"{path} operator/topology mismatch")
+            stages = patch_tokens.bit_length() - 1
+            activation_bits = int(item["activation_bits"])
+            qmax = (1 << (activation_bits - 1)) - 1
+            maximum_pre_branch = (patch_tokens + 1) * qmax
+            branch_shift = int(item["branch_right_shift"])
+            maximum_branch_output = (
+                (maximum_pre_branch + (1 << (branch_shift - 1))) >> branch_shift
+                if branch_shift
+                else maximum_pre_branch
+            )
+            if (
+                int(item["normalization_right_shift"]) != stages
+                or int(item["butterfly_stages_per_transform"]) != stages
+                or int(item["transform_count"]) != 2
+                or int(item["patch_add_sub_per_channel"]) != 2 * patch_tokens * stages
+                or int(item["learned_parameters"]) != 0
+                or int(item["general_multipliers"]) != 0
+                or int(item["input_code_signed_bits"]) != activation_bits
+                or int(item["first_butterfly_signed_bits"])
+                != activation_bits + stages
+                or int(item["second_butterfly_signed_bits"])
+                != activation_bits + 2 * stages
+                or int(item["normalized_global_signed_bits"])
+                != activation_bits + stages
+                or int(item["patch_pre_branch_signed_bits"])
+                != maximum_pre_branch.bit_length() + 1
+                or int(item["branch_output_accumulator_signed_bits"])
+                != maximum_branch_output.bit_length() + 1
+                or item["output_boundary"]
+                != "wide_branch_then_enclosing_residual_a8_requantizer"
+            ):
+                raise ValueError(f"{path} arithmetic ABI mismatch")
+            sign_mask = item["sign_mask_int8"]
+            if not isinstance(sign_mask, torch.Tensor) or tuple(sign_mask.shape) != (
+                patch_tokens,
+            ):
+                raise ValueError(f"{path} sign mask shape mismatch")
+            if (bool(((sign_mask != -1) & (sign_mask != 1)).any())
+                    or int(sign_mask[0]) != 1):
+                raise ValueError(f"{path} sign mask value mismatch")
+        elif operator == "group_shared_a8_pair_lut_global_tree":
+            item = require_keys(
+                item,
+                (
+                    "patch_tokens", "block_index", "activation_bits", "group_size",
+                    "runtime_scale_groups", "reduction_stages", "branch_right_shift",
+                    "address_bias", "address_axis_bits", "entries_per_table",
+                    "payload_bits_per_entry", "tables_per_block", "hard_payload_bits",
+                    "reduce_table_int8", "context_table_int8", "broadcast_table_int8",
+                    "spatial_sharing", "channel_sharing", "output_code_signed_bits",
+                    "learned_payload_entries", "learned_connections",
+                    "general_multipliers_hard_forward",
+                ),
+                path,
+            )
+            patch_tokens = int(item["patch_tokens"])
+            groups = int(item["runtime_scale_groups"])
+            group_size = int(item["group_size"])
+            if (patch_tokens < 2 or patch_tokens & (patch_tokens - 1)
+                    or groups < 1 or group_size < 1):
+                raise ValueError(f"{path} operator/topology mismatch")
+            stages = patch_tokens.bit_length() - 1
+            tables = (stages + 2) * groups
+            if (
+                int(item["activation_bits"]) != 8
+                or int(item["reduction_stages"]) != stages
+                or not 0 <= int(item["branch_right_shift"]) <= 7
+                or int(item["address_bias"]) != 128
+                or int(item["address_axis_bits"]) != 8
+                or int(item["entries_per_table"]) != LUT_ENTRIES
+                or int(item["payload_bits_per_entry"]) != 8
+                or int(item["tables_per_block"]) != tables
+                or int(item["hard_payload_bits"]) != tables * LUT_ENTRIES * 8
+                or int(item["learned_payload_entries"]) != tables * LUT_ENTRIES
+                or int(item["output_code_signed_bits"]) != 8
+                or bool(item["learned_connections"])
+                or int(item["general_multipliers_hard_forward"]) != 0
+                or item["spatial_sharing"]
+                != "one_table_per_stage_group_across_tree_nodes"
+                or item["channel_sharing"]
+                != "one_table_across_channels_inside_group"
+            ):
+                raise ValueError(f"{path} arithmetic ABI mismatch")
+            expected_shapes = {
+                "reduce_table_int8": (stages, groups, 256, 256),
+                "context_table_int8": (groups, 256, 256),
+                "broadcast_table_int8": (groups, 256, 256),
+            }
+            for table_name, expected_shape in expected_shapes.items():
+                table = item[table_name]
+                if (not isinstance(table, torch.Tensor)
+                        or table.dtype != torch.int8
+                        or tuple(table.shape) != expected_shape):
+                    raise ValueError(f"{path}.{table_name} shape/dtype mismatch")
+                if bool((table < -127).any() | (table > 127).any()):
+                    raise ValueError(f"{path}.{table_name} value range mismatch")
+        else:
+            raise ValueError(f"{path} unsupported operator")
     if not isinstance(payload["rms_norms"], list):
         raise ValueError("rms_norms must be a list")
     for index, rms_norm in enumerate(payload["rms_norms"]):
@@ -1086,6 +1190,8 @@ def _model_kwargs_from_checkpoint_args(args: Mapping[str, Any]) -> dict[str, obj
         "hadamard_group_size": int(args.get("hadamard_group_size", 32)),
         "hadamard_branch_shift": int(args.get("hadamard_branch_shift", 2)),
         "hybrid_attention_period": int(args.get("hybrid_attention_period", 3)),
+        "global_lut_group_size": int(args.get("global_lut_group_size", 32)),
+        "global_lut_branch_shift": int(args.get("global_lut_branch_shift", 2)),
         "logic_expert_width": int(args.get("logic_expert_width", 0)),
         "logic_expert_count": int(args.get("logic_expert_count", 1)),
         "state_control": str(args.get("state_control", "none")),

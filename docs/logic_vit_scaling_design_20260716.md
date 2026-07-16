@@ -93,7 +93,9 @@ For 64 patches it uses two six-stage butterflies: 768 add/sub operations per
 channel, 64 sign controls, a `>>6` normalization and no multiplier.  A common
 power-of-two A8 scale is shared by each 32-channel group.  The training value
 is exactly the integer reference; a floating butterfly only supplies the STE
-gradient.  The exporter stores the sign masks and structural ABI as schema v2.
+gradient.  The formal `54229c1` snapshot stores the sign masks and structural
+ABI as schema v2; the current exporter is schema v3 after adding the nonlinear
+global ROM-tree payload.
 The branch input is A8, but its butterfly and branch values use explicitly
 bounded wide accumulators (14/20 bits through the two 64-token transforms and
 13 bits after `branch_shift=2` in the worst case).  The enclosing block, not
@@ -128,6 +130,14 @@ d12/e384-h6 row and 59.52% for d12/e192.  This is encouraging intermediate
 evidence only.  A method conclusion requires the 50k result and the h12
 no-local control.
 
+At 10k the candidate reaches 66.64%.  The historical d12/e384-h6, d12/e192
+and d6/e192 rows were 61.36%, 64.68% and 64.14%, respectively, at the same
+step.  The gains are therefore +5.28, +1.96 and +2.50 points, but this still
+cannot separate the 12-head score-width repair from the local branch.  GPU2
+contention increased the second interval from 0.412 to 0.550 seconds/step; the
+process and checkpoint remain healthy.  Exact live rows are in
+[`docs/tables/scalelogic_50k_live_20260716.csv`](tables/scalelogic_50k_live_20260716.csv).
+
 The active run is frozen to source commit `54229c1`, ordered source-set hash
 `9e8af5d0bd8a42e3b3e913d6a94cbdb9f654c14f005c4db5e6697bb0c6997c94`
 and protocol hash
@@ -153,22 +163,32 @@ the hardened payload.  Remaining deployment work is exponent-aligned residual
 addition, the selected-V divider/LUT, packed kernels and whole-model bit-exact
 C++/RTL validation.
 
-## Next nonlinear global option if Top-K remains the bottleneck
+## Implemented nonlinear global option
 
-A fixed linear FFT/Hadamard is too weak, but a ConvLogic-style nonlinear tree
-remains plausible.  The most direct hardware-expensive version is a shared
+A fixed linear FFT/Hadamard is too weak, so the repository now includes the
+more expressive ConvLogic-style nonlinear tree.  Its primitive is a shared
 two-input A8 fusion ROM:
 
 - address: `(a_code << 8) | b_code` (65,536 entries);
 - payload: one signed A8 output per address;
 - six fixed reduction stages aggregate 64 patches globally;
-- stage/group ROMs are shared across spatial nodes;
-- a top-down broadcast tree conditions every patch on the global code;
-- initialization is rounded average or projection-A to preserve residual flow.
+- stage/group ROMs are shared across spatial nodes and channels within a group;
+- a root/CLS ROM creates a global context;
+- a broadcast ROM conditions every patch and CLS on that context;
+- reduce/context tables initialize to rounded average, the broadcast table to
+  projection-B, and a final `>>2` keeps the initial residual branch weak.
 
-One 65,536x8 ROM is 64 KiB.  Six stages and several channel groups are large
-but explicit and synthesizable, while avoiding learned dense connections.  A
-bilinear surrogate can train table entries, but hard-forward lookup and input
-address gradients must be tested carefully.  This should be pursued only after
-the current h12/local4 50k pair establishes how much accuracy can be recovered
-without replacing content-dependent routing.
+One 65,536x8 ROM is 64 KiB.  With 12 groups, six reduction stages plus
+context/broadcast require 96 ROMs per d12/e384 block: 6,291,456 A8 entries or
+6 MiB.  Across 12 blocks the hard payload is 72 MiB and the shadow table count
+is 75,497,472 parameters.  This is deliberately expensive but scales linearly
+in depth and channel groups, has no learned connections, and is not a claimed
+gate count.
+
+Hard forward has an independent scalar oracle and exports every int8 table.
+Training uses four-entry bilinear interpolation only as a surrogate; the
+returned value is the exact hard lookup.  It is added in parallel with hard
+Top-K, not used as a replacement.  A matched 1k probe must beat the attention
+control before this mechanism is admitted to a 50k queue.
+The implementation review is
+[`docs/reports/global_lut_tree_review_20260716.md`](reports/global_lut_tree_review_20260716.md).
