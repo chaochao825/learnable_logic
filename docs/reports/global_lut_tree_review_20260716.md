@@ -19,10 +19,12 @@ rate-limit exhaustion.  It found two launch blockers:
 1. the 1k launcher had `warmup_steps=2000`, rejected by the training protocol;
 2. its expected aggregate source hash predated later source edits.
 
-Warmup is now 200 for both paired rows, and the final ordered source-set hash is
-`71fec7ad6ad78acad28e456b143151c47e84aff59c3ff22f032f6010a8df3b0b`.
-The reviewer then terminated with HTTP 429, so the remaining hard-path review
-used the documented local fallback and an isolated 434 test tree.
+Warmup is now 200 for both paired rows.  A second narrow review found that the
+first launcher used a private GPU lock and could race the established 210
+queues.  It now holds a pair-specific duplicate guard and the shared
+`codex_lgn_vit_50k_gpuN` lock while waiting for three consecutive idle samples
+and while running both rows.  The final ordered training source-set hash is
+`0b5c9a9ad714612c3e55dbaec67415c8fe18ac8cec3e5e72c8fd671fcff9ef96`.
 
 ## Adversarial findings fixed
 
@@ -39,9 +41,15 @@ used the documented local fallback and an isolated 434 test tree.
 - Hard-change statistics compare reduce, context and broadcast tables against
   their exact initialized integer payload at every validation point.  Accuracy
   without hard flips can therefore be rejected as a surrogate-only effect.
-- Schema v3 exports all int8 tables, validates shapes/ranges/ROM-bit counts and
-  reconstructs the model strictly from a checkpoint.  No FP32 shadow, dither or
+- Schema v4 exports all int8 tables, validates shapes/ranges/ROM-bit counts and
+  reconstructs the model strictly from a checkpoint.  It additionally freezes
+  the group input requantizer, signed branch-shift rounding, content/LUT
+  exponent-aligned add, enclosing three-way residual add and final A8
+  requantizer.  Block, token, group and embedding dimensions are linked back to
+  the main topology; corruption tests fail closed.  No FP32 shadow, dither or
   optimizer state enters the deployment payload.
+- Hard lookup inputs now fail on signed-A8 overflow instead of silently
+  clamping an invalid independent-executor transaction.
 
 ## Verified boundaries
 
@@ -49,14 +57,21 @@ used the documented local fallback and an isolated 434 test tree.
 - Hard module AST: no matmul, einsum, linear, conv2d, log2 or pow call.
 - Address ABI: signed code plus 128, then two 8-bit fields concatenated.
 - d12/e384: 96 ROMs per block, 6 MiB/block, 72 MiB/12 blocks.
+- d12/e384 performs 49,536 ROM reads per image per block, or 594,432 across 12
+  blocks.  With groups parallel and one port per active table this is 4,128
+  serialized cycles/block; providing 32 independent channel ports reduces the
+  transaction component to 129 cycles/block.  Channel sharing is a storage
+  property, not free read bandwidth.
 - These are ROM payload bytes, not a standard-cell gate count.
-- Full isolated suite: 129/129 tests passed.
+- Full isolated schema-v4 suite on 434: 129/129 tests passed.
 - Both launchers pass `bash -n`; remote and local ordered source hashes match.
 
-The activation power-of-two exponent selector and the parallel residual merge
-still use the repository's floating carrier reference.  Thus the ROM tree is a
-bit-exact hard primitive inside a hard-discrete numerical model, not yet a
-whole-model RTL executor.
+The schema now makes the exponent selection and parallel/residual merge
+self-describing, but the PyTorch reference still transports exact
+`integer_code * 2**exponent` values in floating tensors.  The payload contains
+no floating inference state; it also explicitly declares that a packed
+C++/CUDA/RTL executor is not included.  Thus this is a bit-exact transaction
+specification, not yet a cycle-accurate whole-model hardware implementation.
 
 The mechanism is not promoted to a 50k method until its matched 1k row beats
 the attention-only control and shows nonzero deployed hard-table changes.

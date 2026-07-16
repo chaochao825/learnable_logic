@@ -28,7 +28,12 @@ LUT_ENTRIES = LUT_AXIS_SIZE * LUT_AXIS_SIZE
 def signed_a8_lut_index(code: torch.Tensor) -> torch.Tensor:
     """Map signed A8 codes to monotone 0..255 ROM coordinates."""
 
-    return (code.to(torch.int64) + 128).clamp(0, 255)
+    if code.is_floating_point() or code.is_complex():
+        raise TypeError("signed A8 LUT input code must be integer")
+    integer = code.to(torch.int64)
+    if bool(((integer < -128) | (integer > 127)).any()):
+        raise ValueError("signed A8 LUT input code must be in [-128,127]")
+    return integer + 128
 
 
 def _group_table_lookup(
@@ -282,6 +287,8 @@ class A8GlobalLUTTreeMixer(nn.Module):
             raise ValueError("grouped_code shape does not match mixer topology")
         if grouped_code.is_floating_point():
             raise TypeError("grouped_code must be integer")
+        if bool(((grouped_code < -128) | (grouped_code > 127)).any()):
+            raise ValueError("grouped_code must stay inside signed A8 range")
         tables = self.hard_table_payloads()
         cls_code = grouped_code[:, :1].to(torch.int64)
         level = grouped_code[:, 1:].to(torch.int64)
@@ -370,6 +377,8 @@ class A8GlobalLUTTreeMixer(nn.Module):
 
     def deployment_contract(self) -> dict[str, object]:
         tables_per_block = (self.stages + 2) * self.groups
+        transactions_per_channel = 2 * self.patch_tokens + 1
+        reads_per_block = transactions_per_channel * self.dim
         return {
             "operator": "group_shared_a8_pair_lut_global_tree",
             "patch_tokens": self.patch_tokens,
@@ -382,6 +391,17 @@ class A8GlobalLUTTreeMixer(nn.Module):
             "entries_per_table": LUT_ENTRIES,
             "payload_bits_per_entry": 8,
             "hard_payload_bits": tables_per_block * LUT_ENTRIES * 8,
+            "rom_reads_per_image_per_block": reads_per_block,
+            "rom_reads_per_group_per_block": (
+                transactions_per_channel * self.group_size
+            ),
+            "single_port_rom_cycles_per_block_groups_parallel": (
+                transactions_per_channel * self.group_size
+            ),
+            "group_size_ports_cycles_per_block_groups_parallel": (
+                transactions_per_channel
+            ),
+            "ports_per_active_table_for_group_parallelism": self.group_size,
             "address": "((signed_a8_left + 128) << 8) | (signed_a8_right + 128)",
             "spatial_sharing": "one table per stage/group across every tree node",
             "channel_sharing": "one table across channels inside each group",
@@ -391,6 +411,10 @@ class A8GlobalLUTTreeMixer(nn.Module):
             "output_code_signed_bits": self.activation_bits,
             "learned_connections": False,
             "general_multipliers_hard_forward": 0,
+            "rom_port_tradeoff": (
+                "one independent address per channel; sharing payload storage does not "
+                "imply free multi-port throughput"
+            ),
             "training_only_surrogate": "bilinear four-entry interpolation",
             "training_shadow_dither": (
                 "plus_or_minus_0.49_removed_from_soft_surrogate; hard payload unchanged"

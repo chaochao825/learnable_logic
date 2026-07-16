@@ -386,7 +386,7 @@ class LogicPayloadExportTest(unittest.TestCase):
             global_lut_branch_shift=2,
         ).eval()
         payload = export_logic_payload(model)
-        self.assertEqual(payload["schema"]["version"], 3)
+        self.assertEqual(payload["schema"]["version"], 4)
         self.assertEqual(len(payload["attention"]), 1)
         self.assertEqual(len(payload["global_mixers"]), 1)
         mixer = payload["global_mixers"][0]
@@ -397,6 +397,26 @@ class LogicPayloadExportTest(unittest.TestCase):
         self.assertEqual(mixer["runtime_scale_groups"], 2)
         self.assertEqual(mixer["tables_per_block"], 8)
         self.assertEqual(mixer["hard_payload_bits"], 4_194_304)
+        self.assertEqual(mixer["rom_reads_per_image_per_block"], 72)
+        self.assertEqual(mixer["rom_reads_per_group_per_block"], 36)
+        self.assertEqual(
+            mixer["single_port_rom_cycles_per_block_groups_parallel"], 36
+        )
+        self.assertEqual(
+            mixer["group_size_ports_cycles_per_block_groups_parallel"], 9
+        )
+        self.assertEqual(mixer["ports_per_active_table_for_group_parallelism"], 4)
+        self.assertEqual(
+            mixer["input_requantization"]["maximum_reduction_axes_grouped"],
+            [1, 3],
+        )
+        self.assertEqual(
+            mixer["parallel_merge"]["intermediate_requantization"], "none"
+        )
+        self.assertEqual(
+            mixer["outer_residual_boundary"]["output_scale_granularity"],
+            "per_batch_per_token",
+        )
         self.assertEqual(tuple(mixer["reduce_table_int8"].shape), (2, 2, 256, 256))
         self.assertEqual(tuple(mixer["context_table_int8"].shape), (2, 256, 256))
         self.assertEqual(tuple(mixer["broadcast_table_int8"].shape), (2, 256, 256))
@@ -413,6 +433,27 @@ class LogicPayloadExportTest(unittest.TestCase):
         corrupted = export_logic_payload(model)
         corrupted["global_mixers"][0]["broadcast_table_int8"][0, 0, 0] = -128
         with self.assertRaisesRegex(ValueError, "value range"):
+            validate_logic_payload(corrupted)
+
+        corrupted = export_logic_payload(model)
+        corrupted["global_mixers"][0]["runtime_scale_groups"] = 1
+        with self.assertRaisesRegex(ValueError, "cross-topology"):
+            validate_logic_payload(corrupted)
+        corrupted = export_logic_payload(model)
+        corrupted["global_mixers"][0]["block_index"] = 1
+        with self.assertRaisesRegex(ValueError, "cross-topology"):
+            validate_logic_payload(corrupted)
+        corrupted = export_logic_payload(model)
+        corrupted["global_mixers"][0]["input_requantization"][
+            "maximum_reduction_axes_grouped"
+        ] = [3]
+        with self.assertRaisesRegex(ValueError, "input requantization"):
+            validate_logic_payload(corrupted)
+        corrupted = export_logic_payload(model)
+        corrupted["global_mixers"][0]["parallel_merge"][
+            "intermediate_requantization"
+        ] = "A8"
+        with self.assertRaisesRegex(ValueError, "parallel merge"):
             validate_logic_payload(corrupted)
 
         args = {

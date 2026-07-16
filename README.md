@@ -148,5 +148,10 @@ candidate/control results.
 The same branch now also contains an accuracy-expensive nonlinear global
 option: a six-stage group-shared A8-by-A8 ROM reduction tree, root/CLS fusion
 ROM, and broadcast ROM in parallel with hard Top-K.  At d12/e384 its 12-block
-hard table payload is 72 MiB.  It is fully exported as schema v3 and is kept out
+hard table payload is 72 MiB.  It is fully exported as schema v4 and is kept out
 of the 50k queue until a matched 1k probe demonstrates value over attention.
+Schema v4 additionally freezes the input group-requantizer, signed shift,
+content/LUT exponent-aligned merge, outer residual A8 boundary, and
+cross-topology linkage.  It also reports ROM reads and port/cycle assumptions:
+payload sharing is not mistaken for free multi-port throughput.  A packed
+C++/CUDA/RTL executor is still a separate deliverable.

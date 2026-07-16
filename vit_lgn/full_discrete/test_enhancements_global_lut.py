@@ -31,6 +31,12 @@ class A8GlobalLUTTreeMixerTest(unittest.TestCase):
         torch.testing.assert_close(
             signed_a8_lut_index(code), torch.arange(256, dtype=torch.int64)
         )
+        with self.assertRaisesRegex(ValueError, "signed A8"):
+            signed_a8_lut_index(torch.tensor([-129, 0, 127]))
+        with self.assertRaisesRegex(ValueError, "signed A8"):
+            signed_a8_lut_index(torch.tensor([-128, 0, 128]))
+        with self.assertRaisesRegex(TypeError, "must be integer"):
+            signed_a8_lut_index(torch.tensor([-1.0, 0.0, 1.0]))
 
     def test_hard_group_lookup_matches_independent_scalar_addresses(self) -> None:
         torch.manual_seed(2)
@@ -155,6 +161,17 @@ class A8GlobalLUTTreeMixerTest(unittest.TestCase):
         self.assertEqual(contract["tables_per_block"], 96)
         self.assertEqual(contract["entries_per_table"], 65_536)
         self.assertEqual(contract["hard_payload_bits"], 50_331_648)
+        self.assertEqual(contract["rom_reads_per_image_per_block"], 49_536)
+        self.assertEqual(contract["rom_reads_per_group_per_block"], 4_128)
+        self.assertEqual(
+            contract["single_port_rom_cycles_per_block_groups_parallel"], 4_128
+        )
+        self.assertEqual(
+            contract["group_size_ports_cycles_per_block_groups_parallel"], 129
+        )
+        self.assertEqual(
+            contract["ports_per_active_table_for_group_parallelism"], 32
+        )
         self.assertFalse(contract["learned_connections"])
         self.assertEqual(contract["general_multipliers_hard_forward"], 0)
         self.assertNotIn("gate_count", contract)
