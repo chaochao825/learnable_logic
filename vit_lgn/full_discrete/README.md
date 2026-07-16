@@ -94,3 +94,26 @@ one-layer difference is a training-surrogate effect or single-seed noise.
 
 The complete method/result/probe audit is
 [`docs/full_discrete_logic_gate_report_20260715.md`](../../docs/full_discrete_logic_gate_report_20260715.md).
+
+## ScaleLogic-ViT and fixed global mixer ablation
+
+`enhancements_hadamard.py` adds a parameter-free integer Walsh--Hadamard
+global branch.  Its hard value is computed by two FWHT butterfly networks,
+one frozen sign mask, rounded power-of-two shifts, a rounded patch mean for
+CLS, and a CLS broadcast to every patch.  The exporter records the complete
+sign mask and arithmetic ABI in payload schema v2.
+
+The fixed branch is available as a full attention replacement, a periodic
+hybrid, or a weak parallel side branch.  All three 1k probes underperform the
+matched content-dependent XNOR/popcount Top-K control, so the formal scalable
+candidate keeps hard attention.  It instead uses 12 heads at width 384 to hold
+head dimension 32/XNOR width 224 constant and applies the spatially shared
+Wmag4 3x3 branch in the first four blocks.  This separates width scaling from
+the score-gap quantizer width confound in the earlier six-head matrix.
+
+The design rationale, exact static accounting, negative mixer ablation and
+frozen 50k paired protocol are documented in
+[`docs/logic_vit_scaling_design_20260716.md`](../../docs/logic_vit_scaling_design_20260716.md).
+The report deliberately treats 5k accuracy as an intermediate diagnostic; the
+method conclusion requires both the 50k local4 candidate and its local0 paired
+control.

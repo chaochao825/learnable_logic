@@ -6,6 +6,7 @@ import torch
 import torch.nn as nn
 
 from .enhancements_expert import FourModeStateSelectedFFN, ParallelBitSliceLogicFFN
+from .enhancements_hadamard import FixedHadamardGlobalMixer
 from .enhancements_logic_tree import SharedLogicTreeConv3x3
 from .enhancements_lut import GroupwiseDiscreteActivationLUT, MonotonicHeadGapLUT
 from .enhancements_spatial import DiscreteDepthwiseLocalBranch
@@ -69,6 +70,27 @@ class StateSelectedFFNAdapter(nn.Module):
         return {**self.module.deployment_contract(), "selected_control": self.control}
 
 
+class ParallelContentHadamardMixer(nn.Module):
+    """Keep content routing and add a weak fixed integer global side branch."""
+
+    def __init__(self, content: nn.Module, fixed: FixedHadamardGlobalMixer) -> None:
+        super().__init__()
+        self.content = content
+        self.fixed = fixed
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.content(x) + self.fixed(x)
+
+    def deployment_contract(self) -> dict[str, object]:
+        return {
+            "operator": "parallel_content_and_fixed_hadamard",
+            "content": "xnor_popcount_hard_topk",
+            "fixed": self.fixed.deployment_contract(),
+            "merge": "power_of_two_exponent_align_then_integer_add",
+            "general_multipliers": 0,
+        }
+
+
 def _copy_common_ffn(source: DiscreteGatedFFN, target: nn.Module) -> None:
     destination = target.base if hasattr(target, "base") else target
     for name in ("gate", "up", "down"):
@@ -87,6 +109,10 @@ class EnhancedFullDiscreteViT(FullDiscreteViT):
         local_layers: int = 0,
         local_operator: str = "depthwise_shiftadd",
         local_branch_shift: int = 2,
+        global_mixer: str = "attention",
+        hadamard_group_size: int = 32,
+        hadamard_branch_shift: int = 2,
+        hybrid_attention_period: int = 3,
         logic_expert_width: int = 0,
         logic_expert_count: int = 1,
         state_control: str = "none",
@@ -98,6 +124,12 @@ class EnhancedFullDiscreteViT(FullDiscreteViT):
             raise ValueError("unsupported state_control")
         if local_operator not in {"depthwise_shiftadd", "logic_tree3x3"}:
             raise ValueError("unsupported local_operator")
+        if global_mixer not in {"attention", "hadamard", "hybrid", "parallel"}:
+            raise ValueError("unsupported global_mixer")
+        if global_mixer == "hadamard" and learned_gap:
+            raise ValueError("learned_gap is only defined for the attention mixer")
+        if hybrid_attention_period < 1:
+            raise ValueError("hybrid_attention_period must be positive")
         if sum((group_lut_groups > 0, logic_expert_width > 0, state_control != "none")) > 1:
             raise ValueError("FFN enhancement families must be evaluated separately")
         depth = len(self.blocks)
@@ -115,6 +147,29 @@ class EnhancedFullDiscreteViT(FullDiscreteViT):
                 block.attn.gap_lut = MonotonicHeadGapLUT(
                     heads=block.attn.heads, max_gap=gap_max, gap_shift=1
                 )
+
+        if global_mixer in {"hadamard", "hybrid", "parallel"}:
+            for index, block in enumerate(self.blocks):
+                keep_attention = (
+                    global_mixer == "hybrid"
+                    and (index + 1) % hybrid_attention_period == 0
+                )
+                if keep_attention:
+                    continue
+                fixed_mixer = FixedHadamardGlobalMixer(
+                    dim=dim,
+                    patch_tokens=self.patch_embed.num_patches,
+                    block_index=index,
+                    activation_bits=activation_bits,
+                    group_size=hadamard_group_size,
+                    branch_shift=hadamard_branch_shift,
+                )
+                if global_mixer == "parallel":
+                    block.attn = ParallelContentHadamardMixer(
+                        content=block.attn, fixed=fixed_mixer
+                    )
+                else:
+                    block.attn = fixed_mixer
 
         for index, block in enumerate(self.blocks):
             original_ffn = block.ffn
@@ -168,6 +223,10 @@ class EnhancedFullDiscreteViT(FullDiscreteViT):
             "group_lut_groups": group_lut_groups,
             "local_layers": local_layers,
             "local_operator": local_operator,
+            "global_mixer": global_mixer,
+            "hadamard_group_size": hadamard_group_size,
+            "hadamard_branch_shift": hadamard_branch_shift,
+            "hybrid_attention_period": hybrid_attention_period,
             "logic_expert_width": logic_expert_width,
             "logic_expert_count": logic_expert_count,
             "state_control": state_control,
@@ -200,22 +259,75 @@ class EnhancedFullDiscreteViT(FullDiscreteViT):
         base["enhancements"] = self.enhancement_config
         block_contracts = []
         for block in self.blocks:
-            gap_contract = (
-                block.attn.gap_lut.deployment_contract()
-                if block.attn.gap_lut is not None
-                else {"weights": [1, 2, 4, 8], "mapping": "fixed score-gap"}
-            )
             ffn_contract = (
                 block.ffn.deployment_contract()
                 if hasattr(block.ffn, "deployment_contract")
                 else {"type": type(block.ffn).__name__}
             )
-            block_contracts.append({"gap": gap_contract, "ffn": ffn_contract})
-        base["attention"] = (
-            "threshold bits + XNOR/popcount + hard Top-K + " +
-            ("per-head monotone learned gap LUT" if self.enhancement_config["learned_gap"]
-             else "fixed {8,4,2,1} score-gap")
-        )
+            if isinstance(block.attn, ParallelContentHadamardMixer):
+                gap_contract = (
+                    block.attn.content.gap_lut.deployment_contract()
+                    if block.attn.content.gap_lut is not None
+                    else {"weights": [1, 2, 4, 8], "mapping": "fixed score-gap"}
+                )
+                mixer_contract = block.attn.deployment_contract()
+                block_contract = {
+                    "gap": gap_contract,
+                    "global_mixer": mixer_contract,
+                    "ffn": ffn_contract,
+                }
+            elif isinstance(block.attn, FixedHadamardGlobalMixer):
+                mixer_contract = block.attn.deployment_contract()
+                block_contract = {
+                    "global_mixer": mixer_contract,
+                    "ffn": ffn_contract,
+                }
+            else:
+                gap_contract = (
+                    block.attn.gap_lut.deployment_contract()
+                    if block.attn.gap_lut is not None
+                    else {"weights": [1, 2, 4, 8], "mapping": "fixed score-gap"}
+                )
+                mixer_contract = {
+                    "operator": "xnor_popcount_hard_topk",
+                    "gap": gap_contract,
+                }
+                # Keep the v1 convenience key for callers that only inspect
+                # attention experiments while also exposing the generic mixer.
+                block_contract = {
+                    "gap": gap_contract,
+                    "global_mixer": mixer_contract,
+                    "ffn": ffn_contract,
+                }
+            block_contracts.append(block_contract)
+        if self.enhancement_config["global_mixer"] == "hadamard":
+            base["attention"] = "none"
+            base["global_mixer"] = (
+                "fixed H-D-H/N integer butterfly + CLS mean/broadcast"
+            )
+        elif self.enhancement_config["global_mixer"] == "hybrid":
+            base["attention"] = (
+                "one hard XNOR/Top-K content mixer every "
+                f"{self.enhancement_config['hybrid_attention_period']} blocks"
+            )
+            base["global_mixer"] = (
+                "fixed H-D-H/N in remaining blocks; final periodic block is attention"
+            )
+        elif self.enhancement_config["global_mixer"] == "parallel":
+            base["attention"] = (
+                "hard XNOR/Top-K in every block, parallel with fixed Hadamard"
+            )
+            base["global_mixer"] = (
+                "content-dependent routing + weak fixed H-D-H/N side branch"
+            )
+        else:
+            base["attention"] = (
+                "threshold bits + XNOR/popcount + hard Top-K + " +
+                ("per-head monotone learned gap LUT"
+                 if self.enhancement_config["learned_gap"]
+                 else "fixed {8,4,2,1} score-gap")
+            )
+            base["global_mixer"] = "content-dependent hard attention"
         base["block_contracts"] = block_contracts
         base["local_branch_contracts"] = {
             key: branch.deployment_contract() for key, branch in self.local_branches.items()

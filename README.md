@@ -125,3 +125,19 @@ identity in 50k, and the independent whole-model integer/RTL executor is not
 yet complete.  The report deliberately separates a hard-discrete numerical
 model, a transaction-level integer specification, and a complete logic-gate
 executor.
+
+## ScaleLogic-ViT scaling experiment (2026-07-16)
+
+The next accuracy-first candidate fixes the earlier width-scaling confound by
+using 12 heads at d12/e384, keeping `head_dim=32` and the Q/K XNOR width at 224.
+It adds four early spatially shared Wmag4 depthwise 3x3 branches and retains
+content-dependent hard Top-K routing.  A multiplier-free fixed Hadamard global
+mixer was also implemented and exported, but matched 1k probes show that it is
+a useful negative hardware ablation rather than the primary accuracy path.
+
+- [`docs/logic_vit_scaling_design_20260716.md`](docs/logic_vit_scaling_design_20260716.md)
+- [`docs/tables/logic_hadamard_smoke_20260716.csv`](docs/tables/logic_hadamard_smoke_20260716.csv)
+
+The first formal 5k point is recorded only as an intermediate diagnostic.  A
+claim about scaling or the local inductive bias waits for the paired 50k
+candidate/control results.

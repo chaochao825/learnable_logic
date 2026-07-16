@@ -280,6 +280,90 @@ class LogicPayloadExportTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "gate topology"):
             validate_logic_payload(corrupted)
 
+    def test_hadamard_global_mixer_exports_as_fixed_integer_topology(self) -> None:
+        model = EnhancedFullDiscreteViT(
+            image_size=16,
+            patch_size=4,
+            dim=24,
+            depth=2,
+            heads=3,
+            topk=4,
+            mlp_ratio=2.0,
+            weight_bits=7,
+            activation_bits=8,
+            global_mixer="hadamard",
+            hadamard_group_size=8,
+            hadamard_branch_shift=2,
+            local_layers=1,
+        ).eval()
+        payload = export_logic_payload(model)
+        self.assertEqual(payload["schema"]["version"], 2)
+        self.assertEqual(payload["attention"], [])
+        self.assertEqual(len(payload["global_mixers"]), 2)
+        for index, mixer in enumerate(payload["global_mixers"]):
+            self.assertEqual(
+                mixer["operator"],
+                "fixed_hadamard_sign_hadamard_global_mixer",
+            )
+            self.assertEqual(mixer["patch_tokens"], 16)
+            self.assertEqual(mixer["block_index"], index)
+            self.assertEqual(mixer["normalization_right_shift"], 4)
+            self.assertEqual(mixer["patch_add_sub_per_channel"], 128)
+            self.assertEqual(tuple(mixer["sign_mask_int8"].shape), (16,))
+            self.assertEqual(set(mixer["sign_mask_int8"].tolist()), {-1, 1})
+        validate_logic_payload(payload)
+
+        args = {
+            "image_size": 16, "patch_size": 4,
+            "dim": 24, "depth": 2, "heads": 3, "topk": 4,
+            "mlp_ratio": 2.0, "weight_magnitude_bits": 7,
+            "activation_bits": 8, "qk_lanes": 7,
+            "norm_kind": "rms_lut", "final_norm_kind": "same",
+            "learned_gap": False, "group_lut_groups": 0,
+            "local_layers": 1, "local_operator": "depthwise_shiftadd",
+            "global_mixer": "hadamard", "hadamard_group_size": 8,
+            "hadamard_branch_shift": 2,
+            "logic_expert_width": 0, "logic_expert_count": 1,
+            "state_control": "none", "state_expert_width": 0,
+        }
+        checkpoint = {
+            "step": 50_000,
+            "model": model.state_dict(),
+            "args": args,
+            "protocol_sha256": "hadamard-protocol",
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            checkpoint_path = Path(directory) / "checkpoint.pt"
+            output_path = Path(directory) / "payload.pt"
+            torch.save(checkpoint, checkpoint_path)
+            exported = export_checkpoint(checkpoint_path, output_path)
+        self.assertEqual(len(exported["global_mixers"]), 2)
+        self.assertEqual(exported["attention"], [])
+
+    def test_hybrid_topology_finds_attention_after_fixed_first_block(self) -> None:
+        model = EnhancedFullDiscreteViT(
+            image_size=16,
+            patch_size=4,
+            dim=24,
+            depth=3,
+            heads=3,
+            topk=4,
+            mlp_ratio=2.0,
+            weight_bits=7,
+            activation_bits=8,
+            global_mixer="hybrid",
+            hybrid_attention_period=3,
+            hadamard_group_size=8,
+        ).eval()
+        payload = export_logic_payload(model)
+        self.assertEqual(len(payload["global_mixers"]), 2)
+        self.assertEqual(len(payload["attention"]), 1)
+        self.assertEqual(payload["topology"]["heads"], 3)
+        self.assertEqual(payload["topology"]["head_dim"], 8)
+        self.assertEqual(payload["topology"]["topk"], 4)
+        self.assertEqual(payload["topology"]["qk_lanes"], 7)
+        validate_logic_payload(payload)
+
     def test_checkpoint_reconstructs_logic_tree_operator_strictly(self) -> None:
         model = EnhancedFullDiscreteViT(
             dim=24, depth=1, heads=3, topk=4, mlp_ratio=2.0,

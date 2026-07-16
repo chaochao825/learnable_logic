@@ -62,12 +62,14 @@ class TrainProtocolTest(unittest.TestCase):
                 freeze_protocol_manifest(path, {"sha256": "new"})
             self.assertEqual(json.loads(path.read_text(encoding="utf-8")), original)
 
-    def test_logic_tree_source_and_operator_are_protocol_frozen(self) -> None:
+    def test_logic_tree_and_hadamard_sources_are_protocol_frozen(self) -> None:
         self.assertIn("enhancements_logic_tree.py", PROTOCOL_SOURCE_FILES)
+        self.assertIn("enhancements_hadamard.py", PROTOCOL_SOURCE_FILES)
         source_root = Path(__file__).resolve().parent
         hashes = source_hashes(source_root)
         self.assertEqual(set(hashes), set(PROTOCOL_SOURCE_FILES))
         self.assertEqual(len(hashes["enhancements_logic_tree.py"]), 64)
+        self.assertEqual(len(hashes["enhancements_hadamard.py"]), 64)
 
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

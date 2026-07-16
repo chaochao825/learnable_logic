@@ -36,6 +36,7 @@ from .enhancements_expert import (
     FourModeStateSelectedFFN,
     ParallelBitSliceLogicFFN,
 )
+from .enhancements_hadamard import FixedHadamardGlobalMixer
 from .enhancements_lut import GroupwiseDiscreteActivationLUT
 from .enhancements_logic_tree import SITE_OFFSETS, SharedLogicTreeConv3x3
 from .enhancements_spatial import DiscreteDepthwiseLocalBranch
@@ -51,7 +52,7 @@ from .shiftadd import ShiftAddLinear, _power_of_two_scale
 
 
 SCHEMA_NAME = "learnable-logic-full-discrete-inference"
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 SCHEMA_TOP_LEVEL_KEYS = (
     "schema",
     "source",
@@ -59,6 +60,7 @@ SCHEMA_TOP_LEVEL_KEYS = (
     "parameters",
     "shift_add_layers",
     "attention",
+    "global_mixers",
     "rms_norms",
     "rms_luts",
     "activation_luts",
@@ -265,6 +267,33 @@ def _attention_payload(
     }
 
 
+@torch.no_grad()
+def _hadamard_payload(
+    name: str, module: FixedHadamardGlobalMixer
+) -> dict[str, object]:
+    return {
+        "name": name,
+        "operator": "fixed_hadamard_sign_hadamard_global_mixer",
+        "patch_tokens": module.patch_tokens,
+        "block_index": module.block_index,
+        "activation_bits": module.activation_bits,
+        "group_size": module.group_size,
+        "runtime_scale_groups": module.groups,
+        "normalization_right_shift": module.normalization_shift,
+        "branch_right_shift": module.branch_shift,
+        "rounding": "nearest_half_way_magnitude_away_from_zero",
+        "sign_mask_int8": module.sign_mask.detach().cpu().to(torch.int8),
+        "butterfly_stages_per_transform": module.normalization_shift,
+        "transform_count": 2,
+        "patch_add_sub_per_channel": (
+            2 * module.patch_tokens * module.normalization_shift
+        ),
+        "cls_path": "rounded_patch_mean_then_broadcast",
+        "learned_parameters": 0,
+        "general_multipliers": 0,
+    }
+
+
 def _rounded_q15_reciprocal_sqrt(address: int) -> int:
     """Exact ties-to-even round of ``2**15 / sqrt(max(address,1))``."""
 
@@ -305,7 +334,17 @@ def _rms_lut(bits: int) -> dict[str, object]:
 
 
 def _model_topology(model: FullDiscreteViT) -> dict[str, object]:
-    first_attention = model.blocks[0].attn if model.blocks else None
+    # Hybrid models may put a fixed mixer in block zero and retain hard
+    # attention only in later periodic blocks.  Search the complete topology
+    # so heads/Top-K/QK-lanes describe the retained content router rather than
+    # becoming spuriously null whenever the first block is fixed.
+    first_attention = next(
+        (
+            module for module in model.modules()
+            if isinstance(module, HardXNORScoreGapAttention)
+        ),
+        None,
+    )
     patch_features = model.patch_embed.projection.in_features
     patch_area = model.patch_embed.patch_size * model.patch_embed.patch_size
     return {
@@ -317,6 +356,7 @@ def _model_topology(model: FullDiscreteViT) -> dict[str, object]:
         "embedding_dim": int(model.position.shape[2]),
         "depth": len(model.blocks),
         "heads": int(first_attention.heads) if first_attention is not None else 0,
+        "head_dim": int(first_attention.head_dim) if first_attention is not None else 0,
         "topk": int(first_attention.topk) if first_attention is not None else 0,
         "qk_lanes": int(first_attention.qk_lanes) if first_attention is not None else 0,
         "classes": model.head.out_features,
@@ -543,7 +583,7 @@ def export_logic_payload(
         raise TypeError("model must be FullDiscreteViT or EnhancedFullDiscreteViT")
     if model.activation_bits != 8:
         raise ValueError(
-            "schema v1 defines an A8-by-U4 product ROM; activation_bits must be 8"
+            "schema v2 defines an A8-by-U4 product ROM; activation_bits must be 8"
         )
     if requantize_magnitude_bits is not None and not (
         1 <= requantize_magnitude_bits <= 8
@@ -560,6 +600,11 @@ def export_logic_payload(
         _attention_payload(name, module)
         for name, module in named_modules
         if isinstance(module, HardXNORScoreGapAttention)
+    ]
+    global_mixers = [
+        _hadamard_payload(name, module)
+        for name, module in named_modules
+        if isinstance(module, FixedHadamardGlobalMixer)
     ]
     norms: list[dict[str, object]] = []
     for name, module in named_modules:
@@ -668,6 +713,7 @@ def export_logic_payload(
         },
         "shift_add_layers": shift_layers,
         "attention": attentions,
+        "global_mixers": global_mixers,
         "rms_norms": norms,
         "rms_luts": rms_luts,
         "activation_luts": activation_luts,
@@ -681,6 +727,9 @@ def export_logic_payload(
             "power_of_two_scale_runtime": "signed_exponent_alignment_only",
             "activation_requantization": "leading_one_exponent_and_nearest_ties_to_even",
             "normalization_operators": sorted({item["operator"] for item in norms}),
+            "global_mixer_operators": sorted({
+                item["operator"] for item in global_mixers
+            }),
             "rms_reciprocal_sqrt_runtime": "integer_rom_lookup_if_present",
             "general_learned_multipliers": 0,
             "floating_inference_state": False,
@@ -696,7 +745,7 @@ def validate_logic_payload(payload: Mapping[str, object]) -> None:
     """Reject training-only keys, floating tensors and floating scalar state."""
 
     if tuple(payload) != SCHEMA_TOP_LEVEL_KEYS:
-        raise ValueError("payload top-level schema does not match version 1")
+        raise ValueError("payload top-level schema does not match version 2")
 
     def require_keys(value: object, required: tuple[str, ...], path: str) -> Mapping[str, object]:
         if not isinstance(value, Mapping):
@@ -708,9 +757,9 @@ def validate_logic_payload(payload: Mapping[str, object]) -> None:
 
     schema = require_keys(payload["schema"], ("name", "version", "encoding"), "schema")
     if schema["name"] != SCHEMA_NAME or schema["version"] != SCHEMA_VERSION:
-        raise ValueError("payload schema identity does not match version 1")
+        raise ValueError("payload schema identity does not match version 2")
     if schema["encoding"] != "torch_save_integer_tensors_and_structural_metadata":
-        raise ValueError("payload schema encoding does not match version 1")
+        raise ValueError("payload schema encoding does not match version 2")
     parameters = require_keys(payload["parameters"], ("cls_token", "position"), "parameters")
     for parameter_name in ("cls_token", "position"):
         require_keys(
@@ -771,6 +820,42 @@ def validate_logic_payload(payload: Mapping[str, object]) -> None:
             raise ValueError(f"attention[{index}] threshold numerator shape mismatch")
         if not isinstance(shift, torch.Tensor) or tuple(shift.shape) != expected:
             raise ValueError(f"attention[{index}] threshold shift shape mismatch")
+    if not isinstance(payload["global_mixers"], list):
+        raise ValueError("global_mixers must be a list")
+    for index, mixer in enumerate(payload["global_mixers"]):
+        item = require_keys(
+            mixer,
+            (
+                "name", "operator", "patch_tokens", "block_index",
+                "activation_bits", "group_size", "runtime_scale_groups",
+                "normalization_right_shift", "branch_right_shift", "rounding",
+                "sign_mask_int8", "butterfly_stages_per_transform",
+                "transform_count", "patch_add_sub_per_channel", "cls_path",
+                "learned_parameters", "general_multipliers",
+            ),
+            f"global_mixers[{index}]",
+        )
+        patch_tokens = int(item["patch_tokens"])
+        if (item["operator"] != "fixed_hadamard_sign_hadamard_global_mixer"
+                or patch_tokens < 2 or patch_tokens & (patch_tokens - 1)):
+            raise ValueError(f"global_mixers[{index}] operator/topology mismatch")
+        stages = patch_tokens.bit_length() - 1
+        if (
+            int(item["normalization_right_shift"]) != stages
+            or int(item["butterfly_stages_per_transform"]) != stages
+            or int(item["transform_count"]) != 2
+            or int(item["patch_add_sub_per_channel"]) != 2 * patch_tokens * stages
+            or int(item["learned_parameters"]) != 0
+            or int(item["general_multipliers"]) != 0
+        ):
+            raise ValueError(f"global_mixers[{index}] arithmetic ABI mismatch")
+        sign_mask = item["sign_mask_int8"]
+        if not isinstance(sign_mask, torch.Tensor) or tuple(sign_mask.shape) != (
+            patch_tokens,
+        ):
+            raise ValueError(f"global_mixers[{index}] sign mask shape mismatch")
+        if bool(((sign_mask != -1) & (sign_mask != 1)).any()) or int(sign_mask[0]) != 1:
+            raise ValueError(f"global_mixers[{index}] sign mask value mismatch")
     if not isinstance(payload["rms_norms"], list):
         raise ValueError("rms_norms must be a list")
     for index, rms_norm in enumerate(payload["rms_norms"]):
@@ -947,6 +1032,10 @@ def validate_logic_payload(payload: Mapping[str, object]) -> None:
 
 def _model_kwargs_from_checkpoint_args(args: Mapping[str, Any]) -> dict[str, object]:
     return {
+        "image_size": int(args.get("image_size", 32)),
+        "patch_size": int(args.get("patch_size", 4)),
+        "channels": int(args.get("channels", 3)),
+        "classes": int(args.get("classes", 10)),
         "dim": int(args.get("dim", 192)),
         "depth": int(args.get("depth", 6)),
         "heads": int(args.get("heads", 6)),
@@ -961,6 +1050,10 @@ def _model_kwargs_from_checkpoint_args(args: Mapping[str, Any]) -> dict[str, obj
         "group_lut_groups": int(args.get("group_lut_groups", 0)),
         "local_layers": int(args.get("local_layers", 0)),
         "local_operator": str(args.get("local_operator", "depthwise_shiftadd")),
+        "global_mixer": str(args.get("global_mixer", "attention")),
+        "hadamard_group_size": int(args.get("hadamard_group_size", 32)),
+        "hadamard_branch_shift": int(args.get("hadamard_branch_shift", 2)),
+        "hybrid_attention_period": int(args.get("hybrid_attention_period", 3)),
         "logic_expert_width": int(args.get("logic_expert_width", 0)),
         "logic_expert_count": int(args.get("logic_expert_count", 1)),
         "state_control": str(args.get("state_control", "none")),

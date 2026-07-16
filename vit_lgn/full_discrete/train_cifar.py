@@ -23,7 +23,8 @@ from vit_lgn.full_discrete.enhancements_logic_tree import SharedLogicTreeConv3x3
 
 PROTOCOL_SOURCE_FILES = (
     "model.py", "enhanced_model.py", "enhancements_lut.py",
-    "enhancements_spatial.py", "enhancements_logic_tree.py", "enhancements_expert.py",
+    "enhancements_spatial.py", "enhancements_logic_tree.py", "enhancements_hadamard.py",
+    "enhancements_expert.py",
     "__init__.py", "logic_backend.py", "shiftadd.py", "train_cifar.py",
 )
 CIFAR10_PAYLOAD_FILES = (
@@ -97,6 +98,14 @@ def parse_args() -> argparse.Namespace:
         choices=["depthwise_shiftadd", "logic_tree3x3"],
         default="depthwise_shiftadd",
     )
+    parser.add_argument(
+        "--global-mixer",
+        choices=["attention", "hadamard", "hybrid", "parallel"],
+        default="attention",
+    )
+    parser.add_argument("--hadamard-group-size", type=int, default=32)
+    parser.add_argument("--hadamard-branch-shift", type=int, default=2)
+    parser.add_argument("--hybrid-attention-period", type=int, default=3)
     parser.add_argument("--logic-expert-width", type=int, default=0)
     parser.add_argument("--logic-expert-count", type=int, default=1)
     parser.add_argument(
@@ -312,6 +321,10 @@ def main() -> None:
         group_lut_groups=args.group_lut_groups,
         local_layers=args.local_layers,
         local_operator=args.local_operator,
+        global_mixer=args.global_mixer,
+        hadamard_group_size=args.hadamard_group_size,
+        hadamard_branch_shift=args.hadamard_branch_shift,
+        hybrid_attention_period=args.hybrid_attention_period,
         logic_expert_width=args.logic_expert_width,
         logic_expert_count=args.logic_expert_count,
         state_control=args.state_control,
