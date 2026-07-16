@@ -5,6 +5,8 @@ ROOT=${ROOT:-/home/spco/sow_linear/learnable_logic_global_lut_20260716}
 DATA_ROOT=${DATA_ROOT:-/home/spco/sow_linear/ViT-LGN_attention_clean_20260629/data/cifar-10}
 PYTHON_BIN=${PYTHON_BIN:-python}
 GPU_INDEX=${GPU_INDEX:-2}
+GPU_POLL_SECONDS=${GPU_POLL_SECONDS:-60}
+GPU_IDLE_SAMPLES=${GPU_IDLE_SAMPLES:-3}
 EXPECTED_SOURCE_SET_SHA256=71fec7ad6ad78acad28e456b143151c47e84aff59c3ff22f032f6010a8df3b0b
 
 SOURCE_FILES=(
@@ -45,20 +47,46 @@ if [[ "$observed_source" != "$EXPECTED_SOURCE_SET_SHA256" ]]; then
   exit 2
 fi
 
-exec 9>"/tmp/codex_global_lut_smoke_gpu${GPU_INDEX}.lock"
-if ! flock -n 9; then
-  echo "Global LUT smoke GPU lock is already held" >&2
+queue_exit="$ROOT/global_lut_smoke_pair.exit"
+printf '%s\n' running >"$queue_exit"
+trap 'status=$?; printf "%s\n" "$status" >"$queue_exit"' EXIT
+
+exec 8>"/tmp/codex_global_lut_smoke_pair_gpu${GPU_INDEX}.lock"
+if ! flock -n 8; then
+  echo "Global LUT smoke pair is already queued or running" >&2
   exit 3
 fi
-read -r used util < <(
-  nvidia-smi --id="$GPU_INDEX" \
-    --query-gpu=memory.used,utilization.gpu --format=csv,noheader,nounits \
-    | tr -d ' ' | tr ',' ' '
-)
-if (( used > 1024 || util > 10 )); then
-  echo "GPU$GPU_INDEX is not idle: used=$used MiB util=$util%" >&2
-  exit 3
+
+# Serialize with every other LGN-ViT queue on this GPU.  The pair-specific
+# lock above prevents duplicate submissions; this shared lock prevents a
+# TOCTOU launch race with the existing 50k queues.
+exec 9>"/tmp/codex_lgn_vit_50k_gpu${GPU_INDEX}.lock"
+flock 9
+
+if [[ ! "$GPU_POLL_SECONDS" =~ ^[1-9][0-9]*$ ]] || \
+   [[ ! "$GPU_IDLE_SAMPLES" =~ ^[1-9][0-9]*$ ]]; then
+  echo "GPU_POLL_SECONDS and GPU_IDLE_SAMPLES must be positive integers" >&2
+  exit 2
 fi
+
+idle_samples=0
+while (( idle_samples < GPU_IDLE_SAMPLES )); do
+  read -r used util < <(
+    nvidia-smi --id="$GPU_INDEX" \
+      --query-gpu=memory.used,utilization.gpu --format=csv,noheader,nounits \
+      | tr -d ' ' | tr ',' ' '
+  )
+  if (( used <= 1024 && util <= 10 )); then
+    ((idle_samples += 1))
+    echo "GPU$GPU_INDEX idle sample $idle_samples/$GPU_IDLE_SAMPLES: used=$used MiB util=$util%"
+  else
+    idle_samples=0
+    echo "Waiting for GPU$GPU_INDEX: used=$used MiB util=$util%"
+  fi
+  if (( idle_samples < GPU_IDLE_SAMPLES )); then
+    sleep "$GPU_POLL_SECONDS"
+  fi
+done
 
 source "$HOME/anaconda3/etc/profile.d/conda.sh"
 conda activate att
@@ -79,8 +107,6 @@ names=(
   glut_parallel_tree_local6_d6e192_seed42_1k
 )
 mixers=(attention parallel_lut_tree)
-queue_exit="$ROOT/global_lut_smoke_pair.exit"
-trap 'status=$?; printf "%s\n" "$status" >"$queue_exit"' EXIT
 
 for index in "${!names[@]}"; do
   if [[ $(source_set_sha256) != "$EXPECTED_SOURCE_SET_SHA256" ]]; then
