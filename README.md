@@ -129,9 +129,9 @@ Hadamard/LHVM runs are smoke tests only and do not establish final accuracy.
 As of the captured 34-server checkpoint, the active `d12/e384/h12` ScaleLogic
 run uses ordinary attention globally and depthwise shift-add in the first four
 blocks; it is not a Hadamard-global run. It reached validation accuracy
-`0.5958` at 5k, `0.6664` at 10k, and `0.6830` at 15k of 50k planned
-steps. Checkpoints and raw run state remain on server 34 and are not committed
-here.
+`0.5958` at 5k, `0.6664` at 10k, `0.6830` at 15k, and `0.6960` at 20k
+of 50k planned steps. Checkpoints and raw run state remain on server 34 and
+are not committed here.
 
 See:
 

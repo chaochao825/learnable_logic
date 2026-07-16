@@ -2,7 +2,7 @@
   "captured_date": "2026-07-16",
   "evidence_status": "in_progress_checkpoint_history",
   "run_name": "scalelogic_d12e384_h12_local4_seed42_50k",
-  "checkpoint_step": 15000,
+  "checkpoint_step": 20000,
   "planned_steps": 50000,
   "protocol_sha256": "fe9b968f3be661a3ed8cbf77649978774ba525afddf725fe79c127523ec37198",
   "source_checkpoint": "/data2/wangmeiqi/learnable_logic_hadamard_mixer_20260716/runs/scalelogic_d12e384_h12_local4_seed42_50k/checkpoint.pt",
@@ -42,6 +42,18 @@
       "training_seconds_per_step": 0.7802448625439778,
       "unclipped_global_gradient_l2": 2.3256514072418213,
       "validation_accuracy": 0.683
+    },
+    {
+      "gradient_clip_coefficient": 0.4040515439055995,
+      "logic_tree_gradient_l2_after_clip": 0.0,
+      "next_learning_rate": 0.000210489097692938,
+      "peak_allocated_gib": 11.7559494972229,
+      "step": 20000,
+      "train_loss": 1.067804217338562,
+      "training_interval_seconds": 2072.360755642876,
+      "training_seconds_per_step": 0.4144721511285752,
+      "unclipped_global_gradient_l2": 2.474930763244629,
+      "validation_accuracy": 0.696
     }
   ]
 }

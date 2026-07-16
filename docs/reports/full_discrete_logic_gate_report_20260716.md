@@ -161,6 +161,7 @@ Checkpoint history captured during this audit:
 | 5,000 | 0.5958 | 1.4691 | 11.7573 | 0.4120 |
 | 10,000 | 0.6664 | 1.1960 | 11.7559 | 0.5500 |
 | 15,000 | 0.6830 | 1.0756 | 11.7559 | 0.7802 |
+| 20,000 | 0.6960 | 1.0678 | 11.7559 | 0.4145 |
 
 The run was still active when this snapshot was prepared. No final-accuracy
 claim should be made from these rows. The extracted lightweight history is in

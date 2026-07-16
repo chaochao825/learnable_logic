@@ -22,3 +22,4 @@ result_json,mixer_smoke,scalelogic_local4,42,1000,384,12,12,attention,depthwise_
 checkpoint_history,scalelogic_50k,local4_step5000,42,5000,384,12,12,attention,depthwise_shiftadd,4,rms_lut,same,0.5958,,,,in_progress,docs/evidence/scalelogic_d12e384_h12_local4_seed42_50k.checkpoint_history.json
 checkpoint_history,scalelogic_50k,local4_step10000,42,10000,384,12,12,attention,depthwise_shiftadd,4,rms_lut,same,0.6664,,,,in_progress,docs/evidence/scalelogic_d12e384_h12_local4_seed42_50k.checkpoint_history.json
 checkpoint_history,scalelogic_50k,local4_step15000,42,15000,384,12,12,attention,depthwise_shiftadd,4,rms_lut,same,0.6830,,,,in_progress,docs/evidence/scalelogic_d12e384_h12_local4_seed42_50k.checkpoint_history.json
+checkpoint_history,scalelogic_50k,local4_step20000,42,20000,384,12,12,attention,depthwise_shiftadd,4,rms_lut,same,0.6960,,,,in_progress,docs/evidence/scalelogic_d12e384_h12_local4_seed42_50k.checkpoint_history.json
