@@ -1,0 +1,70 @@
+{
+  "args": {
+    "activation_bits": 8,
+    "batch_size": 128,
+    "checkpoint_every": 500,
+    "data_root": "/home/wangmeiqi/ViT-LGN_goal6plus_nobias_retry_20260630/data/cifar-10",
+    "depth": 6,
+    "dim": 192,
+    "eval_batch_size": 256,
+    "eval_every": 500,
+    "final_norm_kind": "same",
+    "global_mixer": "attention",
+    "group_lut_groups": 0,
+    "hadamard_branch_shift": 2,
+    "hadamard_group_size": 32,
+    "heads": 6,
+    "learned_gap": false,
+    "learning_rate": 0.0003,
+    "local_layers": 6,
+    "local_operator": "depthwise_shiftadd",
+    "logic_expert_count": 1,
+    "logic_expert_width": 0,
+    "min_learning_rate": 1e-05,
+    "mlp_ratio": 4.0,
+    "norm_kind": "rms_lut",
+    "out_dir": "/data2/wangmeiqi/learnable_logic_hadamard_mixer_20260716/runs/attention_local6_smoke_d6e192_seed42",
+    "qk_lanes": 7,
+    "seed": 42,
+    "state_control": "none",
+    "state_expert_width": 0,
+    "steps": 1000,
+    "topk": 8,
+    "valid_size": 5000,
+    "warmup_steps": 100,
+    "weight_decay": 0.05,
+    "weight_magnitude_bits": 7
+  },
+  "cuda": "12.1",
+  "dataset": {
+    "archive_sha256": "6d958be074577803d12ecdefd02955f39262c83c16fe9348329d7fe0b5c001ce",
+    "extracted_files_sha256": {
+      "batches.meta": "f962466ef690d46b226450fb9aadc74ba4bc64a76aa526b5827fe4bc5c7125cb",
+      "data_batch_1": "54636561a3ce25bd3e19253c6b0d8538147b0ae398331ac4a2d86c6d987368cd",
+      "data_batch_2": "766b2cef9fbc745cf056b3152224f7cf77163b330ea9a15f9392beb8b89bc5a8",
+      "data_batch_3": "0f00d98ebfb30b3ec0ad19f9756dc2630b89003e10525f5e148445e82aa6a1f9",
+      "data_batch_4": "3f7bb240661948b8f4d53e36ec720d8306f5668bd0071dcb4e6c947f78e9682b",
+      "data_batch_5": "d91802434d8376bbaeeadf58a737e3a1b12ac839077e931237e0dcd43adcb154",
+      "test_batch": "f53d8d457504f7cff4ea9e021afcf0e0ad8e24a91f3fc42091b8adef61157831"
+    }
+  },
+  "sha256": "99d40e58c1723dfb7c9739f35cb6da156a6900fb15c3fa6e44134a4772b6d489",
+  "sources": {
+    "__init__.py": "efa4661d5fff2269d6bd7666c11f8321d0989b66ebf53302ab2344a4935e0ff4",
+    "enhanced_model.py": "95517f469bf71cf4fd0e523eee4b29c9fc708e9eaa44e26e755855acb2259cac",
+    "enhancements_expert.py": "bb5bdf59ff2601dc499df511f22f22673b4c9e5cebbf332c9cdc9b3f3cad8885",
+    "enhancements_hadamard.py": "75a324549fb0429bc71f1c1fd639e499ee76adacddfc9be395973ab5af3ba904",
+    "enhancements_logic_tree.py": "cf828073c5279ed58be7da730c02d708f4643279f67706bf82718d039b2c2dcf",
+    "enhancements_lut.py": "21bf594009bb2608679c97339b14d7bac8bc3d79aa6d4167eddfe20ab0a41e9b",
+    "enhancements_spatial.py": "ff07894866109e388d5ce22371d43a7cb716d40d8bbf9eca5c27eb5a45967cc4",
+    "logic_backend.py": "b06b2cae779fbf4734687a79ae3ff168a4c24448ebf432b784c4355bb0b3f7df",
+    "model.py": "a3e501c74fdbb67719900a4ff26ee27b0aa1819a7378b39f70969cb37d566e6e",
+    "shiftadd.py": "d44638f5f1e978ce9df9a57643dd786ff672753dae551939d38c329c4a4d2c4a",
+    "train_cifar.py": "45cd33175c5ab04e52282947a99ea85ab348a05ad385c802575dba23e99319b2"
+  },
+  "split": {
+    "seed": 20260711,
+    "valid_size": 5000
+  },
+  "torch": "2.5.1+cu121"
+}

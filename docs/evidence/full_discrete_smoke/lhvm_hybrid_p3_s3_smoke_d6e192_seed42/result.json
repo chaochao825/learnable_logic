@@ -1,0 +1,1009 @@
+{
+  "deployment_contract": {
+    "activation_bits": 8,
+    "all_learned_matrix_weights": "signed bit-plane sums times power-of-two scales",
+    "attention": "one hard XNOR/Top-K content mixer every 3 blocks",
+    "block_contracts": [
+      {
+        "ffn": {
+          "type": "DiscreteGatedFFN"
+        },
+        "global_mixer": {
+          "activation_bits": 8,
+          "block_index": 0,
+          "branch_right_shift": 3,
+          "cls_path": "rounded patch mean to CLS; CLS broadcast to patches",
+          "first_butterfly_signed_bits": 14,
+          "general_multipliers": 0,
+          "global_path": "two FWHTs + fixed sign XOR/negate + shifts",
+          "group_size": 32,
+          "learned_parameters": 0,
+          "normalization_right_shift": 6,
+          "operator": "fixed_hadamard_sign_hadamard_global_mixer",
+          "patch_add_sub_per_channel": 768,
+          "patch_tokens": 64,
+          "rounding": "nearest, half-way magnitude away from zero",
+          "runtime_scale_groups": 6,
+          "second_butterfly_signed_bits": 20,
+          "sign_mask": [
+            1,
+            1,
+            1,
+            -1,
+            -1,
+            -1,
+            1,
+            -1,
+            1,
+            1,
+            -1,
+            -1,
+            1,
+            1,
+            -1,
+            1,
+            -1,
+            1,
+            -1,
+            1,
+            1,
+            1,
+            -1,
+            -1,
+            1,
+            1,
+            1,
+            -1,
+            1,
+            1,
+            1,
+            1,
+            -1,
+            1,
+            -1,
+            -1,
+            1,
+            1,
+            -1,
+            -1,
+            -1,
+            1,
+            1,
+            -1,
+            1,
+            -1,
+            1,
+            1,
+            -1,
+            1,
+            -1,
+            -1,
+            1,
+            1,
+            -1,
+            1,
+            -1,
+            1,
+            1,
+            1,
+            -1,
+            1,
+            1,
+            1
+          ]
+        }
+      },
+      {
+        "ffn": {
+          "type": "DiscreteGatedFFN"
+        },
+        "global_mixer": {
+          "activation_bits": 8,
+          "block_index": 1,
+          "branch_right_shift": 3,
+          "cls_path": "rounded patch mean to CLS; CLS broadcast to patches",
+          "first_butterfly_signed_bits": 14,
+          "general_multipliers": 0,
+          "global_path": "two FWHTs + fixed sign XOR/negate + shifts",
+          "group_size": 32,
+          "learned_parameters": 0,
+          "normalization_right_shift": 6,
+          "operator": "fixed_hadamard_sign_hadamard_global_mixer",
+          "patch_add_sub_per_channel": 768,
+          "patch_tokens": 64,
+          "rounding": "nearest, half-way magnitude away from zero",
+          "runtime_scale_groups": 6,
+          "second_butterfly_signed_bits": 20,
+          "sign_mask": [
+            1,
+            1,
+            -1,
+            -1,
+            1,
+            -1,
+            -1,
+            1,
+            -1,
+            1,
+            -1,
+            -1,
+            -1,
+            1,
+            -1,
+            -1,
+            -1,
+            -1,
+            1,
+            1,
+            -1,
+            -1,
+            1,
+            1,
+            -1,
+            -1,
+            1,
+            -1,
+            1,
+            -1,
+            1,
+            -1,
+            -1,
+            1,
+            1,
+            -1,
+            -1,
+            -1,
+            -1,
+            1,
+            -1,
+            -1,
+            1,
+            1,
+            -1,
+            1,
+            -1,
+            1,
+            -1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            -1,
+            1,
+            -1,
+            -1,
+            1,
+            -1,
+            1,
+            1
+          ]
+        }
+      },
+      {
+        "ffn": {
+          "type": "DiscreteGatedFFN"
+        },
+        "gap": {
+          "mapping": "fixed score-gap",
+          "weights": [
+            1,
+            2,
+            4,
+            8
+          ]
+        },
+        "global_mixer": {
+          "gap": {
+            "mapping": "fixed score-gap",
+            "weights": [
+              1,
+              2,
+              4,
+              8
+            ]
+          },
+          "operator": "xnor_popcount_hard_topk"
+        }
+      },
+      {
+        "ffn": {
+          "type": "DiscreteGatedFFN"
+        },
+        "global_mixer": {
+          "activation_bits": 8,
+          "block_index": 3,
+          "branch_right_shift": 3,
+          "cls_path": "rounded patch mean to CLS; CLS broadcast to patches",
+          "first_butterfly_signed_bits": 14,
+          "general_multipliers": 0,
+          "global_path": "two FWHTs + fixed sign XOR/negate + shifts",
+          "group_size": 32,
+          "learned_parameters": 0,
+          "normalization_right_shift": 6,
+          "operator": "fixed_hadamard_sign_hadamard_global_mixer",
+          "patch_add_sub_per_channel": 768,
+          "patch_tokens": 64,
+          "rounding": "nearest, half-way magnitude away from zero",
+          "runtime_scale_groups": 6,
+          "second_butterfly_signed_bits": 20,
+          "sign_mask": [
+            1,
+            1,
+            -1,
+            -1,
+            1,
+            1,
+            1,
+            1,
+            -1,
+            1,
+            1,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1,
+            1,
+            -1,
+            -1,
+            1,
+            -1,
+            1,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1,
+            -1,
+            1,
+            -1,
+            -1,
+            -1,
+            1,
+            1,
+            -1,
+            1,
+            1,
+            -1,
+            -1,
+            1,
+            -1,
+            -1,
+            1,
+            -1,
+            1,
+            -1,
+            -1,
+            1,
+            -1,
+            1,
+            1,
+            1,
+            -1,
+            1,
+            -1,
+            1,
+            -1,
+            1,
+            -1,
+            1,
+            -1,
+            1,
+            1
+          ]
+        }
+      },
+      {
+        "ffn": {
+          "type": "DiscreteGatedFFN"
+        },
+        "global_mixer": {
+          "activation_bits": 8,
+          "block_index": 4,
+          "branch_right_shift": 3,
+          "cls_path": "rounded patch mean to CLS; CLS broadcast to patches",
+          "first_butterfly_signed_bits": 14,
+          "general_multipliers": 0,
+          "global_path": "two FWHTs + fixed sign XOR/negate + shifts",
+          "group_size": 32,
+          "learned_parameters": 0,
+          "normalization_right_shift": 6,
+          "operator": "fixed_hadamard_sign_hadamard_global_mixer",
+          "patch_add_sub_per_channel": 768,
+          "patch_tokens": 64,
+          "rounding": "nearest, half-way magnitude away from zero",
+          "runtime_scale_groups": 6,
+          "second_butterfly_signed_bits": 20,
+          "sign_mask": [
+            1,
+            1,
+            1,
+            -1,
+            -1,
+            1,
+            -1,
+            -1,
+            1,
+            1,
+            1,
+            -1,
+            1,
+            1,
+            -1,
+            -1,
+            -1,
+            1,
+            1,
+            -1,
+            -1,
+            -1,
+            1,
+            1,
+            1,
+            -1,
+            -1,
+            -1,
+            -1,
+            1,
+            -1,
+            1,
+            1,
+            -1,
+            1,
+            1,
+            -1,
+            -1,
+            1,
+            1,
+            1,
+            1,
+            -1,
+            -1,
+            1,
+            1,
+            -1,
+            1,
+            -1,
+            1,
+            -1,
+            -1,
+            1,
+            1,
+            1,
+            1,
+            -1,
+            -1,
+            1,
+            -1,
+            -1,
+            -1,
+            1,
+            1
+          ]
+        }
+      },
+      {
+        "ffn": {
+          "type": "DiscreteGatedFFN"
+        },
+        "gap": {
+          "mapping": "fixed score-gap",
+          "weights": [
+            1,
+            2,
+            4,
+            8
+          ]
+        },
+        "global_mixer": {
+          "gap": {
+            "mapping": "fixed score-gap",
+            "weights": [
+              1,
+              2,
+              4,
+              8
+            ]
+          },
+          "operator": "xnor_popcount_hard_topk"
+        }
+      }
+    ],
+    "classifier_output_bits": 16,
+    "enhancements": {
+      "effective_state_expert_width": 0,
+      "gap_max": 63,
+      "global_mixer": "hybrid",
+      "group_lut_groups": 0,
+      "hadamard_branch_shift": 3,
+      "hadamard_group_size": 32,
+      "hybrid_attention_period": 3,
+      "learned_gap": false,
+      "local_branch_shift": 2,
+      "local_layers": 6,
+      "local_operator": "depthwise_shiftadd",
+      "logic_expert_count": 1,
+      "logic_expert_width": 0,
+      "state_control": "none",
+      "state_expert_width": 0
+    },
+    "ffn": "binary gate/MUX + shift-add bit-plane projections",
+    "general_matrix_multipliers": 0,
+    "global_mixer": "fixed H-D-H/N in remaining blocks; final periodic block is attention",
+    "inference_backend": "fake_quant",
+    "linear_layer_count": 24,
+    "local_branch_contracts": {
+      "0": {
+        "cls_path": "bypass spatial stencil; signed-A requantization only",
+        "general_multipliers": 0,
+        "input_activation": "signed A8, one power-of-two scale per sample/channel",
+        "kernel_integer_range": [
+          -15,
+          15
+        ],
+        "kernel_magnitude_bit_values": [
+          1,
+          2,
+          4,
+          8
+        ],
+        "kernel_scale": "per-channel signed power of two followed by >> 2",
+        "minimum_signed_accumulator_bits": 16,
+        "output_activation": "signed A8, requantized after residual add",
+        "residual_add": "align power-of-two exponents with shifts, add integers, then A requantize",
+        "runtime": "bit-plane conditional shifts plus integer accumulation",
+        "spatial_operator": "zero-padded 3x3 depthwise correlation",
+        "token_layout": "CLS + row-major 8x8 patch grid"
+      },
+      "1": {
+        "cls_path": "bypass spatial stencil; signed-A requantization only",
+        "general_multipliers": 0,
+        "input_activation": "signed A8, one power-of-two scale per sample/channel",
+        "kernel_integer_range": [
+          -15,
+          15
+        ],
+        "kernel_magnitude_bit_values": [
+          1,
+          2,
+          4,
+          8
+        ],
+        "kernel_scale": "per-channel signed power of two followed by >> 2",
+        "minimum_signed_accumulator_bits": 16,
+        "output_activation": "signed A8, requantized after residual add",
+        "residual_add": "align power-of-two exponents with shifts, add integers, then A requantize",
+        "runtime": "bit-plane conditional shifts plus integer accumulation",
+        "spatial_operator": "zero-padded 3x3 depthwise correlation",
+        "token_layout": "CLS + row-major 8x8 patch grid"
+      },
+      "2": {
+        "cls_path": "bypass spatial stencil; signed-A requantization only",
+        "general_multipliers": 0,
+        "input_activation": "signed A8, one power-of-two scale per sample/channel",
+        "kernel_integer_range": [
+          -15,
+          15
+        ],
+        "kernel_magnitude_bit_values": [
+          1,
+          2,
+          4,
+          8
+        ],
+        "kernel_scale": "per-channel signed power of two followed by >> 2",
+        "minimum_signed_accumulator_bits": 16,
+        "output_activation": "signed A8, requantized after residual add",
+        "residual_add": "align power-of-two exponents with shifts, add integers, then A requantize",
+        "runtime": "bit-plane conditional shifts plus integer accumulation",
+        "spatial_operator": "zero-padded 3x3 depthwise correlation",
+        "token_layout": "CLS + row-major 8x8 patch grid"
+      },
+      "3": {
+        "cls_path": "bypass spatial stencil; signed-A requantization only",
+        "general_multipliers": 0,
+        "input_activation": "signed A8, one power-of-two scale per sample/channel",
+        "kernel_integer_range": [
+          -15,
+          15
+        ],
+        "kernel_magnitude_bit_values": [
+          1,
+          2,
+          4,
+          8
+        ],
+        "kernel_scale": "per-channel signed power of two followed by >> 2",
+        "minimum_signed_accumulator_bits": 16,
+        "output_activation": "signed A8, requantized after residual add",
+        "residual_add": "align power-of-two exponents with shifts, add integers, then A requantize",
+        "runtime": "bit-plane conditional shifts plus integer accumulation",
+        "spatial_operator": "zero-padded 3x3 depthwise correlation",
+        "token_layout": "CLS + row-major 8x8 patch grid"
+      },
+      "4": {
+        "cls_path": "bypass spatial stencil; signed-A requantization only",
+        "general_multipliers": 0,
+        "input_activation": "signed A8, one power-of-two scale per sample/channel",
+        "kernel_integer_range": [
+          -15,
+          15
+        ],
+        "kernel_magnitude_bit_values": [
+          1,
+          2,
+          4,
+          8
+        ],
+        "kernel_scale": "per-channel signed power of two followed by >> 2",
+        "minimum_signed_accumulator_bits": 16,
+        "output_activation": "signed A8, requantized after residual add",
+        "residual_add": "align power-of-two exponents with shifts, add integers, then A requantize",
+        "runtime": "bit-plane conditional shifts plus integer accumulation",
+        "spatial_operator": "zero-padded 3x3 depthwise correlation",
+        "token_layout": "CLS + row-major 8x8 patch grid"
+      },
+      "5": {
+        "cls_path": "bypass spatial stencil; signed-A requantization only",
+        "general_multipliers": 0,
+        "input_activation": "signed A8, one power-of-two scale per sample/channel",
+        "kernel_integer_range": [
+          -15,
+          15
+        ],
+        "kernel_magnitude_bit_values": [
+          1,
+          2,
+          4,
+          8
+        ],
+        "kernel_scale": "per-channel signed power of two followed by >> 2",
+        "minimum_signed_accumulator_bits": 16,
+        "output_activation": "signed A8, requantized after residual add",
+        "residual_add": "align power-of-two exponents with shifts, add integers, then A requantize",
+        "runtime": "bit-plane conditional shifts plus integer accumulation",
+        "spatial_operator": "zero-padded 3x3 depthwise correlation",
+        "token_layout": "CLS + row-major 8x8 patch grid"
+      }
+    },
+    "logic_lut_scope": "CPU bit-exact W-magnitude nibble LUT and packed-XNOR transaction reference; power-of-two requantization still uses a float carrier",
+    "normalization": {
+      "block": {
+        "kind": "rms_lut",
+        "normalizer": "unsigned Q0.15 reciprocal-square-root ROM",
+        "runtime_code_product": true,
+        "statistics": "rounded integer mean square"
+      },
+      "final": {
+        "kind": "rms_lut",
+        "normalizer": "unsigned Q0.15 reciprocal-square-root ROM",
+        "runtime_code_product": true,
+        "statistics": "rounded integer mean square"
+      }
+    },
+    "weight_magnitude_bit_values": [
+      1,
+      2,
+      4,
+      8,
+      16,
+      32,
+      64
+    ]
+  },
+  "elapsed_seconds": 178.50417261524126,
+  "final_validation_accuracy": 0.3192,
+  "history": [
+    {
+      "gradient_clip_coefficient": 0.4932373410015181,
+      "logic_tree_gradient_l2_after_clip": 0.0,
+      "next_learning_rate": 0.0001801789857617049,
+      "normalization_statistics": {
+        "blocks.0.norm1": {
+          "code_count": 62400000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            382,
+            265612,
+            59006,
+            0
+          ],
+          "saturated_code_count": 199243
+        },
+        "blocks.0.norm2": {
+          "code_count": 62400000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            528,
+            252011,
+            72461,
+            0
+          ],
+          "saturated_code_count": 502782
+        },
+        "blocks.1.norm1": {
+          "code_count": 62400000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            40373,
+            209231,
+            75396,
+            0
+          ],
+          "saturated_code_count": 305762
+        },
+        "blocks.1.norm2": {
+          "code_count": 62400000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            18990,
+            281128,
+            24882,
+            0
+          ],
+          "saturated_code_count": 346338
+        },
+        "blocks.2.norm1": {
+          "code_count": 62400000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            896,
+            182334,
+            141770,
+            0
+          ],
+          "saturated_code_count": 404893
+        },
+        "blocks.2.norm2": {
+          "code_count": 62400000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            10,
+            93228,
+            231762,
+            0
+          ],
+          "saturated_code_count": 1205962
+        },
+        "blocks.3.norm1": {
+          "code_count": 62400000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            234007,
+            90993,
+            0
+          ],
+          "saturated_code_count": 737742
+        },
+        "blocks.3.norm2": {
+          "code_count": 62400000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            159194,
+            165806,
+            0
+          ],
+          "saturated_code_count": 1857961
+        },
+        "blocks.4.norm1": {
+          "code_count": 62400000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            41930,
+            283070,
+            0
+          ],
+          "saturated_code_count": 871984
+        },
+        "blocks.4.norm2": {
+          "code_count": 62400000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            801,
+            324073,
+            126
+          ],
+          "saturated_code_count": 2047964
+        },
+        "blocks.5.norm1": {
+          "code_count": 62400000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            3392,
+            321521,
+            87
+          ],
+          "saturated_code_count": 2397362
+        },
+        "blocks.5.norm2": {
+          "code_count": 62400000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            218975,
+            106025,
+            0
+          ],
+          "saturated_code_count": 2631088
+        },
+        "norm": {
+          "code_count": 62400000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            57623,
+            267377,
+            0
+          ],
+          "saturated_code_count": 2724679
+        }
+      },
+      "peak_allocated_gib": 1.9191665649414062,
+      "step": 500,
+      "train_loss": 2.05820894241333,
+      "training_interval_seconds": 86.92508358694613,
+      "training_seconds_per_step": 0.17385016717389226,
+      "unclipped_global_gradient_l2": 2.0274205207824707,
+      "validation_accuracy": 0.3076
+    },
+    {
+      "gradient_clip_coefficient": 0.3061654613530121,
+      "logic_tree_gradient_l2_after_clip": 0.0,
+      "next_learning_rate": 1e-05,
+      "normalization_statistics": {
+        "blocks.0.norm1": {
+          "code_count": 62400000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            1268,
+            271874,
+            51858,
+            0
+          ],
+          "saturated_code_count": 196129
+        },
+        "blocks.0.norm2": {
+          "code_count": 62400000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            1710,
+            256649,
+            66641,
+            0
+          ],
+          "saturated_code_count": 460603
+        },
+        "blocks.1.norm1": {
+          "code_count": 62400000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            53709,
+            216690,
+            54601,
+            0
+          ],
+          "saturated_code_count": 225452
+        },
+        "blocks.1.norm2": {
+          "code_count": 62400000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            17322,
+            287076,
+            20602,
+            0
+          ],
+          "saturated_code_count": 321705
+        },
+        "blocks.2.norm1": {
+          "code_count": 62400000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            2870,
+            259063,
+            63067,
+            0
+          ],
+          "saturated_code_count": 194933
+        },
+        "blocks.2.norm2": {
+          "code_count": 62400000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            2798,
+            210416,
+            111786,
+            0
+          ],
+          "saturated_code_count": 437241
+        },
+        "blocks.3.norm1": {
+          "code_count": 62400000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            81,
+            106610,
+            218309,
+            0
+          ],
+          "saturated_code_count": 906318
+        },
+        "blocks.3.norm2": {
+          "code_count": 62400000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            46175,
+            278825,
+            0
+          ],
+          "saturated_code_count": 3082260
+        },
+        "blocks.4.norm1": {
+          "code_count": 62400000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            126891,
+            198109,
+            0
+          ],
+          "saturated_code_count": 1945033
+        },
+        "blocks.4.norm2": {
+          "code_count": 62400000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            53611,
+            271372,
+            17
+          ],
+          "saturated_code_count": 4836062
+        },
+        "blocks.5.norm1": {
+          "code_count": 62400000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            88071,
+            236849,
+            80
+          ],
+          "saturated_code_count": 1932890
+        },
+        "blocks.5.norm2": {
+          "code_count": 62400000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            53948,
+            271052,
+            0
+          ],
+          "saturated_code_count": 1546085
+        },
+        "norm": {
+          "code_count": 62400000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            48007,
+            276993,
+            0
+          ],
+          "saturated_code_count": 3348919
+        }
+      },
+      "peak_allocated_gib": 1.918980598449707,
+      "step": 1000,
+      "train_loss": 2.0632357597351074,
+      "training_interval_seconds": 86.04155233083293,
+      "training_seconds_per_step": 0.17208310466166585,
+      "unclipped_global_gradient_l2": 3.266206741333008,
+      "validation_accuracy": 0.3192
+    }
+  ],
+  "parameters": 2983296,
+  "protocol_sha256": "bbcbbd6c0ae5b51e24f9b6205ae88a8286b19d213a69942832ac688a5062d3ff",
+  "source_sha256": {
+    "__init__.py": "efa4661d5fff2269d6bd7666c11f8321d0989b66ebf53302ab2344a4935e0ff4",
+    "enhanced_model.py": "a9747ccbc5410f117e9415eff3f352b1c7cb46e077b9cd3930085f76730cbbb7",
+    "enhancements_expert.py": "bb5bdf59ff2601dc499df511f22f22673b4c9e5cebbf332c9cdc9b3f3cad8885",
+    "enhancements_hadamard.py": "75a324549fb0429bc71f1c1fd639e499ee76adacddfc9be395973ab5af3ba904",
+    "enhancements_logic_tree.py": "cf828073c5279ed58be7da730c02d708f4643279f67706bf82718d039b2c2dcf",
+    "enhancements_lut.py": "21bf594009bb2608679c97339b14d7bac8bc3d79aa6d4167eddfe20ab0a41e9b",
+    "enhancements_spatial.py": "ff07894866109e388d5ce22371d43a7cb716d40d8bbf9eca5c27eb5a45967cc4",
+    "logic_backend.py": "b06b2cae779fbf4734687a79ae3ff168a4c24448ebf432b784c4355bb0b3f7df",
+    "model.py": "a3e501c74fdbb67719900a4ff26ee27b0aa1819a7378b39f70969cb37d566e6e",
+    "shiftadd.py": "d44638f5f1e978ce9df9a57643dd786ff672753dae551939d38c329c4a4d2c4a",
+    "train_cifar.py": "6e6ee4f11c39ef51edcc6da1238f603ed1c3a9e421b8386a7ff1304b9945805f"
+  }
+}

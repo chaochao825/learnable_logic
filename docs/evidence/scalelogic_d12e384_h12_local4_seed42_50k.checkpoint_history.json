@@ -1,0 +1,47 @@
+{
+  "captured_date": "2026-07-16",
+  "evidence_status": "in_progress_checkpoint_history",
+  "run_name": "scalelogic_d12e384_h12_local4_seed42_50k",
+  "checkpoint_step": 15000,
+  "planned_steps": 50000,
+  "protocol_sha256": "fe9b968f3be661a3ed8cbf77649978774ba525afddf725fe79c127523ec37198",
+  "source_checkpoint": "/data2/wangmeiqi/learnable_logic_hadamard_mixer_20260716/runs/scalelogic_d12e384_h12_local4_seed42_50k/checkpoint.pt",
+  "history": [
+    {
+      "gradient_clip_coefficient": 0.2913866500801643,
+      "logic_tree_gradient_l2_after_clip": 0.0,
+      "next_learning_rate": 0.00029721386565846836,
+      "peak_allocated_gib": 11.757297992706299,
+      "step": 5000,
+      "train_loss": 1.469059705734253,
+      "training_interval_seconds": 2060.077404911164,
+      "training_seconds_per_step": 0.41201548098223284,
+      "unclipped_global_gradient_l2": 3.4318652153015137,
+      "validation_accuracy": 0.5958
+    },
+    {
+      "gradient_clip_coefficient": 0.34140487070359127,
+      "logic_tree_gradient_l2_after_clip": 0.0,
+      "next_learning_rate": 0.0002805736835487436,
+      "peak_allocated_gib": 11.7559494972229,
+      "step": 10000,
+      "train_loss": 1.1959587335586548,
+      "training_interval_seconds": 2749.868470890913,
+      "training_seconds_per_step": 0.5499736941781826,
+      "unclipped_global_gradient_l2": 2.929072618484497,
+      "validation_accuracy": 0.6664
+    },
+    {
+      "gradient_clip_coefficient": 0.429986870301904,
+      "logic_tree_gradient_l2_after_clip": 0.0,
+      "next_learning_rate": 0.00025060514318951,
+      "peak_allocated_gib": 11.7559494972229,
+      "step": 15000,
+      "train_loss": 1.0755608081817627,
+      "training_interval_seconds": 3901.224312719889,
+      "training_seconds_per_step": 0.7802448625439778,
+      "unclipped_global_gradient_l2": 2.3256514072418213,
+      "validation_accuracy": 0.683
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+evidence_class,experiment_family,variant,seed,steps,dim,depth,heads,global_mixer,local_operator,local_layers,block_norm,final_norm,validation_accuracy,cross_entropy,hard_lut_state,root_change_rate,status,source_note
+source_document,frozen_norm_probe,q15_rms_same,42,50000,192,6,6,attention,,,rms_lut,same,0.7468,0.8689,,,complete,vit_lgn/full_discrete/NORM_PROBE_RESULTS.md
+source_document,frozen_norm_probe,shift_rms_same,42,50000,192,6,6,attention,,,shift_rms,same,0.7360,0.9210,,,complete,vit_lgn/full_discrete/NORM_PROBE_RESULTS.md
+source_document,frozen_norm_probe,requant_same,42,50000,192,6,6,attention,,,requant,same,0.1530,15.4844,,,complete,vit_lgn/full_discrete/NORM_PROBE_RESULTS.md
+source_document,frozen_norm_probe,identity_same,42,50000,192,6,6,attention,,,none,same,0.1530,15.4844,,,complete,vit_lgn/full_discrete/NORM_PROBE_RESULTS.md
+source_document,frozen_norm_probe,shift_rms_final_none,42,50000,192,6,6,attention,,,shift_rms,none,0.7360,1.8611,,,complete,vit_lgn/full_discrete/NORM_PROBE_RESULTS.md
+source_document,frozen_norm_probe,q15_rms_final_none,42,50000,192,6,6,attention,,,rms_lut,none,0.7454,1.7670,,,complete,vit_lgn/full_discrete/NORM_PROBE_RESULTS.md
+source_document,from_scratch_norm,wmag7_rms_same,42,50000,192,6,6,attention,,,rms_lut,same,0.7530,,,,complete,source README and norm probe; raw result absent from snapshot
+source_document,from_scratch_norm,wmag7_shift_rms_same,42,50000,192,6,6,attention,,,shift_rms,same,0.7180,,,,complete,source README and norm probe; raw result absent from snapshot
+source_document,from_scratch_norm,wmag7_shift_final_none,42,50000,192,6,6,attention,,,shift_rms,none,0.7460,,,,complete,source README and norm probe; raw result absent from snapshot
+source_document,from_scratch_norm,wmag7_rms_final_none,42,50000,192,6,6,attention,,,rms_lut,none,0.7474,,,,complete,source README and norm probe; raw result absent from snapshot
+source_document,from_scratch_norm,wmag7_requant_same,42,50000,192,6,6,attention,,,requant,same,0.7010,,,,complete,source README and norm probe; raw result absent from snapshot
+source_document,from_scratch_norm,wmag7_none_same,42,50000,192,6,6,attention,,,none,same,0.7064,,,,complete,source README and norm probe; raw result absent from snapshot
+source_document,logic_tree_pair,local0_control,42,50000,192,6,6,attention,logic_tree3x3,0,rms_lut,same,0.7530,,all_0xC,0.0,complete,source README; raw result absent from snapshot
+source_document,logic_tree_pair,local1,42,50000,192,6,6,attention,logic_tree3x3,1,rms_lut,same,0.7576,,all_0xC,0.0,complete,source README; raw result absent from snapshot
+source_document,logic_tree_pair,local3,42,50000,192,6,6,attention,logic_tree3x3,3,rms_lut,same,0.5828,,all_0xC,0.0,complete,source README; raw result absent from snapshot
+result_json,mixer_smoke,attention_local6,42,1000,192,6,6,attention,depthwise_shiftadd,6,rms_lut,same,0.4930,,,,smoke,docs/evidence/full_discrete_smoke/attention_local6_smoke_d6e192_seed42/result.json
+result_json,mixer_smoke,lhvm_hybrid_p3_s3,42,1000,192,6,6,hybrid,depthwise_shiftadd,6,rms_lut,same,0.3192,,,,smoke,docs/evidence/full_discrete_smoke/lhvm_hybrid_p3_s3_smoke_d6e192_seed42/result.json
+result_json,mixer_smoke,lhvm_parallel_s4,42,1000,192,6,6,parallel,depthwise_shiftadd,6,rms_lut,same,0.4742,,,,smoke,docs/evidence/full_discrete_smoke/lhvm_parallel_s4_smoke_d6e192_seed42/result.json
+result_json,mixer_smoke,lhvm,42,1000,192,6,6,hadamard,depthwise_shiftadd,6,rms_lut,same,0.2666,,,,smoke,docs/evidence/full_discrete_smoke/lhvm_smoke_d6e192_seed42/result.json
+result_json,mixer_smoke,scalelogic_local4,42,1000,384,12,12,attention,depthwise_shiftadd,4,rms_lut,same,0.4886,,,,smoke,docs/evidence/full_discrete_smoke/scalelogic_smoke_d12e384_h12_local4_seed42/result.json
+checkpoint_history,scalelogic_50k,local4_step5000,42,5000,384,12,12,attention,depthwise_shiftadd,4,rms_lut,same,0.5958,,,,in_progress,docs/evidence/scalelogic_d12e384_h12_local4_seed42_50k.checkpoint_history.json
+checkpoint_history,scalelogic_50k,local4_step10000,42,10000,384,12,12,attention,depthwise_shiftadd,4,rms_lut,same,0.6664,,,,in_progress,docs/evidence/scalelogic_d12e384_h12_local4_seed42_50k.checkpoint_history.json
+checkpoint_history,scalelogic_50k,local4_step15000,42,15000,384,12,12,attention,depthwise_shiftadd,4,rms_lut,same,0.6830,,,,in_progress,docs/evidence/scalelogic_d12e384_h12_local4_seed42_50k.checkpoint_history.json

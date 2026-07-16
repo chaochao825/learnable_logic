@@ -1,0 +1,19 @@
+{
+  "captured_date": "2026-07-16",
+  "source_protocol_sha256": "fe9b968f3be661a3ed8cbf77649978774ba525afddf725fe79c127523ec37198",
+  "normalization": "CRLF line endings were converted to LF where present, and text files use exactly one terminal newline.",
+  "verification": "Each listed publish file is byte-identical to the corresponding server-34 source after applying the same text normalization.",
+  "files": {
+    "__init__.py": "865483d9fe385307429a379bd6d54088094bb91b2b0e26cc20d9bbdec07aaf86",
+    "enhanced_model.py": "332337a2561929b817e6fea08d38b87f247564fd421d27d4cc7d3a93950c2765",
+    "enhancements_expert.py": "759946fb079d575fceedf003e5ec9305006be0ab589b1a65389b4dd023c3bd7e",
+    "enhancements_hadamard.py": "780b063297a952aa65bff7932dff6c6841bc43653f42dea440b82c491114c9bc",
+    "enhancements_logic_tree.py": "44d7caacd13ea66869791e5114670bab96f75926b29b67a214533e925dff8ab5",
+    "enhancements_lut.py": "467963c701c1d206a7214eaa51a0a6c38b459ccbbd7adb8a2bd05a2260bf70a4",
+    "enhancements_spatial.py": "97f771a649ed950c1575703edaf305b1df6571d5383835c8cf63f393a16ef006",
+    "logic_backend.py": "7a0a635b2f0f987d9d0c1d1d3fe458ecf6d9dc147eb8894e1b454a627cafe6d5",
+    "model.py": "4c882b9b4db914383b528f9656df487c8428be2a16ca103947d17d3e9d86fcae",
+    "shiftadd.py": "60aa85ab4783841f0e07dbab34a145a33fb02767ed80b47ed8f04ef1413fa648",
+    "train_cifar.py": "529863b98e5d36773b4d1401f9faba3e6f1aa505fc0106c4d1d2ae3582288be4"
+  }
+}

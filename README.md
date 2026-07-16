@@ -103,3 +103,43 @@ Highlights:
 - Attention-clean 200k checkpoints were not saved; SCTM checkpoint binaries are
   intentionally kept on 210 and listed in the weight manifest instead of being
   committed to GitHub.
+
+## Full-discrete ViT and ScaleLogic extension
+
+The 34-server snapshot under `vit_lgn/full_discrete/` adds an
+accuracy-first, fully discrete ViT path with an explicit transaction-level
+deployment contract:
+
+- signed Wmag7/Wmag4 bit-plane projections with power-of-two scales
+- A8 activations and exact A8-by-U4 product-LUT reference operations
+- packed XNOR/popcount Q/K scoring and deterministic hard Top-K
+- Q0.15 RMS-LUT, exponent-only Shift-RMS, requant-only, and no-norm controls
+- optional local shift-add, Hadamard/LHVM, LUT, expert, spatial, and shared
+  logic-tree operators
+- an exporter that removes FP32 shadow parameters, AdamW state, and STE-only
+  training objects from the deployment payload
+
+This snapshot is worth continuing, but its strongest current evidence is the
+integer/bit-plane inference contract rather than a demonstrated Hadamard
+advantage. The imported CPU suite passes 116 tests. Historical 50k results
+show that block normalization remains important, while the three-layer shared
+logic tree collapses and never changes its deployed hard LUTs. The 1k
+Hadamard/LHVM runs are smoke tests only and do not establish final accuracy.
+
+As of the captured 34-server checkpoint, the active `d12/e384/h12` ScaleLogic
+run uses ordinary attention globally and depthwise shift-add in the first four
+blocks; it is not a Hadamard-global run. It reached validation accuracy
+`0.5958` at 5k, `0.6664` at 10k, and `0.6830` at 15k of 50k planned
+steps. Checkpoints and raw run state remain on server 34 and are not committed
+here.
+
+See:
+
+- `docs/reports/full_discrete_logic_gate_report_20260716.md` for the method,
+  provenance, evidence audit, value judgment, and next experiments
+- `docs/tables/full_discrete_results_20260716.csv` for normalized historical,
+  smoke-test, and in-progress result rows
+- `docs/protocols/scalelogic_d12e384_h12_local4_seed42_50k.protocol.json` for
+  the frozen active-run protocol and source hashes
+- `docs/protocols/full_discrete_publish_source_hashes_20260716.json` for the
+  text-normalized GitHub snapshot hashes
