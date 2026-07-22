@@ -1,0 +1,57 @@
+{
+  "activation_inactive_gate_ratio": 0.22008547008547008,
+  "bit_exact_verified": true,
+  "checkpoint": "remote_runs/h200_strong_baselines_20260723/gumbel_normal_adam_tau010_w4096_seed0/checkpoint.pt",
+  "gate_confidence": 0.33073073625564575,
+  "gate_entropy": 0.7632536888122559,
+  "layer_gap_diagnostics": [
+    {
+      "elements": 272629760,
+      "flip_ratio": 0.0014471640953650842,
+      "layer": 0,
+      "mae": 0.40204500418442946,
+      "name": "encoder"
+    },
+    {
+      "elements": 272629760,
+      "flip_ratio": 0.14868805958674505,
+      "layer": 1,
+      "mae": 0.43067642725431005,
+      "name": "local_1"
+    },
+    {
+      "elements": 272629760,
+      "flip_ratio": 0.23708938085115872,
+      "layer": 2,
+      "mae": 0.44576022441570573,
+      "name": "local_2"
+    },
+    {
+      "elements": 272629760,
+      "flip_ratio": 0.3100606038020207,
+      "layer": 3,
+      "mae": 0.4438579559326172,
+      "name": "global_1"
+    },
+    {
+      "elements": 272629760,
+      "flip_ratio": 0.3070300945868859,
+      "layer": 4,
+      "mae": 0.4501326340895433,
+      "name": "global_2"
+    },
+    {
+      "elements": 655360,
+      "flip_ratio": 0.25403289794921874,
+      "layer": 5,
+      "mae": 0.39240221679210663,
+      "name": "votes"
+    }
+  ],
+  "layer_gap_final_flip_ratio": 0.25403289794921874,
+  "layer_gap_max_flip_ratio": 0.3100606038020207,
+  "layer_gap_max_mae": 0.4501326340895433,
+  "source_summary": "remote_runs/h200_strong_baselines_20260723/gumbel_normal_adam_tau010_w4096_seed0/summary.json",
+  "unused_gate_definition": "mind_gap_entropy_above_initialization_2.5pct",
+  "unused_gate_ratio": 0.7974092364311218
+}

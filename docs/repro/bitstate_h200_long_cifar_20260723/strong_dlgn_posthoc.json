@@ -1,0 +1,57 @@
+{
+  "activation_inactive_gate_ratio": 0.2941372863247863,
+  "bit_exact_verified": true,
+  "checkpoint": "remote_runs/h200_strong_baselines_20260723/dlgn_normal_adam_w4096_seed0/checkpoint.pt",
+  "gate_confidence": 0.6275767087936401,
+  "gate_entropy": 0.41802290081977844,
+  "layer_gap_diagnostics": [
+    {
+      "elements": 272629760,
+      "flip_ratio": 0.00067900510934683,
+      "layer": 0,
+      "mae": 0.20756586514986478,
+      "name": "encoder"
+    },
+    {
+      "elements": 272629760,
+      "flip_ratio": 0.03831367859473595,
+      "layer": 1,
+      "mae": 0.1875471225151649,
+      "name": "local_1"
+    },
+    {
+      "elements": 272629760,
+      "flip_ratio": 0.046557052318866435,
+      "layer": 2,
+      "mae": 0.17418296703925498,
+      "name": "local_2"
+    },
+    {
+      "elements": 272629760,
+      "flip_ratio": 0.11292356344369742,
+      "layer": 3,
+      "mae": 0.2501066648043119,
+      "name": "global_1"
+    },
+    {
+      "elements": 272629760,
+      "flip_ratio": 0.19111055227426382,
+      "layer": 4,
+      "mae": 0.3484930772047776,
+      "name": "global_2"
+    },
+    {
+      "elements": 655360,
+      "flip_ratio": 0.1037139892578125,
+      "layer": 5,
+      "mae": 0.1428707793354988,
+      "name": "votes"
+    }
+  ],
+  "layer_gap_final_flip_ratio": 0.1037139892578125,
+  "layer_gap_max_flip_ratio": 0.19111055227426382,
+  "layer_gap_max_mae": 0.3484930772047776,
+  "source_summary": "remote_runs/h200_strong_baselines_20260723/dlgn_normal_adam_w4096_seed0/summary.json",
+  "unused_gate_definition": "mind_gap_entropy_above_initialization_2.5pct",
+  "unused_gate_ratio": 0.4023771584033966
+}
