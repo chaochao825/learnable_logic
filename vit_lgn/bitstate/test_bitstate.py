@@ -3,6 +3,7 @@ from __future__ import annotations
 import unittest
 
 import torch
+from torch.utils.data import TensorDataset
 
 from vit_lgn.bitstate.blocks import BinaryTopKBlock, LocalBitLogicBlock
 from vit_lgn.bitstate.encoder import RedundantPredicatePatchEncoder, ThermometerPatchEncoder
@@ -17,6 +18,7 @@ from vit_lgn.bitstate.regularization import (
     collapse_regularization,
     gate_entropy_target_penalty,
 )
+from vit_lgn.bitstate.train_bitstate import split_train_validation
 
 
 def small_config() -> BitStateConfig:
@@ -49,6 +51,16 @@ def contains_float_tensor(value: object) -> bool:
 
 
 class BitStateTest(unittest.TestCase):
+    def test_train_validation_split_is_deterministic_and_disjoint(self) -> None:
+        dataset = TensorDataset(torch.arange(20))
+        train_a, validation_a = split_train_validation(dataset, dataset, 5, 17)
+        train_b, validation_b = split_train_validation(dataset, dataset, 5, 17)
+        self.assertIsNotNone(validation_a)
+        self.assertIsNotNone(validation_b)
+        self.assertEqual(train_a.indices, train_b.indices)
+        self.assertEqual(validation_a.indices, validation_b.indices)
+        self.assertFalse(set(train_a.indices) & set(validation_a.indices))
+
     def test_compressed_lut_matches_16_function_mixture(self) -> None:
         torch.manual_seed(5)
         a = torch.rand(3, 7)

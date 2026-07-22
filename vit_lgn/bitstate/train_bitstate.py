@@ -148,9 +148,33 @@ def subset(dataset: Dataset, limit: int, seed: int) -> Dataset:
     return Subset(dataset, torch.randperm(len(dataset), generator=generator)[:limit].tolist())
 
 
-def make_datasets(args: argparse.Namespace) -> tuple[Dataset, Dataset, int, int, int]:
+def split_train_validation(
+    train_source: Dataset,
+    validation_source: Dataset,
+    validation_size: int,
+    seed: int,
+) -> tuple[Dataset, Dataset | None]:
+    if validation_size <= 0:
+        return train_source, None
+    if validation_size >= len(train_source):
+        raise ValueError((validation_size, len(train_source)))
+    if len(train_source) != len(validation_source):
+        raise ValueError((len(train_source), len(validation_source)))
+    generator = torch.Generator().manual_seed(seed)
+    permutation = torch.randperm(len(train_source), generator=generator)
+    validation_indices = permutation[:validation_size].tolist()
+    train_indices = permutation[validation_size:].tolist()
+    return (
+        Subset(train_source, train_indices),
+        Subset(validation_source, validation_indices),
+    )
+
+
+def make_datasets(
+    args: argparse.Namespace,
+) -> tuple[Dataset, Dataset, Dataset, int, int, int]:
     if args.dataset == "synthetic_patterns":
-        train = SyntheticPatternDataset(
+        train_source = SyntheticPatternDataset(
             samples=args.train_limit if args.train_limit > 0 else 4096,
             image_size=args.image_size,
             channels=args.in_channels,
@@ -164,7 +188,20 @@ def make_datasets(args: argparse.Namespace) -> tuple[Dataset, Dataset, int, int,
             classes=args.num_classes,
             sample_seed=args.seed + 20,
         )
-        return train, test, args.image_size, args.in_channels, args.num_classes
+        train, validation = split_train_validation(
+            train_source,
+            train_source,
+            args.validation_size,
+            args.seed + 25,
+        )
+        return (
+            train,
+            test if validation is None else validation,
+            test,
+            args.image_size,
+            args.in_channels,
+            args.num_classes,
+        )
 
     if args.dataset == "sklearn_digits":
         from sklearn.datasets import load_digits
@@ -180,10 +217,21 @@ def make_datasets(args: argparse.Namespace) -> tuple[Dataset, Dataset, int, int,
             random_state=args.seed,
             stratify=labels.numpy(),
         )
-        train = TensorDataset(images[train_ids], labels[train_ids])
+        train_source = TensorDataset(images[train_ids], labels[train_ids])
         test = TensorDataset(images[test_ids], labels[test_ids])
+        train, validation = split_train_validation(
+            train_source,
+            train_source,
+            args.validation_size,
+            args.seed + 25,
+        )
         return (
             subset(train, args.train_limit, args.seed + 30),
+            subset(
+                test if validation is None else validation,
+                args.eval_limit,
+                args.seed + 35,
+            ),
             subset(test, args.eval_limit, args.seed + 40),
             8,
             1,
@@ -196,7 +244,13 @@ def make_datasets(args: argparse.Namespace) -> tuple[Dataset, Dataset, int, int,
     root = Path(args.data_root)
     if args.dataset == "mnist":
         train_transform = evaluation_transform
-        train = datasets.MNIST(root, train=True, transform=train_transform, download=args.download)
+        train_source = datasets.MNIST(
+            root,
+            train=True,
+            transform=train_transform,
+            download=args.download,
+        )
+        validation_source = train_source
         test = datasets.MNIST(root, train=False, transform=evaluation_transform, download=args.download)
         image_size, channels, classes = 28, 1, 10
     elif args.dataset == "cifar10":
@@ -211,13 +265,35 @@ def make_datasets(args: argparse.Namespace) -> tuple[Dataset, Dataset, int, int,
             if args.augment
             else evaluation_transform
         )
-        train = datasets.CIFAR10(root, train=True, transform=train_transform, download=args.download)
+        train_source = datasets.CIFAR10(
+            root,
+            train=True,
+            transform=train_transform,
+            download=args.download,
+        )
+        validation_source = datasets.CIFAR10(
+            root,
+            train=True,
+            transform=evaluation_transform,
+            download=args.download,
+        )
         test = datasets.CIFAR10(root, train=False, transform=evaluation_transform, download=args.download)
         image_size, channels, classes = 32, 3, 10
     else:
         raise ValueError(args.dataset)
+    train, validation = split_train_validation(
+        train_source,
+        validation_source,
+        args.validation_size,
+        args.seed + 25,
+    )
     return (
         subset(train, args.train_limit, args.seed + 30),
+        subset(
+            test if validation is None else validation,
+            args.eval_limit,
+            args.seed + 35,
+        ),
         subset(test, args.eval_limit, args.seed + 40),
         image_size,
         channels,
@@ -225,8 +301,10 @@ def make_datasets(args: argparse.Namespace) -> tuple[Dataset, Dataset, int, int,
     )
 
 
-def make_loaders(args: argparse.Namespace) -> tuple[DataLoader, DataLoader, tuple[int, int, int]]:
-    train, test, image_size, channels, classes = make_datasets(args)
+def make_loaders(
+    args: argparse.Namespace,
+) -> tuple[DataLoader, DataLoader, DataLoader, tuple[int, int, int]]:
+    train, validation, test, image_size, channels, classes = make_datasets(args)
     generator = torch.Generator().manual_seed(args.seed + 50)
     common = {
         "batch_size": args.batch_size,
@@ -235,8 +313,9 @@ def make_loaders(args: argparse.Namespace) -> tuple[DataLoader, DataLoader, tupl
         "persistent_workers": args.workers > 0,
     }
     train_loader = DataLoader(train, shuffle=True, generator=generator, **common)
+    validation_loader = DataLoader(validation, shuffle=False, **common)
     test_loader = DataLoader(test, shuffle=False, **common)
-    return train_loader, test_loader, (image_size, channels, classes)
+    return train_loader, validation_loader, test_loader, (image_size, channels, classes)
 
 
 def geometric_temperature(epoch: int, epochs: int, start: float, end: float) -> float:
@@ -371,7 +450,7 @@ def measure_state_diagnostics(
 def train(args: argparse.Namespace) -> dict[str, object]:
     seed_everything(args.seed)
     device = torch.device(args.device)
-    train_loader, eval_loader, dataset_shape = make_loaders(args)
+    train_loader, validation_loader, test_loader, dataset_shape = make_loaders(args)
     image_size, channels, classes = dataset_shape
     if image_size % args.patch_size:
         raise ValueError(f"patch size {args.patch_size} does not divide image size {image_size}")
@@ -413,6 +492,7 @@ def train(args: argparse.Namespace) -> dict[str, object]:
     output_dir.mkdir(parents=True, exist_ok=True)
     best_discrete_acc = -1.0
     best_epoch = 0
+    best_state: dict[str, Tensor] | None = None
     regularization_active = any(
         weight > 0.0
         for weight in (
@@ -522,12 +602,18 @@ def train(args: argparse.Namespace) -> dict[str, object]:
 
         soft_loss, soft_acc = evaluate(
             model,
-            eval_loader,
+            validation_loader,
             device,
             discrete=False,
             tau=args.eval_tau,
         )
-        discrete_loss, discrete_acc = evaluate(model, eval_loader, device, discrete=True, tau=tau)
+        discrete_loss, discrete_acc = evaluate(
+            model,
+            validation_loader,
+            device,
+            discrete=True,
+            tau=tau,
+        )
         if epochs_to_target is None and discrete_acc >= args.target_accuracy:
             epochs_to_target = epoch + 1
         epoch_row = {
@@ -551,10 +637,14 @@ def train(args: argparse.Namespace) -> dict[str, object]:
         if discrete_acc > best_discrete_acc:
             best_discrete_acc = discrete_acc
             best_epoch = epoch + 1
+            best_state = {
+                name: value.detach().cpu().clone()
+                for name, value in model.state_dict().items()
+            }
             if args.save_best_checkpoint:
                 torch.save(
                     {
-                        "model": model.state_dict(),
+                        "model": best_state,
                         "config": asdict(config),
                         "epoch": best_epoch,
                         "discrete_acc": best_discrete_acc,
@@ -563,15 +653,29 @@ def train(args: argparse.Namespace) -> dict[str, object]:
                 )
 
     train_time = time.perf_counter() - started
-    soft_loss, soft_acc = evaluate(model, eval_loader, device, discrete=False, tau=args.eval_tau)
-    discrete_loss, discrete_acc = evaluate(model, eval_loader, device, discrete=True, tau=args.eval_tau)
-    hard_carrier_loss, hard_carrier_acc = evaluate_hard_carrier(model, eval_loader, device)
-    first_images, _ = next(iter(eval_loader))
+    if args.restore_best and best_state is not None:
+        model.load_state_dict(best_state)
+    soft_loss, soft_acc = evaluate(
+        model,
+        test_loader,
+        device,
+        discrete=False,
+        tau=args.eval_tau,
+    )
+    discrete_loss, discrete_acc = evaluate(
+        model,
+        test_loader,
+        device,
+        discrete=True,
+        tau=args.eval_tau,
+    )
+    hard_carrier_loss, hard_carrier_acc = evaluate_hard_carrier(model, test_loader, device)
+    first_images, _ = next(iter(test_loader))
     model.assert_bit_exact(first_images.to(device))
     unused_ratio = measure_inactive(model, train_loader, device, args.inactive_batches)
     state_diagnostics = measure_state_diagnostics(
         model,
-        eval_loader,
+        test_loader,
         device,
         args.inactive_batches,
     )
@@ -620,6 +724,8 @@ def train(args: argparse.Namespace) -> dict[str, object]:
         "soft_eval_tau": args.eval_tau,
         "best_discrete_acc": best_discrete_acc,
         "best_epoch": best_epoch,
+        "selection_split": "validation" if args.validation_size > 0 else "test",
+        "restored_best": bool(args.restore_best),
         "bit_exact_verified": True,
         "history": history,
         "model_config": asdict(config),
@@ -677,6 +783,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--target-accuracy", type=float, default=0.8)
     parser.add_argument("--train-limit", type=int, default=0)
     parser.add_argument("--eval-limit", type=int, default=0)
+    parser.add_argument("--validation-size", type=int, default=0)
     parser.add_argument("--inactive-batches", type=int, default=8)
     parser.add_argument("--image-size", type=int, default=8)
     parser.add_argument("--in-channels", type=int, default=1)
@@ -726,6 +833,11 @@ def parse_args() -> argparse.Namespace:
         action=argparse.BooleanOptionalAction,
         default=True,
     )
+    parser.add_argument(
+        "--restore-best",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+    )
     args = parser.parse_args()
     if args.epochs < 1 or args.batch_size < 1 or args.inactive_batches < 1:
         parser.error("epochs, batch-size, and inactive-batches must be positive")
@@ -733,6 +845,8 @@ def parse_args() -> argparse.Namespace:
         parser.error("target-accuracy must be in [0, 1]")
     if args.warmup_epochs < 0 or args.soft_warmup_epochs < 0:
         parser.error("warmup epochs must be non-negative")
+    if args.validation_size < 0:
+        parser.error("validation-size must be non-negative")
     if args.predicate_fanin < 1 or args.predicate_chunk_size < 1:
         parser.error("predicate fanin and chunk size must be positive")
     if args.encoder_identity_width < 0 or args.predicate_temperature <= 0.0:

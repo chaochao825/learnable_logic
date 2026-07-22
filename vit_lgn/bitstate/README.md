@@ -58,7 +58,7 @@ python -m vit_lgn.bitstate.train_bitstate \
   --dataset cifar10 --method progressive_hard_st \
   --encoder-kind redundant_predicate --state-width 4096 \
   --predicate-fanin 9 --encoder-identity-width 192 \
-  --soft-warmup-epochs 10 --epochs 100 --augment \
+  --soft-warmup-epochs 10 --epochs 100 --validation-size 5000 --augment \
   --state-balance-weight 0.05 --state-diversity-weight 0.02 \
   --state-flip-weight 0.02 --gate-entropy-weight 0.01 \
   --amp-bfloat16 --output-dir runs/bitstate_cifar10_w4096
