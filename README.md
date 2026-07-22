@@ -71,6 +71,8 @@ The raw large run directories remain on the 210 server.
 - `docs/repro/mind_gap_scaled_required_table_20260723/`: requested 34-row
   metrics table with provenance
 - `vit_lgn/bitstate/`: persistent Boolean state model, trainer, and tests
+- `docs/repro/bitstate_count_token_screen_20260723/`: matched bounded ablation
+  of fixed-majority versus learned integer count-threshold global tokens
 
 ## Raw artifact location on 210
 
