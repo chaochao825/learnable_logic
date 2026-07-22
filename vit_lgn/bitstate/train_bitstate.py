@@ -21,6 +21,7 @@ from .regularization import (
     gate_distribution_metrics,
     gate_entropy_target_penalty,
 )
+from .teacher import ATTENTION_CLEAN_PROFILE, load_attention_clean_teacher
 
 
 RESULT_COLUMNS = (
@@ -355,6 +356,32 @@ def training_mode(method: str, *, epoch: int = 0, soft_warmup_epochs: int = 0) -
     }[method]
 
 
+def supervised_distillation_loss(
+    student_logits: Tensor,
+    labels: Tensor,
+    *,
+    label_smoothing: float,
+    teacher_logits: Tensor | None,
+    teacher_alpha: float,
+    teacher_temperature: float,
+) -> tuple[Tensor, Tensor, Tensor]:
+    supervised = F.cross_entropy(
+        student_logits,
+        labels,
+        label_smoothing=label_smoothing,
+    )
+    if teacher_logits is None or teacher_alpha == 0.0:
+        return supervised, supervised, supervised.new_zeros(())
+    temperature = teacher_temperature
+    distillation = F.kl_div(
+        F.log_softmax(student_logits / temperature, dim=-1),
+        F.softmax(teacher_logits / temperature, dim=-1),
+        reduction="batchmean",
+    ) * temperature**2
+    combined = (1 - teacher_alpha) * supervised + teacher_alpha * distillation
+    return combined, supervised, distillation
+
+
 @torch.no_grad()
 def evaluate(
     model: BitStateViT,
@@ -363,6 +390,7 @@ def evaluate(
     *,
     discrete: bool,
     tau: float,
+    group_sum_temperature: float,
 ) -> tuple[float, float]:
     model.eval()
     total_loss = 0.0
@@ -372,9 +400,10 @@ def evaluate(
         images = images.to(device, non_blocking=True)
         labels = labels.to(device, non_blocking=True)
         if discrete:
-            logits = model.forward_bits(images).to(torch.float32)
+            raw_logits = model.forward_bits(images).to(torch.float32)
         else:
-            logits = model(images, mode="soft", tau=tau)
+            raw_logits = model(images, mode="soft", tau=tau)
+        logits = raw_logits / group_sum_temperature
         total_loss += float(F.cross_entropy(logits, labels, reduction="sum"))
         correct += int((logits.argmax(dim=-1) == labels).sum())
         count += labels.numel()
@@ -386,6 +415,7 @@ def evaluate_hard_carrier(
     model: BitStateViT,
     loader: DataLoader,
     device: torch.device,
+    group_sum_temperature: float,
 ) -> tuple[float, float]:
     model.eval()
     total_loss = 0.0
@@ -394,7 +424,7 @@ def evaluate_hard_carrier(
     for images, labels in loader:
         images = images.to(device, non_blocking=True)
         labels = labels.to(device, non_blocking=True)
-        logits = model(images, mode="hard")
+        logits = model(images, mode="hard") / group_sum_temperature
         total_loss += float(F.cross_entropy(logits, labels, reduction="sum"))
         correct += int((logits.argmax(dim=-1) == labels).sum())
         count += labels.numel()
@@ -478,6 +508,17 @@ def train(args: argparse.Namespace) -> dict[str, object]:
         seed=args.seed,
     )
     model = BitStateViT(config).to(device)
+    teacher = None
+    teacher_metadata: dict[str, object] | None = None
+    if args.teacher_alpha > 0.0:
+        if args.dataset != "cifar10":
+            raise ValueError("the attention-clean teacher requires cifar10")
+        teacher, teacher_metadata = load_attention_clean_teacher(
+            source_dir=args.teacher_source_dir,
+            checkpoint_path=args.teacher_checkpoint,
+            device=device,
+            profile=args.teacher_profile,
+        )
     optimizer_class = torch.optim.AdamW if args.optimizer == "adamw" else torch.optim.Adam
     optimizer = optimizer_class(
         model.parameters(),
@@ -539,13 +580,21 @@ def train(args: argparse.Namespace) -> dict[str, object]:
             images = images.to(device, non_blocking=True)
             labels = labels.to(device, non_blocking=True)
             optimizer.zero_grad(set_to_none=True)
+            teacher_logits = None
+            if teacher is not None:
+                with torch.no_grad(), torch.autocast(
+                    device_type=device.type,
+                    dtype=torch.bfloat16,
+                    enabled=args.teacher_amp_bfloat16 and device.type == "cuda",
+                ):
+                    teacher_logits = teacher(images).to(torch.float32)
             with torch.autocast(
                 device_type=device.type,
                 dtype=torch.bfloat16,
                 enabled=autocast_enabled,
             ):
                 if regularization_active:
-                    logits, trace = model(
+                    raw_logits, trace = model(
                         images,
                         mode=mode,
                         tau=tau,
@@ -562,13 +611,17 @@ def train(args: argparse.Namespace) -> dict[str, object]:
                         maximum_flip=args.state_maximum_flip,
                     )
                 else:
-                    logits = model(images, mode=mode, tau=tau)
-                    collapse_loss = logits.new_zeros(())
+                    raw_logits = model(images, mode=mode, tau=tau)
+                    collapse_loss = raw_logits.new_zeros(())
                     collapse_metrics = {}
-                task_loss = F.cross_entropy(
+                logits = raw_logits / args.group_sum_temperature
+                task_loss, supervised_loss, distillation_loss = supervised_distillation_loss(
                     logits,
                     labels,
                     label_smoothing=args.label_smoothing,
+                    teacher_logits=teacher_logits,
+                    teacher_alpha=args.teacher_alpha,
+                    teacher_temperature=args.teacher_temperature,
                 )
                 gate_penalty, gate_entropy, gate_confidence = gate_entropy_target_penalty(
                     model.gate_layers(),
@@ -592,6 +645,8 @@ def train(args: argparse.Namespace) -> dict[str, object]:
                 "gate_entropy": gate_entropy,
                 "gate_confidence": gate_confidence,
                 "gate_entropy_penalty": gate_penalty,
+                "supervised_loss": supervised_loss,
+                "distillation_loss": distillation_loss,
             }
             for key, value in batch_metrics.items():
                 running_metrics[key] = (
@@ -606,6 +661,7 @@ def train(args: argparse.Namespace) -> dict[str, object]:
             device,
             discrete=False,
             tau=args.eval_tau,
+            group_sum_temperature=args.group_sum_temperature,
         )
         discrete_loss, discrete_acc = evaluate(
             model,
@@ -613,6 +669,7 @@ def train(args: argparse.Namespace) -> dict[str, object]:
             device,
             discrete=True,
             tau=tau,
+            group_sum_temperature=args.group_sum_temperature,
         )
         if epochs_to_target is None and discrete_acc >= args.target_accuracy:
             epochs_to_target = epoch + 1
@@ -661,6 +718,7 @@ def train(args: argparse.Namespace) -> dict[str, object]:
         device,
         discrete=False,
         tau=args.eval_tau,
+        group_sum_temperature=args.group_sum_temperature,
     )
     discrete_loss, discrete_acc = evaluate(
         model,
@@ -668,8 +726,14 @@ def train(args: argparse.Namespace) -> dict[str, object]:
         device,
         discrete=True,
         tau=args.eval_tau,
+        group_sum_temperature=args.group_sum_temperature,
     )
-    hard_carrier_loss, hard_carrier_acc = evaluate_hard_carrier(model, test_loader, device)
+    hard_carrier_loss, hard_carrier_acc = evaluate_hard_carrier(
+        model,
+        test_loader,
+        device,
+        args.group_sum_temperature,
+    )
     first_images, _ = next(iter(test_loader))
     model.assert_bit_exact(first_images.to(device))
     unused_ratio = measure_inactive(model, train_loader, device, args.inactive_batches)
@@ -722,6 +786,7 @@ def train(args: argparse.Namespace) -> dict[str, object]:
         "seed": args.seed,
         "final_tau": tau,
         "soft_eval_tau": args.eval_tau,
+        "group_sum_temperature": args.group_sum_temperature,
         "best_discrete_acc": best_discrete_acc,
         "best_epoch": best_epoch,
         "selection_split": "validation" if args.validation_size > 0 else "test",
@@ -730,6 +795,7 @@ def train(args: argparse.Namespace) -> dict[str, object]:
         "history": history,
         "model_config": asdict(config),
         "training_args": vars(args),
+        "teacher": teacher_metadata,
         "state_diagnostics": state_diagnostics,
     }
 
@@ -780,6 +846,16 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--grad-clip", type=float, default=1.0)
     parser.add_argument("--label-smoothing", type=float, default=0.0)
     parser.add_argument("--amp-bfloat16", action=argparse.BooleanOptionalAction, default=False)
+    parser.add_argument("--teacher-alpha", type=float, default=0.0)
+    parser.add_argument("--teacher-temperature", type=float, default=2.0)
+    parser.add_argument("--teacher-source-dir", default="")
+    parser.add_argument("--teacher-checkpoint", default="")
+    parser.add_argument("--teacher-profile", default=ATTENTION_CLEAN_PROFILE)
+    parser.add_argument(
+        "--teacher-amp-bfloat16",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+    )
     parser.add_argument("--target-accuracy", type=float, default=0.8)
     parser.add_argument("--train-limit", type=int, default=0)
     parser.add_argument("--eval-limit", type=int, default=0)
@@ -806,6 +882,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--qk-bits", type=int, default=8)
     parser.add_argument("--topk", type=int, default=4)
     parser.add_argument("--votes-per-class", type=int, default=16)
+    parser.add_argument("--group-sum-temperature", type=float, default=1.0)
     parser.add_argument("--update-fraction", type=float, default=0.5)
     parser.add_argument("--attention-temperature", type=float, default=0.25)
     parser.add_argument("--exclude-self", action="store_true")
@@ -853,6 +930,14 @@ def parse_args() -> argparse.Namespace:
         parser.error("invalid predicate encoder settings")
     if not 0.0 <= args.label_smoothing < 1.0:
         parser.error("label-smoothing must be in [0, 1)")
+    if args.group_sum_temperature <= 0.0:
+        parser.error("group-sum-temperature must be positive")
+    if not 0.0 <= args.teacher_alpha <= 1.0 or args.teacher_temperature <= 0.0:
+        parser.error("invalid teacher distillation settings")
+    if args.teacher_alpha > 0.0 and (
+        not args.teacher_source_dir or not args.teacher_checkpoint
+    ):
+        parser.error("teacher source and checkpoint are required when teacher-alpha > 0")
     if min(
         args.state_balance_weight,
         args.state_diversity_weight,

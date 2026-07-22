@@ -69,3 +69,10 @@ duplicate bit ratios, layer-to-layer flip rate, gate entropy, and gate
 confidence. The compressed four-address LUT evaluator is algebraically
 identical to mixing all 16 Boolean functions while avoiding a 16x activation
 tensor at every gate layer.
+
+`--group-sum-temperature` scales class vote counts only for the training and
+reported cross-entropy; it cannot change integer-vote argmax predictions or
+the deployment payload. Optional online distillation accepts the verified
+attention-clean CIFAR-10 checkpoint through `--teacher-source-dir`,
+`--teacher-checkpoint`, and `--teacher-alpha`. The teacher remains an explicit
+floating training aid and is never exported with the Boolean student.

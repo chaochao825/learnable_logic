@@ -18,7 +18,10 @@ from vit_lgn.bitstate.regularization import (
     collapse_regularization,
     gate_entropy_target_penalty,
 )
-from vit_lgn.bitstate.train_bitstate import split_train_validation
+from vit_lgn.bitstate.train_bitstate import (
+    split_train_validation,
+    supervised_distillation_loss,
+)
 
 
 def small_config() -> BitStateConfig:
@@ -60,6 +63,22 @@ class BitStateTest(unittest.TestCase):
         self.assertEqual(train_a.indices, train_b.indices)
         self.assertEqual(validation_a.indices, validation_b.indices)
         self.assertFalse(set(train_a.indices) & set(validation_a.indices))
+
+    def test_supervised_distillation_loss_backpropagates(self) -> None:
+        student = torch.randn(6, 4, requires_grad=True)
+        teacher = torch.randn(6, 4)
+        labels = torch.tensor([0, 1, 2, 3, 0, 1])
+        combined, supervised, distillation = supervised_distillation_loss(
+            student,
+            labels,
+            label_smoothing=0.1,
+            teacher_logits=teacher,
+            teacher_alpha=0.4,
+            teacher_temperature=2.0,
+        )
+        torch.testing.assert_close(combined, 0.6 * supervised + 0.4 * distillation)
+        combined.backward()
+        self.assertGreater(float(student.grad.abs().sum()), 0.0)
 
     def test_compressed_lut_matches_16_function_mixture(self) -> None:
         torch.manual_seed(5)
