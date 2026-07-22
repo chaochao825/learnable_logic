@@ -3,7 +3,7 @@ from __future__ import annotations
 import torch
 from torch import Tensor, nn
 
-from .gates import HardSTGateLayer, random_connections
+from .gates import HardSTGateLayer, hard_forward_soft_backward, random_connections
 
 
 class LocalBitLogicBlock(nn.Module):
@@ -250,7 +250,10 @@ class BinaryTopKBlock(nn.Module):
         ).permute(0, 2, 1, 3)
         soft_message = torch.einsum("bhqk,bhkd->bhqd", weights, values)
         soft_message = soft_message.permute(0, 2, 1, 3).reshape_as(state)
-        message = hard_message.to(state.dtype) + soft_message - soft_message.detach()
+        message = hard_forward_soft_backward(
+            hard_message.to(state.dtype),
+            soft_message,
+        )
         merged_input = torch.cat((state, message), dim=-1)
         output = self.merge(merged_input, mode=mode, tau=tau)
         self._last_indices = indices.detach()

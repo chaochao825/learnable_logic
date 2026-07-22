@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-group="${1:?usage: run_h200_commitment_screen.sh gpu2|gpu3 [output-root]}"
+group="${1:?usage: run_h200_commitment_screen.sh gpu2|gpu3|ramp010|ramp050 [output-root]}"
 output_root="${2:-remote_runs/h200_commitment_screen_20260723}"
 python_bin="${PYTHON_BIN:-/home/wangmeiqi/miniconda3/envs/lgn/bin/python}"
 data_root="${CIFAR10_ROOT:-/home/wangmeiqi/phz/attention-clean/data/cifar-10}"
@@ -69,6 +69,14 @@ case "${group}" in
     run_config entropy010 --gate-entropy-weight 0.1
     run_config scale4_ramp010 --hardening-logit-scale 4 \
       --gate-entropy-weight-start 0 --gate-entropy-weight-end 0.1
+    run_config scale4_ramp050 --hardening-logit-scale 4 \
+      --gate-entropy-weight-start 0 --gate-entropy-weight-end 0.5
+    ;;
+  ramp010)
+    run_config scale4_ramp010 --hardening-logit-scale 4 \
+      --gate-entropy-weight-start 0 --gate-entropy-weight-end 0.1
+    ;;
+  ramp050)
     run_config scale4_ramp050 --hardening-logit-scale 4 \
       --gate-entropy-weight-start 0 --gate-entropy-weight-end 0.5
     ;;

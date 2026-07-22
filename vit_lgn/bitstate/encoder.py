@@ -5,6 +5,8 @@ import math
 import torch
 from torch import Tensor, nn
 
+from .gates import hard_forward_soft_backward
+
 
 class ThermometerPatchEncoder(nn.Module):
     """Convert uint8 images directly to a persistent Boolean token state."""
@@ -267,7 +269,7 @@ class RedundantPredicatePatchEncoder(ThermometerPatchEncoder):
             return soft, hard
         if mode not in {"hard_st", "gumbel_st"}:
             raise ValueError(mode)
-        return hard.to(soft.dtype).detach() + soft - soft.detach(), hard
+        return hard_forward_soft_backward(hard.to(soft.dtype), soft), hard
 
     def _patch_state(
         self,
@@ -316,10 +318,9 @@ class RedundantPredicatePatchEncoder(ThermometerPatchEncoder):
             if mode == "soft":
                 global_token = soft_global
             else:
-                global_token = (
-                    hard_global.to(soft_global.dtype).detach()
-                    + soft_global
-                    - soft_global.detach()
+                global_token = hard_forward_soft_backward(
+                    hard_global.to(soft_global.dtype),
+                    soft_global,
                 )
         return torch.cat((global_token.unsqueeze(1), state), dim=1)
 

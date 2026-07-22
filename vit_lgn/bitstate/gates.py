@@ -5,6 +5,7 @@ from typing import Iterable
 import torch
 import torch.nn.functional as F
 from torch import Tensor, nn
+from torch.autograd import Function
 
 
 GATE_NAMES = (
@@ -48,6 +49,23 @@ TRUTH_TABLE = torch.tensor(
     ],
     dtype=torch.bool,
 )
+
+
+class _HardForwardSoftBackward(Function):
+    @staticmethod
+    def forward(_ctx: object, hard: Tensor, soft: Tensor) -> Tensor:
+        del soft
+        return hard
+
+    @staticmethod
+    def backward(_ctx: object, gradient: Tensor) -> tuple[None, Tensor]:
+        return None, gradient
+
+
+def hard_forward_soft_backward(hard: Tensor, soft: Tensor) -> Tensor:
+    """Return exact hard values while routing gradients through ``soft``."""
+
+    return _HardForwardSoftBackward.apply(hard, soft)
 
 
 def relaxed_gate_outputs(a: Tensor, b: Tensor) -> Tensor:
@@ -160,6 +178,22 @@ class HardSTGateLayer(nn.Module):
     def confidence(self) -> Tensor:
         return F.softmax(self.logits, dim=-1).amax(dim=-1).mean()
 
+    def _hard_value(self, a: Tensor, b: Tensor, op_ids: Tensor) -> Tensor:
+        return evaluate_gate_bits(a >= 0.5, b >= 0.5, op_ids).to(a.dtype)
+
+    def _surrogate_value(
+        self,
+        a: Tensor,
+        b: Tensor,
+        soft_lut: Tensor,
+        hard_lut: Tensor,
+    ) -> Tensor:
+        if self.surrogate_inputs:
+            return relaxed_lut_output(a, b, soft_lut)
+        hard_input_gradient = relaxed_lut_output(a, b, hard_lut)
+        logit_gradient = relaxed_lut_output(a.detach(), b.detach(), soft_lut)
+        return hard_input_gradient + logit_gradient - logit_gradient.detach()
+
     def forward(self, x: Tensor, *, mode: str = "hard_st", tau: float = 1.0) -> Tensor:
         if x.shape[-1] != self.in_dim:
             raise ValueError((x.shape, self.in_dim))
@@ -170,11 +204,12 @@ class HardSTGateLayer(nn.Module):
         truth = TRUTH_TABLE.to(device=self.logits.device, dtype=self.logits.dtype)
         soft_weights = F.softmax(self.logits / tau, dim=-1)
         soft_lut = soft_weights @ truth
-        hard_lut = truth[self.logits.argmax(dim=-1)]
+        hard_ops = self.logits.argmax(dim=-1)
+        hard_lut = truth[hard_ops]
         if mode == "soft":
             return relaxed_lut_output(a, b, soft_lut)
         if mode == "hard":
-            return relaxed_lut_output(a, b, hard_lut)
+            return self._hard_value(a, b, hard_ops)
         if mode == "gumbel_st":
             sampled_soft = F.gumbel_softmax(
                 self.logits,
@@ -183,21 +218,21 @@ class HardSTGateLayer(nn.Module):
                 dim=-1,
             )
             sampled_soft_lut = sampled_soft @ truth
-            sampled_hard_lut = truth[sampled_soft.argmax(dim=-1)]
-            if self.surrogate_inputs:
-                hard_value = relaxed_lut_output(a, b, sampled_hard_lut)
-                soft_value = relaxed_lut_output(a, b, sampled_soft_lut)
-                return hard_value.detach() + soft_value - soft_value.detach()
-            lut = sampled_hard_lut + sampled_soft_lut - sampled_soft_lut.detach()
-            return relaxed_lut_output(a, b, lut)
+            sampled_ops = sampled_soft.argmax(dim=-1)
+            sampled_hard_lut = truth[sampled_ops]
+            hard_value = self._hard_value(a, b, sampled_ops)
+            surrogate = self._surrogate_value(
+                a,
+                b,
+                sampled_soft_lut,
+                sampled_hard_lut,
+            )
+            return hard_forward_soft_backward(hard_value, surrogate)
         if mode != "hard_st":
             raise ValueError(mode)
-        if self.surrogate_inputs:
-            hard_value = relaxed_lut_output(a, b, hard_lut)
-            soft_value = relaxed_lut_output(a, b, soft_lut)
-            return hard_value.detach() + soft_value - soft_value.detach()
-        lut = hard_lut + soft_lut - soft_lut.detach()
-        return relaxed_lut_output(a, b, lut)
+        hard_value = self._hard_value(a, b, hard_ops)
+        surrogate = self._surrogate_value(a, b, soft_lut, hard_lut)
+        return hard_forward_soft_backward(hard_value, surrogate)
 
     def forward_bits(self, x: Tensor) -> Tensor:
         if x.dtype != torch.bool:

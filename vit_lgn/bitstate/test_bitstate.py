@@ -207,6 +207,18 @@ class BitStateTest(unittest.TestCase):
         self.assertEqual(logits.dtype, torch.int32)
         self.assertEqual(logits.shape, (3, 2))
         self.assertTrue(all(item.dtype == torch.bool for item in trace))
+        carrier_logits, carrier_trace = model(
+            images,
+            mode="hard_st",
+            return_trace=True,
+        )
+        self.assertTrue(
+            all(
+                torch.equal(carrier.detach(), bits.to(carrier.dtype))
+                for carrier, bits in zip(carrier_trace, trace)
+            )
+        )
+        torch.testing.assert_close(carrier_logits.detach(), logits.to(torch.float32))
 
     def test_redundant_full_model_matches_integer_reference(self) -> None:
         config = small_config()
