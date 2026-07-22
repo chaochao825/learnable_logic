@@ -15,6 +15,7 @@ import csv
 import math
 import re
 import subprocess
+import time
 from pathlib import Path
 
 import numpy as np
@@ -33,6 +34,7 @@ OUTPUT_FIELDS = [
     "source_blif",
     "optimized_blif",
     "abc_write_returncode",
+    "abc_write_runtime_seconds",
     "abc_write_log",
     "pre_soft_acc",
     "pre_discrete_acc",
@@ -302,7 +304,13 @@ def evaluate_blif(
     return acc, loss, stats
 
 
-def run_abc_write(abc_path: Path, run_dir: Path, source_blif: Path, optimized_blif: Path, log_path: Path) -> int:
+def run_abc_write(
+    abc_path: Path,
+    run_dir: Path,
+    source_blif: Path,
+    optimized_blif: Path,
+    log_path: Path,
+) -> tuple[int, float]:
     optimized_blif.parent.mkdir(parents=True, exist_ok=True)
     relative_source = source_blif.relative_to(run_dir)
     cmd = [
@@ -310,10 +318,12 @@ def run_abc_write(abc_path: Path, run_dir: Path, source_blif: Path, optimized_bl
         "-c",
         f"read_blif {relative_source}; strash; dc2; write_blif {optimized_blif}",
     ]
+    started = time.perf_counter()
     proc = subprocess.run(cmd, cwd=run_dir, text=True, capture_output=True, check=False)
+    elapsed = time.perf_counter() - started
     log_path.parent.mkdir(parents=True, exist_ok=True)
     log_path.write_text(proc.stdout + proc.stderr, encoding="utf-8")
-    return proc.returncode
+    return proc.returncode, elapsed
 
 
 def safe_stem(dataset: str, method: str, seed: str) -> str:
@@ -381,7 +391,15 @@ def main() -> None:
             if not source_blif.exists():
                 raise FileNotFoundError(source_blif)
             if not args.skip_abc_write:
-                row["abc_write_returncode"] = run_abc_write(Path(args.abc_path), args.run_dir, source_blif, optimized_blif, write_log)
+                returncode, runtime = run_abc_write(
+                    Path(args.abc_path),
+                    args.run_dir,
+                    source_blif,
+                    optimized_blif,
+                    write_log,
+                )
+                row["abc_write_returncode"] = returncode
+                row["abc_write_runtime_seconds"] = runtime
             elif not optimized_blif.exists():
                 raise FileNotFoundError(optimized_blif)
             if int(row.get("abc_write_returncode", 0)) != 0:

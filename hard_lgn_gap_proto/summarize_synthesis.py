@@ -15,8 +15,12 @@ METHOD_ORDER = {
     "dlgn": 0,
     "dlgn_anneal": 1,
     "gumbel_st": 2,
-    "block_relaxed": 3,
-    "block_hard_refit": 4,
+    "hard_st": 3,
+    "hard_st_cage": 4,
+    "gumbel_st_cage": 5,
+    "block_relaxed": 6,
+    "block_hard_refit": 7,
+    "block_hard_task_refit": 8,
 }
 
 JOIN_COLUMNS = [
@@ -25,6 +29,7 @@ JOIN_COLUMNS = [
     "method",
     "seed",
     "abc_status",
+    "abc_runtime_seconds",
     "soft_acc",
     "discrete_acc",
     "acc_gap",
@@ -57,6 +62,7 @@ SUMMARY_NUMERIC_COLUMNS = [
     "acc_gap",
     "train_time",
     "unused_gate_ratio",
+    "abc_runtime_seconds",
     "pre_gate_count",
     "pre_depth",
     "pre_fanout_max",

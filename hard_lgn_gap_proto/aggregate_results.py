@@ -26,6 +26,7 @@ METRIC_COLUMNS = [
     "train_time",
     "time_to_target",
     "unused_gate_ratio",
+    "activation_inactive_gate_ratio",
     "gate_count",
     "depth",
     "fanout_max",

@@ -989,7 +989,9 @@ def maybe_run_abc_stats(
             "-c",
             f"read_blif {row['blif_path']}; print_stats; strash; dc2; print_stats",
         ]
+        abc_started = time.perf_counter()
         proc = subprocess.run(cmd, text=True, capture_output=True, check=False, cwd=Path(args.out_dir))
+        row["abc_runtime_seconds"] = time.perf_counter() - abc_started
         log_path.write_text(proc.stdout + proc.stderr)
         row["abc_returncode"] = proc.returncode
         parsed = parse_abc_print_stats(proc.stdout + proc.stderr)

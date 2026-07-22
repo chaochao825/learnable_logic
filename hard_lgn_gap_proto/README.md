@@ -3,6 +3,11 @@
 PyTorch prototype for comparing standard differentiable logic gate networks
 against block-wise hard refitting.
 
+The completed scaled comparison and its conservative verdict are in
+[`docs/reports/mind_gap_scaled_hard_lgn_results_20260723.md`](../docs/reports/mind_gap_scaled_hard_lgn_results_20260723.md).
+The exact requested output schema is retained in
+[`docs/repro/mind_gap_scaled_required_table_20260723/`](../docs/repro/mind_gap_scaled_required_table_20260723/README.md).
+
 The script intentionally uses the same 16 two-input Boolean gate ordering as
 `difflogic.functional` from `/home/spco/convlogic`, fixed random wiring, and a
 GroupSum output head. It adds the missing experiment paths needed for the

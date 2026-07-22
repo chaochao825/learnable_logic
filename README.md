@@ -31,6 +31,9 @@ The raw large run directories remain on the 210 server.
 6. The 2026-07-23 integration adds deterministic Hard-ST, paper-matched CAGE
    temperature control, equal-budget block accounting, and task-aware
    per-block truth-table refitting with training-only candidate selection.
+7. A persistent Boolean bit-state ViT/LGN path keeps hidden state Boolean,
+   uses XNOR-popcount Top-K and integer GroupSum, and exports a float-free
+   deployment payload.
 
 ## Headline results
 
@@ -49,6 +52,10 @@ The raw large run directories remain on the 210 server.
   levels closes the binarized-MNIST teacher gap to `0.1%` at `K=16`, whereas
   thresholding every hidden layer loses `9.6%`. This motivates the persistent
   bit-state path rather than repeated one-bit re-encoding.
+- In the matched three-seed Boolean sweep, block truth-table refit reduces the
+  DLGN accuracy gap on all tasks and prevents mismatch accumulation inside
+  frozen prefixes, but does not reduce the Mind-the-Gap entropy-unused metric.
+  The digits probe favors annealing and Hard-ST/CAGE over block refit.
 
 ## Repository layout
 
@@ -59,6 +66,11 @@ The raw large run directories remain on the 210 server.
 - `docs/tables/`: small CSV tables referenced by the summary
 - `docs/repro/210_hard_lgn_results_20260723/`: byte-preserved Full-K and
   soft-loss precision evidence captured from server 210
+- `docs/reports/mind_gap_scaled_hard_lgn_results_20260723.md`: matched scaled
+  baseline comparison and paper-claim audit
+- `docs/repro/mind_gap_scaled_required_table_20260723/`: requested 34-row
+  metrics table with provenance
+- `vit_lgn/bitstate/`: persistent Boolean state model, trainer, and tests
 
 ## Raw artifact location on 210
 
