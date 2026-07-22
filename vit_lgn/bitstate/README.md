@@ -64,6 +64,13 @@ python -m vit_lgn.bitstate.train_bitstate \
   --amp-bfloat16 --output-dir runs/bitstate_cifar10_w4096
 ```
 
+For matched full-CIFAR H200 runs, `run_h200_long_cifar.sh` keeps the data
+split, width, depth, optimizer, and seed fixed while selecting `dlgn`,
+`anneal`, `gumbel`, or one of the progressive hard variants. Its defaults are
+a 45k/5k train/validation split, the full 10k test split, width 4096, and 30
+epochs. Environment variables such as `STATE_WIDTH`, `EPOCHS`, `TRAIN_LIMIT`,
+and `EVAL_LIMIT` are intended for bounded capacity and throughput probes.
+
 The anti-collapse diagnostics report hidden-state entropy, constant and
 duplicate bit ratios, layer-to-layer flip rate, gate entropy, and gate
 confidence. The compressed four-address LUT evaluator is algebraically
