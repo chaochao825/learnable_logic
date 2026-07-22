@@ -17,6 +17,7 @@ import random
 import subprocess
 import time
 from dataclasses import asdict, dataclass
+from functools import lru_cache
 from pathlib import Path
 from typing import Iterable
 
@@ -123,6 +124,7 @@ class MetricsRow:
     soft_inference_samples_per_sec: float
     discrete_inference_samples_per_sec: float
     inference_bench_repeats: int
+    activation_inactive_gate_ratio: float = math.nan
 
 
 def set_seed(seed: int) -> None:
@@ -764,6 +766,63 @@ def compute_unused_gate_ratio(
     return inactive / max(total, 1)
 
 
+@lru_cache(maxsize=None)
+def mind_gap_entropy_threshold(samples: int = 100_000, seed: int = 0) -> float:
+    """Monte-Carlo 2.5% entropy threshold used by Mind the Gap.
+
+    The paper defines an unused neuron as one whose gate-distribution entropy
+    remains above the lower edge of the 95% interval for newly initialized
+    N(0, 1) logits. The fixed seed makes the finite-sample reference portable.
+    """
+
+    if samples < 100:
+        raise ValueError(samples)
+    generator = torch.Generator(device="cpu").manual_seed(seed)
+    logits = torch.randn(samples, 16, generator=generator)
+    probabilities = logits.softmax(dim=-1)
+    entropy = -(probabilities * probabilities.clamp_min(1e-12).log()).sum(dim=-1)
+    return float(torch.quantile(entropy, 0.025).item())
+
+
+def compute_entropy_unused_gate_ratio(
+    layers: Iterable[nn.Module],
+    threshold: float | None = None,
+) -> float:
+    """Fraction of trainable gates above the paper's entropy threshold."""
+
+    if threshold is None:
+        threshold = mind_gap_entropy_threshold()
+    unused = 0
+    total = 0
+    for layer in layers:
+        if not isinstance(layer, SoftLogicLayer):
+            continue
+        probabilities = layer.logits.detach().softmax(dim=-1)
+        entropy = -(probabilities * probabilities.clamp_min(1e-12).log()).sum(dim=-1)
+        unused += int((entropy > threshold).sum().item())
+        total += layer.out_dim
+    if total == 0:
+        raise ValueError("entropy utilization requires at least one relaxed logic layer")
+    return unused / total
+
+
+def make_optimizer(model: nn.Module, args: argparse.Namespace) -> torch.optim.Optimizer:
+    optimizer_class = torch.optim.Adam if args.optimizer == "adam" else torch.optim.AdamW
+    return optimizer_class(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+
+
+def apply_mind_gap_scaled_preset(args: argparse.Namespace) -> None:
+    """Apply paper-exact optimization settings while retaining scaled shape/budget."""
+
+    args.optimizer = "adam"
+    args.lr = 0.01
+    args.weight_decay = 0.0
+    args.batch_size = 128
+    args.group_tau = 0.01
+    args.gumbel_temp_start = 1.0
+    args.gumbel_temp_end = 1.0
+
+
 @torch.no_grad()
 def layer_gap_diagnostics(
     method: str,
@@ -1008,7 +1067,7 @@ def train_end_to_end(
     dict[str, float | int | str] | None,
 ]:
     model = make_soft_net(arch, dataset.num_classes, args.group_tau).to(device)
-    opt = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+    opt = make_optimizer(model, args)
     loader = make_loader(dataset.x_train, dataset.y_train, args.batch_size, seed)
     epoch_rows = []
     epochs_to_target = -1
@@ -1142,13 +1201,16 @@ def train_end_to_end(
         train_time=train_time,
         epochs_to_target=epochs_to_target,
         time_to_target=time_to_target,
-        unused_gate_ratio=compute_unused_gate_ratio(layers, dataset.x_train, args.eval_batch_size, device),
+        unused_gate_ratio=compute_entropy_unused_gate_ratio(model.soft_layers()),
         gate_count=gate_count(layers),
         depth=len(layers),
         fanout_max=fanout_max(layers),
         soft_inference_samples_per_sec=soft_throughput,
         discrete_inference_samples_per_sec=discrete_throughput,
         inference_bench_repeats=inference_repeats,
+        activation_inactive_gate_ratio=compute_unused_gate_ratio(
+            layers, dataset.x_train, args.eval_batch_size, device
+        ),
     )
     layer_diag_rows = layer_gap_diagnostics(
         method,
@@ -1184,7 +1246,7 @@ def train_one_block(
     x_test_block = apply_layers(prefix_layers, dataset.x_test, args.eval_batch_size, device, mode=prefix_mode)
     block_model = LogicNet([layer], dataset.num_classes, group_tau=args.group_tau).to(device)
     loader = make_loader(x_train_block, dataset.y_train, args.batch_size, seed + 7919 * (block_id + 1))
-    opt = torch.optim.AdamW(block_model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+    opt = make_optimizer(block_model, args)
     epoch_rows = []
     start = time.perf_counter()
 
@@ -1873,13 +1935,16 @@ def train_blockwise(
         train_time=total_train_time,
         epochs_to_target=epochs_to_target,
         time_to_target=time_to_target,
-        unused_gate_ratio=compute_unused_gate_ratio(hard_layers_for_stats, dataset.x_train, args.eval_batch_size, device),
+        unused_gate_ratio=compute_entropy_unused_gate_ratio(soft_model.layers),
         gate_count=gate_count(hard_layers_for_stats),
         depth=len(hard_layers_for_stats),
         fanout_max=fanout_max(hard_layers_for_stats),
         soft_inference_samples_per_sec=soft_throughput,
         discrete_inference_samples_per_sec=discrete_throughput,
         inference_bench_repeats=inference_repeats,
+        activation_inactive_gate_ratio=compute_unused_gate_ratio(
+            hard_layers_for_stats, dataset.x_train, args.eval_batch_size, device
+        ),
     )
     layer_diag_rows = layer_gap_diagnostics(
         method,
@@ -1962,6 +2027,7 @@ def write_summary(path: Path, rows: list[MetricsRow], args: argparse.Namespace, 
         "soft_inference_samples_per_sec",
         "discrete_inference_samples_per_sec",
         "inference_bench_repeats",
+        "activation_inactive_gate_ratio",
     ]
     lines = [
         "# Hard-LGN Gap Prototype Summary",
@@ -1973,6 +2039,8 @@ def write_summary(path: Path, rows: list[MetricsRow], args: argparse.Namespace, 
         "- `soft_acc`/`soft_loss` evaluate all trained relaxed blocks in soft mode.",
         "- `discrete_acc`/`discrete_loss` evaluate the corresponding hard network: argmax gates for DLGN-style methods and fitted gates for block-hard methods.",
         "- `path_*` metrics evaluate the method-native training path. Hard-ST uses the deterministic hard forward; block-hard methods use hard frozen prefixes plus the final relaxed block.",
+        f"- `unused_gate_ratio` follows Mind the Gap: logit entropy above the deterministic N(0,1) initialization 2.5% threshold ({mind_gap_entropy_threshold():.6f}).",
+        "- `activation_inactive_gate_ratio` retains the older data-dependent statistic: hard gate outputs that are constant on the training set.",
         "- `layer_diagnostics.csv` tracks relaxed-path versus hard-path representation mismatch after each layer prefix for depth-wise gap accumulation checks.",
         "- `*_inference_samples_per_sec` are optional PyTorch forward-pass throughput measurements from `--inference-bench`; they are not bit-packed Boolean inference kernels.",
         "- For block-wise methods, `epochs_to_target` is conservative: total block epochs if the final hard model reaches the dataset target, otherwise `-1`.",
@@ -2033,6 +2101,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--eval-batch-size", type=int, default=2048)
     parser.add_argument("--lr", type=float, default=0.02)
     parser.add_argument("--weight-decay", type=float, default=0.0)
+    parser.add_argument("--optimizer", choices=("adam", "adamw"), default="adamw")
     parser.add_argument("--group-tau", type=float, default=1.0)
     parser.add_argument("--temp-start", type=float, default=2.0)
     parser.add_argument("--temp-end", type=float, default=0.2)
@@ -2078,6 +2147,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--out-dir", default="runs/quick")
     parser.add_argument("--quick", action="store_true", help="Small run for code-path validation.")
     parser.add_argument(
+        "--mind-gap-scaled",
+        action="store_true",
+        help=(
+            "Use the paper's Adam/lr=0.01/batch=128/GroupSum=1/0.01/fixed-"
+            "Gumbel-tau=1 protocol while retaining the requested width, depth, and epochs."
+        ),
+    )
+    parser.add_argument(
         "--difflogic-compat-check",
         action="store_true",
         help="Write difflogic_compat.json comparing prototype primitives against /home/spco/convlogic.",
@@ -2092,6 +2169,8 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
+    if args.mind_gap_scaled:
+        apply_mind_gap_scaled_preset(args)
     if not 0.0 < args.refit_validation_fraction < 1.0:
         raise ValueError("--refit-validation-fraction must be in (0, 1)")
     if not 1 <= args.refit_candidate_topk <= 16:

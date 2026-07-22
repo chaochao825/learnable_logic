@@ -40,6 +40,29 @@ the `path_*` columns, per-block fitting/selection evidence is in
 `block_diagnostics.csv`, and depth-wise mismatch is in
 `layer_diagnostics.csv`.
 
+Scaled Mind-the-Gap protocol (paper optimizer settings, prototype model size):
+
+```bash
+python hard_lgn_benchmark.py \
+  --mind-gap-scaled \
+  --datasets parity8 majority9 random_sparse10 \
+  --methods dlgn dlgn_anneal gumbel_st hard_st_cage \
+            block_relaxed block_hard_refit block_hard_task_refit \
+  --width 128 --layers 4 --epochs 120 --block-total-epochs 120 \
+  --seeds 0 1 2 --device cpu \
+  --out-dir runs/mind_gap_scaled_bool
+```
+
+`--mind-gap-scaled` fixes Adam, learning rate 0.01, batch size 128,
+GroupSum scale `1/0.01`, and Gumbel temperature 1, following the paper. Width,
+depth, epochs, dataset, and seeds remain explicit because this is a scaled
+prototype rather than the paper's 256K-wide, depth-12 CIFAR experiment.
+
+For paper-aligned utilization, `unused_gate_ratio` is the fraction of gate
+logit entropies above the 2.5th percentile of 100K newly initialized
+`N(0, 1)` 16-way logits. The older constant-hard-output statistic is retained
+as `activation_inactive_gate_ratio`.
+
 Run on the 210 server:
 
 ```bash

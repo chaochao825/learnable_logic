@@ -10,8 +10,11 @@ from hard_lgn_gap_proto.hard_lgn_benchmark import (
     GATE_TRUTH,
     SoftLogicLayer,
     _block_metrics_from_ops,
+    apply_mind_gap_scaled_preset,
+    compute_entropy_unused_gate_ratio,
     exact_binary_inputs,
     gate_outputs,
+    mind_gap_entropy_threshold,
     refit_task_aware_layer,
 )
 
@@ -60,6 +63,44 @@ class CageTemperatureTest(unittest.TestCase):
         tau, confidence = cage.update([layer])
         self.assertGreater(confidence, 0.999)
         self.assertAlmostEqual(tau, 0.5, places=5)
+
+
+class MindGapProtocolTest(unittest.TestCase):
+    def test_scaled_preset_matches_paper_optimization_settings(self) -> None:
+        args = SimpleNamespace(
+            optimizer="adamw",
+            lr=0.02,
+            weight_decay=0.1,
+            batch_size=256,
+            group_tau=1.0,
+            gumbel_temp_start=1.5,
+            gumbel_temp_end=0.3,
+        )
+        apply_mind_gap_scaled_preset(args)
+        self.assertEqual(args.optimizer, "adam")
+        self.assertEqual(args.lr, 0.01)
+        self.assertEqual(args.weight_decay, 0.0)
+        self.assertEqual(args.batch_size, 128)
+        self.assertEqual(args.group_tau, 0.01)
+        self.assertEqual(args.gumbel_temp_start, 1.0)
+        self.assertEqual(args.gumbel_temp_end, 1.0)
+
+    def test_entropy_unused_metric_separates_uniform_and_committed_logits(self) -> None:
+        threshold = mind_gap_entropy_threshold()
+        self.assertGreater(threshold, 1.8)
+        self.assertLess(threshold, 2.0)
+        layer = SoftLogicLayer(
+            2,
+            4,
+            torch.zeros(4, dtype=torch.long),
+            torch.ones(4, dtype=torch.long),
+            torch.zeros(4, 16),
+        )
+        self.assertEqual(compute_entropy_unused_gate_ratio([layer], threshold), 1.0)
+        with torch.no_grad():
+            layer.logits.fill_(-20.0)
+            layer.logits[:, 6] = 20.0
+        self.assertEqual(compute_entropy_unused_gate_ratio([layer], threshold), 0.0)
 
 
 class TaskAwareRefitTest(unittest.TestCase):
