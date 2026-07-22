@@ -231,12 +231,27 @@ class BitStateTest(unittest.TestCase):
         model = BitStateViT(config).eval()
         images = torch.randint(0, 256, (2, 1, 4, 4), dtype=torch.uint8)
         model.assert_bit_exact(images)
+        operations = [layer.hard_ops().clone() for layer in model.gate_layers()]
+        confidence_before = torch.stack(
+            [layer.confidence() for layer in model.gate_layers()]
+        ).mean()
         self.assertTrue(
             all(
                 float(layer.confidence().detach()) < 0.2
                 for layer in model.gate_layers()
             )
         )
+        model.scale_gate_logits(4.0)
+        confidence_after = torch.stack(
+            [layer.confidence() for layer in model.gate_layers()]
+        ).mean()
+        self.assertGreater(
+            float(confidence_after.detach()),
+            float(confidence_before.detach()),
+        )
+        for expected, layer in zip(operations, model.gate_layers()):
+            torch.testing.assert_close(expected, layer.hard_ops())
+        model.assert_bit_exact(images)
 
     def test_anti_collapse_losses_are_finite_and_differentiable(self) -> None:
         model = BitStateViT(small_config()).train()

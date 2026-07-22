@@ -548,6 +548,14 @@ def train(args: argparse.Namespace) -> dict[str, object]:
 
     for epoch in range(args.epochs):
         model.train()
+        hardening_applied = False
+        if (
+            args.method == "progressive_hard_st"
+            and epoch == args.soft_warmup_epochs
+            and args.hardening_logit_scale != 1.0
+        ):
+            model.scale_gate_logits(args.hardening_logit_scale)
+            hardening_applied = True
         learning_rate = epoch_learning_rate(epoch, args)
         for parameter_group in optimizer.param_groups:
             parameter_group["lr"] = learning_rate
@@ -573,6 +581,20 @@ def train(args: argparse.Namespace) -> dict[str, object]:
             args.gate_entropy_target_start,
             args.gate_entropy_target_end,
         )
+        if args.gate_entropy_weight_start >= 0.0:
+            entropy_weight_end = (
+                args.gate_entropy_weight
+                if args.gate_entropy_weight_end < 0.0
+                else args.gate_entropy_weight_end
+            )
+            entropy_weight = linear_schedule(
+                epoch,
+                args.epochs,
+                args.gate_entropy_weight_start,
+                entropy_weight_end,
+            )
+        else:
+            entropy_weight = args.gate_entropy_weight
         running_loss = 0.0
         running_task_loss = 0.0
         running_metrics: dict[str, float] = {}
@@ -631,7 +653,7 @@ def train(args: argparse.Namespace) -> dict[str, object]:
                 loss = (
                     task_loss
                     + collapse_loss
-                    + args.gate_entropy_weight * gate_penalty
+                    + entropy_weight * gate_penalty
                 )
             loss.backward()
             if args.grad_clip > 0:
@@ -687,6 +709,8 @@ def train(args: argparse.Namespace) -> dict[str, object]:
             "mode": mode,
             "learning_rate": learning_rate,
             "gate_entropy_target": entropy_target,
+            "gate_entropy_weight": entropy_weight,
+            "hardening_applied": hardening_applied,
             "elapsed": time.perf_counter() - started,
         }
         epoch_row.update({key: value / count for key, value in running_metrics.items()})
@@ -898,6 +922,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--tau-end", type=float, default=0.25)
     parser.add_argument("--eval-tau", type=float, default=1.0)
     parser.add_argument("--soft-warmup-epochs", type=int, default=2)
+    parser.add_argument("--hardening-logit-scale", type=float, default=1.0)
     parser.add_argument("--cage-tau-max", type=float, default=3.0)
     parser.add_argument("--cage-tau-min", type=float, default=0.5)
     parser.add_argument("--cage-beta", type=float, default=0.99)
@@ -909,6 +934,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--state-minimum-flip", type=float, default=0.02)
     parser.add_argument("--state-maximum-flip", type=float, default=0.5)
     parser.add_argument("--gate-entropy-weight", type=float, default=0.0)
+    parser.add_argument("--gate-entropy-weight-start", type=float, default=-1.0)
+    parser.add_argument("--gate-entropy-weight-end", type=float, default=-1.0)
     parser.add_argument("--gate-entropy-target-start", type=float, default=0.8)
     parser.add_argument("--gate-entropy-target-end", type=float, default=0.1)
     parser.add_argument("--save-checkpoint", action="store_true")
@@ -929,6 +956,8 @@ def parse_args() -> argparse.Namespace:
         parser.error("target-accuracy must be in [0, 1]")
     if args.warmup_epochs < 0 or args.soft_warmup_epochs < 0:
         parser.error("warmup epochs must be non-negative")
+    if args.hardening_logit_scale <= 0.0:
+        parser.error("hardening-logit-scale must be positive")
     if args.validation_size < 0:
         parser.error("validation-size must be non-negative")
     if args.predicate_fanin < 1 or args.predicate_chunk_size < 1:
@@ -954,6 +983,14 @@ def parse_args() -> argparse.Namespace:
         args.gate_entropy_weight,
     ) < 0.0:
         parser.error("regularization weights must be non-negative")
+    if any(
+        value != -1.0 and value < 0.0
+        for value in (
+            args.gate_entropy_weight_start,
+            args.gate_entropy_weight_end,
+        )
+    ):
+        parser.error("entropy weight schedule values must be non-negative or -1")
     if not 0.5 <= args.state_maximum_similarity < 1.0:
         parser.error("state-maximum-similarity must be in [0.5, 1)")
     if not 0.0 <= args.state_minimum_flip <= args.state_maximum_flip <= 1.0:

@@ -166,6 +166,13 @@ class BitStateViT(nn.Module):
     def gate_layers(self) -> list[HardSTGateLayer]:
         return [module for module in self.modules() if isinstance(module, HardSTGateLayer)]
 
+    @torch.no_grad()
+    def scale_gate_logits(self, factor: float) -> None:
+        if factor <= 0.0:
+            raise ValueError(factor)
+        for layer in self.gate_layers():
+            layer.logits.mul_(factor)
+
     def _group_sum(self, votes: Tensor) -> Tensor:
         return votes.reshape(
             votes.shape[0],

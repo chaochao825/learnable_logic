@@ -79,3 +79,8 @@ floating training aid and is never exported with the Boolean student.
 `--gate-init-strength` controls the initial selected-vs-alternative truth-table
 logit margin; small positive values preserve the same hard initial circuit but
 let gate argmax choices change much earlier than the legacy high-margin setup.
+At the soft-to-hard boundary, `--hardening-logit-scale` can increase
+truth-table commitment without changing any selected gate. Entropy pressure
+can be ramped with `--gate-entropy-weight-start` and
+`--gate-entropy-weight-end` so early exploration and late commitment are
+controlled separately.
