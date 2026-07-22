@@ -74,6 +74,28 @@ def relaxed_gate_outputs(a: Tensor, b: Tensor) -> Tensor:
     )
 
 
+def relaxed_lut_output(a: Tensor, b: Tensor, address_values: Tensor) -> Tensor:
+    """Evaluate a relaxed 2-input LUT without materializing 16 gate values.
+
+    ``address_values`` stores the output at addresses 00, 01, 10, and 11 for
+    every output gate. This multilinear form is exactly equivalent to mixing
+    the 16 relaxed Boolean functions, but its activation memory is independent
+    of the number of candidate functions.
+    """
+
+    if address_values.shape[-1] != 4:
+        raise ValueError(address_values.shape)
+    values = address_values.to(dtype=a.dtype, device=a.device)
+    one_minus_a = 1 - a
+    one_minus_b = 1 - b
+    return (
+        values[..., 0] * one_minus_a * one_minus_b
+        + values[..., 1] * one_minus_a * b
+        + values[..., 2] * a * one_minus_b
+        + values[..., 3] * a * b
+    )
+
+
 def evaluate_gate_bits(a: Tensor, b: Tensor, op_ids: Tensor) -> Tensor:
     if a.dtype != torch.bool or b.dtype != torch.bool:
         raise TypeError("bit execution requires torch.bool inputs")
@@ -145,31 +167,37 @@ class HardSTGateLayer(nn.Module):
             raise ValueError(tau)
         a = x[..., self.indices_0]
         b = x[..., self.indices_1]
-        gate_values = relaxed_gate_outputs(a, b)
-        soft = F.softmax(self.logits / tau, dim=-1).to(x.dtype)
-        hard = F.one_hot(self.logits.argmax(dim=-1), 16).to(x.dtype)
+        truth = TRUTH_TABLE.to(device=self.logits.device, dtype=self.logits.dtype)
+        soft_weights = F.softmax(self.logits / tau, dim=-1)
+        soft_lut = soft_weights @ truth
+        hard_lut = truth[self.logits.argmax(dim=-1)]
         if mode == "soft":
-            weights = soft
-            return (gate_values * weights).sum(dim=-1)
+            return relaxed_lut_output(a, b, soft_lut)
         if mode == "hard":
-            return (gate_values * hard).sum(dim=-1)
+            return relaxed_lut_output(a, b, hard_lut)
         if mode == "gumbel_st":
-            sampled_soft = F.gumbel_softmax(self.logits, tau=tau, hard=False, dim=-1).to(x.dtype)
-            sampled_hard = F.one_hot(sampled_soft.argmax(dim=-1), 16).to(x.dtype)
+            sampled_soft = F.gumbel_softmax(
+                self.logits,
+                tau=tau,
+                hard=False,
+                dim=-1,
+            )
+            sampled_soft_lut = sampled_soft @ truth
+            sampled_hard_lut = truth[sampled_soft.argmax(dim=-1)]
             if self.surrogate_inputs:
-                hard_value = (gate_values * sampled_hard).sum(dim=-1)
-                soft_value = (gate_values * sampled_soft).sum(dim=-1)
+                hard_value = relaxed_lut_output(a, b, sampled_hard_lut)
+                soft_value = relaxed_lut_output(a, b, sampled_soft_lut)
                 return hard_value.detach() + soft_value - soft_value.detach()
-            weights = sampled_hard + sampled_soft - sampled_soft.detach()
-            return (gate_values * weights).sum(dim=-1)
+            lut = sampled_hard_lut + sampled_soft_lut - sampled_soft_lut.detach()
+            return relaxed_lut_output(a, b, lut)
         if mode != "hard_st":
             raise ValueError(mode)
         if self.surrogate_inputs:
-            hard_value = (gate_values * hard).sum(dim=-1)
-            soft_value = (gate_values * soft).sum(dim=-1)
+            hard_value = relaxed_lut_output(a, b, hard_lut)
+            soft_value = relaxed_lut_output(a, b, soft_lut)
             return hard_value.detach() + soft_value - soft_value.detach()
-        weights = hard + soft - soft.detach()
-        return (gate_values * weights).sum(dim=-1)
+        lut = hard_lut + soft_lut - soft_lut.detach()
+        return relaxed_lut_output(a, b, lut)
 
     def forward_bits(self, x: Tensor) -> Tensor:
         if x.dtype != torch.bool:

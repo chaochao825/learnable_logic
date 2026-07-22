@@ -1,5 +1,5 @@
 from .blocks import BinaryTopKBlock, LocalBitLogicBlock
-from .encoder import ThermometerPatchEncoder
+from .encoder import RedundantPredicatePatchEncoder, ThermometerPatchEncoder
 from .gates import GATE_NAMES, TRUTH_TABLE, HardSTGateLayer
 from .model import BitStateConfig, BitStateViT, bitstate_vit
 
@@ -10,6 +10,7 @@ __all__ = [
     "GATE_NAMES",
     "HardSTGateLayer",
     "LocalBitLogicBlock",
+    "RedundantPredicatePatchEncoder",
     "TRUTH_TABLE",
     "ThermometerPatchEncoder",
     "bitstate_vit",

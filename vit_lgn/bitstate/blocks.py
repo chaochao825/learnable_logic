@@ -164,6 +164,17 @@ class BinaryTopKBlock(nn.Module):
             init_ops=merge_init,
             surrogate_inputs=True,
         )
+        # Break the soft-LUT symmetry around the hard identity operation so
+        # query/key routing receives gradient from the first optimizer step.
+        with torch.no_grad():
+            self.merge.logits.add_(
+                torch.randn(
+                    self.merge.logits.shape,
+                    generator=generator,
+                    device=self.merge.logits.device,
+                )
+                * 0.01
+            )
 
     def _reshape_qk(self, value: Tensor) -> Tensor:
         batch, tokens, _ = value.shape

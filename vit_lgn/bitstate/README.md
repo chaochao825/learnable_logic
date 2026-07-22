@@ -9,7 +9,9 @@ point after every block.
 
 - Input: `uint8` images (floating `[0, 1]` tensors are quantized once for
   training convenience).
-- Encoder: fixed uint8 threshold comparisons and patch-bit routing.
+- Encoder: fixed uint8 threshold comparisons and either direct patch-bit
+  routing or redundant sparse popcount predicates with learned integer
+  thresholds and polarity bits.
 - Local blocks: fixed spatial wiring, trainable 2-input Boolean truth tables,
   and exact identity highways.
 - Global blocks: Boolean query/key gates, XNOR-popcount scores, stable hard
@@ -47,3 +49,23 @@ The implementation intentionally reports trainable 2-input gate count
 separately from the unexpanded XNOR-popcount/Top-K routing fabric. ABC/Yosys
 export should expand that fabric before reporting synthesized primitive count,
 depth, and fanout.
+
+Wide-state regularized training keeps a lossless subset of the thermometer
+bits and fills the remaining state with deployable sparse predicates:
+
+```bash
+python -m vit_lgn.bitstate.train_bitstate \
+  --dataset cifar10 --method progressive_hard_st \
+  --encoder-kind redundant_predicate --state-width 4096 \
+  --predicate-fanin 9 --encoder-identity-width 192 \
+  --soft-warmup-epochs 10 --epochs 100 --augment \
+  --state-balance-weight 0.05 --state-diversity-weight 0.02 \
+  --state-flip-weight 0.02 --gate-entropy-weight 0.01 \
+  --amp-bfloat16 --output-dir runs/bitstate_cifar10_w4096
+```
+
+The anti-collapse diagnostics report hidden-state entropy, constant and
+duplicate bit ratios, layer-to-layer flip rate, gate entropy, and gate
+confidence. The compressed four-address LUT evaluator is algebraically
+identical to mixing all 16 Boolean functions while avoiding a 16x activation
+tensor at every gate layer.

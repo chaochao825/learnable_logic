@@ -7,7 +7,7 @@ import torch
 from torch import Tensor, nn
 
 from .blocks import BinaryTopKBlock, LocalBitLogicBlock
-from .encoder import ThermometerPatchEncoder
+from .encoder import RedundantPredicatePatchEncoder, ThermometerPatchEncoder
 from .gates import HardSTGateLayer, random_connections, total_gate_count
 
 
@@ -18,6 +18,11 @@ class BitStateConfig:
     in_channels: int = 3
     threshold_levels: int = 4
     state_width: int = 192
+    encoder_kind: str = "thermometer"
+    predicate_fanin: int = 9
+    encoder_identity_width: int = 0
+    predicate_temperature: float = 1.0
+    predicate_chunk_size: int = 1024
     local_depth: int = 2
     global_depth: int = 2
     heads: int = 6
@@ -37,6 +42,8 @@ class BitStateConfig:
             "in_channels": self.in_channels,
             "threshold_levels": self.threshold_levels,
             "state_width": self.state_width,
+            "predicate_fanin": self.predicate_fanin,
+            "predicate_chunk_size": self.predicate_chunk_size,
             "heads": self.heads,
             "qk_bits": self.qk_bits,
             "topk": self.topk,
@@ -47,6 +54,10 @@ class BitStateConfig:
             raise ValueError(positive)
         if self.image_size % self.patch_size:
             raise ValueError((self.image_size, self.patch_size))
+        if self.encoder_kind not in {"thermometer", "redundant_predicate"}:
+            raise ValueError(self.encoder_kind)
+        if self.encoder_identity_width < 0 or self.predicate_temperature <= 0.0:
+            raise ValueError((self.encoder_identity_width, self.predicate_temperature))
         if self.state_width % self.heads:
             raise ValueError((self.state_width, self.heads))
         if self.local_depth < 0 or self.global_depth < 0:
@@ -79,14 +90,25 @@ class BitStateViT(nn.Module):
     def __init__(self, config: BitStateConfig) -> None:
         super().__init__()
         self.config = config
-        self.encoder = ThermometerPatchEncoder(
-            image_size=config.image_size,
-            patch_size=config.patch_size,
-            in_channels=config.in_channels,
-            threshold_levels=config.threshold_levels,
-            state_width=config.state_width,
-            append_global_token=True,
-        )
+        encoder_kwargs = {
+            "image_size": config.image_size,
+            "patch_size": config.patch_size,
+            "in_channels": config.in_channels,
+            "threshold_levels": config.threshold_levels,
+            "state_width": config.state_width,
+            "append_global_token": True,
+        }
+        if config.encoder_kind == "redundant_predicate":
+            self.encoder = RedundantPredicatePatchEncoder(
+                **encoder_kwargs,
+                predicate_fanin=config.predicate_fanin,
+                identity_width=config.encoder_identity_width,
+                predicate_temperature=config.predicate_temperature,
+                predicate_chunk_size=config.predicate_chunk_size,
+                seed=config.seed + 500,
+            )
+        else:
+            self.encoder = ThermometerPatchEncoder(**encoder_kwargs)
         self.local_blocks = nn.ModuleList(
             LocalBitLogicBlock(
                 state_width=config.state_width,
@@ -144,7 +166,7 @@ class BitStateViT(nn.Module):
         tau: float = 1.0,
         return_trace: bool = False,
     ) -> Tensor | tuple[Tensor, list[Tensor]]:
-        state = self.encoder(images)
+        state = self.encoder(images, mode=mode, tau=tau)
         trace = [state] if return_trace else []
         for block in self.local_blocks:
             state = block(state, mode=mode, tau=tau)
@@ -232,12 +254,16 @@ class BitStateViT(nn.Module):
         return total_gate_count(self.gate_layers())
 
     def logic_depth(self) -> int:
-        # One threshold stage, one gate stage per local block, query/key plus
-        # merge per global block, and one vote-head stage.
-        return 2 + self.config.local_depth + 2 * self.config.global_depth
+        # Encoder stages, one gate stage per local block, query/key plus merge
+        # per global block, and one vote-head stage.
+        return self.encoder.logic_depth() + self.config.local_depth + 2 * self.config.global_depth + 1
 
     def fanout_max(self) -> int:
-        return max((layer.fanout_max() for layer in self.gate_layers()), default=0)
+        gate_fanout = max((layer.fanout_max() for layer in self.gate_layers()), default=0)
+        return max(gate_fanout, self.encoder.fanout_max())
+
+    def predicate_count(self) -> int:
+        return int(getattr(self.encoder, "predicate_width", 0))
 
     def deployment_payload(self) -> dict[str, object]:
         discrete_config = {
@@ -257,6 +283,7 @@ class BitStateViT(nn.Module):
                 "votes_per_class": self.config.votes_per_class,
             },
             "gate_count": self.gate_count(),
+            "predicate_count": self.predicate_count(),
             "logic_depth": self.logic_depth(),
             "fanout_max": self.fanout_max(),
             "general_matrix_multipliers": 0,

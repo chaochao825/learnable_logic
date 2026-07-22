@@ -5,9 +5,18 @@ import unittest
 import torch
 
 from vit_lgn.bitstate.blocks import BinaryTopKBlock, LocalBitLogicBlock
-from vit_lgn.bitstate.encoder import ThermometerPatchEncoder
-from vit_lgn.bitstate.gates import HardSTGateLayer, TRUTH_TABLE
+from vit_lgn.bitstate.encoder import RedundantPredicatePatchEncoder, ThermometerPatchEncoder
+from vit_lgn.bitstate.gates import (
+    HardSTGateLayer,
+    TRUTH_TABLE,
+    relaxed_gate_outputs,
+    relaxed_lut_output,
+)
 from vit_lgn.bitstate.model import BitStateConfig, BitStateViT
+from vit_lgn.bitstate.regularization import (
+    collapse_regularization,
+    gate_entropy_target_penalty,
+)
 
 
 def small_config() -> BitStateConfig:
@@ -40,6 +49,16 @@ def contains_float_tensor(value: object) -> bool:
 
 
 class BitStateTest(unittest.TestCase):
+    def test_compressed_lut_matches_16_function_mixture(self) -> None:
+        torch.manual_seed(5)
+        a = torch.rand(3, 7)
+        b = torch.rand(3, 7)
+        weights = torch.softmax(torch.randn(7, 16), dim=-1)
+        expected = (relaxed_gate_outputs(a, b) * weights).sum(dim=-1)
+        address_values = weights @ TRUTH_TABLE.to(torch.float32)
+        actual = relaxed_lut_output(a, b, address_values)
+        torch.testing.assert_close(actual, expected, rtol=1e-6, atol=1e-6)
+
     def test_all_16_gates_match_truth_table(self) -> None:
         inputs = torch.tensor(
             [[False, False], [False, True], [True, False], [True, True]]
@@ -101,6 +120,29 @@ class BitStateTest(unittest.TestCase):
         self.assertEqual(output.dtype, torch.bool)
         self.assertEqual(output.shape, (1, 5, 8))
 
+    def test_redundant_encoder_is_bit_exact_and_trainable(self) -> None:
+        encoder = RedundantPredicatePatchEncoder(
+            image_size=4,
+            patch_size=2,
+            in_channels=1,
+            threshold_levels=2,
+            state_width=16,
+            identity_width=4,
+            predicate_fanin=3,
+            predicate_chunk_size=5,
+            seed=13,
+        )
+        images = torch.arange(32, dtype=torch.uint8).reshape(2, 1, 4, 4) * 8
+        carrier = encoder(images, mode="hard_st", tau=0.8)
+        bits = encoder.forward_bits(images)
+        torch.testing.assert_close(carrier.detach().bool(), bits)
+        carrier.sum().backward()
+        for parameter in (encoder.threshold_logits, encoder.polarity_logits):
+            self.assertIsNotNone(parameter.grad)
+            self.assertTrue(bool(torch.isfinite(parameter.grad).all()))
+            self.assertGreater(float(parameter.grad.abs().sum()), 0.0)
+        self.assertFalse(contains_float_tensor(encoder.deployment_payload()))
+
     def test_local_block_hard_carrier_matches_bits(self) -> None:
         block = LocalBitLogicBlock(state_width=8, grid_size=2, update_fraction=0.5, seed=2)
         bits = torch.randint(0, 2, (2, 5, 8), dtype=torch.bool)
@@ -134,6 +176,54 @@ class BitStateTest(unittest.TestCase):
         self.assertEqual(logits.dtype, torch.int32)
         self.assertEqual(logits.shape, (3, 2))
         self.assertTrue(all(item.dtype == torch.bool for item in trace))
+
+    def test_redundant_full_model_matches_integer_reference(self) -> None:
+        config = small_config()
+        config = BitStateConfig(
+            **{
+                **config.__dict__,
+                "state_width": 24,
+                "encoder_kind": "redundant_predicate",
+                "predicate_fanin": 3,
+                "encoder_identity_width": 4,
+            }
+        )
+        model = BitStateViT(config).eval()
+        images = torch.randint(0, 256, (3, 1, 4, 4), dtype=torch.uint8)
+        model.assert_bit_exact(images)
+        self.assertGreater(model.predicate_count(), 0)
+        self.assertFalse(contains_float_tensor(model.deployment_payload()))
+
+    def test_anti_collapse_losses_are_finite_and_differentiable(self) -> None:
+        model = BitStateViT(small_config()).train()
+        _logits, trace = model(
+            torch.rand(4, 1, 4, 4),
+            mode="hard_st",
+            return_trace=True,
+        )
+        collapse_loss, metrics = collapse_regularization(
+            trace,
+            balance_weight=0.1,
+            diversity_weight=0.1,
+            flip_weight=0.1,
+        )
+        gate_loss, entropy, confidence = gate_entropy_target_penalty(
+            model.gate_layers(),
+            0.5,
+        )
+        loss = collapse_loss + gate_loss
+        self.assertTrue(bool(torch.isfinite(loss)))
+        self.assertTrue(all(bool(torch.isfinite(value)) for value in metrics.values()))
+        self.assertTrue(bool(torch.isfinite(entropy)))
+        self.assertTrue(bool(torch.isfinite(confidence)))
+        loss.backward()
+        self.assertTrue(
+            any(
+                layer.logits.grad is not None
+                and float(layer.logits.grad.abs().sum()) > 0.0
+                for layer in model.gate_layers()
+            )
+        )
 
     def test_backward_reaches_every_gate_family(self) -> None:
         torch.manual_seed(123)

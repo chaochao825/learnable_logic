@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import math
+
 import torch
 from torch import Tensor, nn
 
@@ -62,7 +64,7 @@ class ThermometerPatchEncoder(nn.Module):
             raise TypeError(f"unsupported image dtype: {images.dtype}")
         return images.detach().clamp(0, 1).mul(255).round().to(torch.uint8)
 
-    def forward_bits(self, images: Tensor) -> Tensor:
+    def _raw_patch_bits(self, images: Tensor) -> Tensor:
         images_u8 = self.to_uint8(images)
         threshold_shape = (1, 1, 1, 1, self.threshold_levels)
         bits = images_u8.unsqueeze(-1) >= self.thresholds.view(threshold_shape)
@@ -83,14 +85,35 @@ class ThermometerPatchEncoder(nn.Module):
             self.patch_tokens,
             self.raw_patch_width,
         )
-        state = patches[..., self.state_route]
+        return patches
+
+    def _append_global_bits(self, state: Tensor) -> Tensor:
         if not self.append_global_token:
             return state
         global_token = state.to(torch.int32).sum(dim=1) * 2 >= self.patch_tokens
         return torch.cat((global_token.unsqueeze(1), state), dim=1)
 
-    def forward(self, images: Tensor) -> Tensor:
+    def forward_bits(self, images: Tensor) -> Tensor:
+        patches = self._raw_patch_bits(images)
+        state = patches[..., self.state_route]
+        return self._append_global_bits(state)
+
+    def forward(
+        self,
+        images: Tensor,
+        *,
+        mode: str = "hard_st",
+        tau: float = 1.0,
+    ) -> Tensor:
+        del mode, tau
         return self.forward_bits(images).to(torch.float32)
+
+    def logic_depth(self) -> int:
+        return 1
+
+    def fanout_max(self) -> int:
+        counts = torch.bincount(self.state_route.detach().cpu(), minlength=self.raw_patch_width)
+        return int(counts.max().item())
 
     def deployment_payload(self) -> dict[str, Tensor | int | str | bool]:
         return {
@@ -103,4 +126,260 @@ class ThermometerPatchEncoder(nn.Module):
             "append_global_token": self.append_global_token,
             "thresholds": self.thresholds.detach().cpu(),
             "state_route": self.state_route.detach().cpu().to(torch.int32),
+        }
+
+
+class RedundantPredicatePatchEncoder(ThermometerPatchEncoder):
+    """Preserve raw bits and add sparse deployable popcount predicates.
+
+    Every learned feature compares the popcount of a fixed sparse subset of
+    thermometer bits with an integer threshold, followed by an optional
+    inversion. Training uses a hard forward / sigmoid backward estimator;
+    deployment stores only routes, integer thresholds, and polarity bits.
+    """
+
+    def __init__(
+        self,
+        *,
+        image_size: int,
+        patch_size: int,
+        in_channels: int,
+        threshold_levels: int,
+        state_width: int,
+        predicate_fanin: int = 9,
+        identity_width: int = 0,
+        predicate_temperature: float = 1.0,
+        predicate_chunk_size: int = 1024,
+        seed: int = 0,
+        append_global_token: bool = True,
+    ) -> None:
+        super().__init__(
+            image_size=image_size,
+            patch_size=patch_size,
+            in_channels=in_channels,
+            threshold_levels=threshold_levels,
+            state_width=state_width,
+            append_global_token=append_global_token,
+        )
+        if predicate_fanin < 1 or predicate_temperature <= 0.0:
+            raise ValueError((predicate_fanin, predicate_temperature))
+        if predicate_chunk_size < 1:
+            raise ValueError(predicate_chunk_size)
+        if identity_width < 0:
+            raise ValueError(identity_width)
+
+        automatic_identity = min(self.raw_patch_width, self.state_width)
+        self.identity_width = min(
+            automatic_identity if identity_width == 0 else identity_width,
+            self.raw_patch_width,
+            self.state_width,
+        )
+        self.predicate_width = self.state_width - self.identity_width
+        self.predicate_fanin = min(int(predicate_fanin), self.raw_patch_width)
+        self.predicate_temperature = float(predicate_temperature)
+        self.predicate_chunk_size = int(predicate_chunk_size)
+
+        identity_route = torch.div(
+            torch.arange(self.identity_width, dtype=torch.long) * self.raw_patch_width,
+            max(self.identity_width, 1),
+            rounding_mode="floor",
+        ).clamp_max(self.raw_patch_width - 1)
+        self.register_buffer("identity_route", identity_route)
+
+        generator = torch.Generator().manual_seed(seed)
+        if self.predicate_width:
+            random_scores = torch.rand(
+                self.predicate_width,
+                self.raw_patch_width,
+                generator=generator,
+            )
+            predicate_route = random_scores.topk(
+                self.predicate_fanin,
+                dim=-1,
+                largest=False,
+                sorted=False,
+            ).indices
+            low = max(1, self.predicate_fanin // 3)
+            high = max(low, min(self.predicate_fanin, math.ceil(2 * self.predicate_fanin / 3)))
+            initial_thresholds = torch.randint(
+                low,
+                high + 1,
+                (self.predicate_width,),
+                generator=generator,
+            )
+            if self.predicate_fanin == 1:
+                threshold_logits = torch.zeros(self.predicate_width)
+            else:
+                target = initial_thresholds.to(torch.float32).clamp(
+                    1.25,
+                    self.predicate_fanin - 0.25,
+                )
+                fraction = (target - 1.0) / (self.predicate_fanin - 1.0)
+                threshold_logits = torch.logit(fraction.clamp(1e-4, 1 - 1e-4))
+            polarity = torch.randint(
+                0,
+                2,
+                (self.predicate_width,),
+                generator=generator,
+            ).to(torch.float32)
+            polarity_logits = (polarity * 2 - 1) * 0.5
+        else:
+            predicate_route = torch.empty(0, self.predicate_fanin, dtype=torch.long)
+            threshold_logits = torch.empty(0)
+            polarity_logits = torch.empty(0)
+        self.register_buffer("predicate_route", predicate_route)
+        self.threshold_logits = nn.Parameter(threshold_logits)
+        self.polarity_logits = nn.Parameter(polarity_logits)
+
+    def _threshold_real(self) -> Tensor:
+        if self.predicate_fanin == 1:
+            return torch.ones_like(self.threshold_logits)
+        return 1.0 + (self.predicate_fanin - 1.0) * torch.sigmoid(self.threshold_logits)
+
+    def hard_thresholds(self) -> Tensor:
+        return self._threshold_real().detach().round().clamp(1, self.predicate_fanin).long()
+
+    def _predicate_chunk(
+        self,
+        patches: Tensor,
+        start: int,
+        end: int,
+        *,
+        mode: str,
+        tau: float,
+    ) -> tuple[Tensor, Tensor]:
+        route = self.predicate_route[start:end]
+        counts = patches[..., route].sum(dim=-1, dtype=torch.int32)
+        hard_base = counts >= self.hard_thresholds()[start:end]
+        hard_polarity = self.polarity_logits[start:end].detach() >= 0
+        hard = torch.where(hard_polarity, hard_base, ~hard_base)
+        if mode == "hard":
+            return hard.to(torch.float32), hard
+
+        temperature = self.predicate_temperature * tau
+        threshold = self._threshold_real()[start:end]
+        soft_base = torch.sigmoid(
+            (counts.to(threshold.dtype) - threshold + 0.5) / temperature
+        )
+        polarity = torch.sigmoid(self.polarity_logits[start:end] / tau)
+        soft = polarity * soft_base + (1 - polarity) * (1 - soft_base)
+        if mode == "soft":
+            return soft, hard
+        if mode not in {"hard_st", "gumbel_st"}:
+            raise ValueError(mode)
+        return hard.to(soft.dtype).detach() + soft - soft.detach(), hard
+
+    def _patch_state(
+        self,
+        patches: Tensor,
+        *,
+        mode: str,
+        tau: float,
+    ) -> tuple[Tensor, Tensor]:
+        if tau <= 0.0:
+            raise ValueError(tau)
+        identity_bits = patches[..., self.identity_route]
+        carriers = [identity_bits.to(torch.float32)]
+        hard_parts = [identity_bits]
+        for start in range(0, self.predicate_width, self.predicate_chunk_size):
+            end = min(start + self.predicate_chunk_size, self.predicate_width)
+            carrier, hard = self._predicate_chunk(
+                patches,
+                start,
+                end,
+                mode=mode,
+                tau=tau,
+            )
+            carriers.append(carrier)
+            hard_parts.append(hard)
+        return torch.cat(carriers, dim=-1), torch.cat(hard_parts, dim=-1)
+
+    def _append_global_carrier(
+        self,
+        state: Tensor,
+        hard_state: Tensor,
+        *,
+        mode: str,
+        tau: float,
+    ) -> Tensor:
+        if not self.append_global_token:
+            return state
+        hard_global = hard_state.to(torch.int32).sum(dim=1) * 2 >= self.patch_tokens
+        if mode == "hard":
+            global_token = hard_global.to(state.dtype)
+        else:
+            majority_threshold = math.ceil(self.patch_tokens / 2) - 0.5
+            soft_global = torch.sigmoid(
+                (state.sum(dim=1) - majority_threshold)
+                / (self.predicate_temperature * tau)
+            )
+            if mode == "soft":
+                global_token = soft_global
+            else:
+                global_token = (
+                    hard_global.to(soft_global.dtype).detach()
+                    + soft_global
+                    - soft_global.detach()
+                )
+        return torch.cat((global_token.unsqueeze(1), state), dim=1)
+
+    def forward_bits(self, images: Tensor) -> Tensor:
+        patches = self._raw_patch_bits(images)
+        identity = patches[..., self.identity_route]
+        predicates = []
+        hard_thresholds = self.hard_thresholds()
+        hard_polarity = self.polarity_logits.detach() >= 0
+        for start in range(0, self.predicate_width, self.predicate_chunk_size):
+            end = min(start + self.predicate_chunk_size, self.predicate_width)
+            counts = patches[..., self.predicate_route[start:end]].sum(
+                dim=-1,
+                dtype=torch.int32,
+            )
+            base = counts >= hard_thresholds[start:end]
+            predicates.append(torch.where(hard_polarity[start:end], base, ~base))
+        state = torch.cat((identity, *predicates), dim=-1)
+        return self._append_global_bits(state)
+
+    def forward(
+        self,
+        images: Tensor,
+        *,
+        mode: str = "hard_st",
+        tau: float = 1.0,
+    ) -> Tensor:
+        patches = self._raw_patch_bits(images)
+        state, hard_state = self._patch_state(patches, mode=mode, tau=tau)
+        return self._append_global_carrier(
+            state,
+            hard_state,
+            mode=mode,
+            tau=tau,
+        )
+
+    def logic_depth(self) -> int:
+        return 2 if self.predicate_width else 1
+
+    def fanout_max(self) -> int:
+        routes = torch.cat(
+            (self.identity_route.reshape(-1), self.predicate_route.reshape(-1)),
+        ).detach().cpu()
+        counts = torch.bincount(routes, minlength=self.raw_patch_width)
+        return int(counts.max().item())
+
+    def deployment_payload(self) -> dict[str, Tensor | int | str | bool]:
+        return {
+            "kind": "uint8_thermometer_sparse_popcount_predicates",
+            "image_size": self.image_size,
+            "patch_size": self.patch_size,
+            "in_channels": self.in_channels,
+            "threshold_levels": self.threshold_levels,
+            "state_width": self.state_width,
+            "append_global_token": self.append_global_token,
+            "thresholds": self.thresholds.detach().cpu(),
+            "identity_route": self.identity_route.detach().cpu().to(torch.int32),
+            "predicate_route": self.predicate_route.detach().cpu().to(torch.int32),
+            "predicate_thresholds": self.hard_thresholds().cpu().to(torch.uint8),
+            "predicate_polarity": (self.polarity_logits.detach() >= 0).cpu(),
+            "predicate_fanin": self.predicate_fanin,
+            "predicate_count": self.predicate_width,
         }
