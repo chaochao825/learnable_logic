@@ -1,0 +1,6 @@
+run,seed,steps,dim,depth,heads,head_dim,global_mixer,hadamard_branch_shift,hybrid_attention_period,local_layers,validation_accuracy_500,validation_accuracy_1000,train_loss_1000,seconds_per_step_1000,peak_allocated_gib,protocol_sha256
+lhvm_smoke_d6e192_seed42,42,1000,192,6,6,32,hadamard,2,3,6,0.2268,0.2666,2.038545,0.159066,1.101816,95cfc387f6108ed362b1da8f97b897003b5792370dc0282eacf0822a5b9636c8
+lhvm_hybrid_p3_s3_smoke_d6e192_seed42,42,1000,192,6,6,32,hybrid,3,3,6,0.3076,0.3192,2.063236,0.172083,1.918981,bbcbbd6c0ae5b51e24f9b6205ae88a8286b19d213a69942832ac688a5062d3ff
+lhvm_parallel_s4_smoke_d6e192_seed42,42,1000,192,6,6,32,parallel,4,3,6,0.4102,0.4742,1.684370,0.213583,3.177301,6e4142eda0dc4e4383cb6f2e4c36faac922e90071c7b98c6652093b78be1a0df
+attention_local6_smoke_d6e192_seed42,42,1000,192,6,6,32,attention,2,3,6,0.4300,0.4930,1.681979,0.185073,3.177231,99d40e58c1723dfb7c9739f35cb6da156a6900fb15c3fa6e44134a4772b6d489
+scalelogic_smoke_d12e384_h12_local4_seed42,42,1000,384,12,12,32,attention,2,3,4,0.3900,0.4886,1.686549,0.411512,11.755949,39fd18b45563c14efa02225d2f90ce8e952d4698935c48689ed8e7f02c63e24a

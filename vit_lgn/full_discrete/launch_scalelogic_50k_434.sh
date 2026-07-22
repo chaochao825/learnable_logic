@@ -7,7 +7,7 @@ PYTHON_BIN=${PYTHON_BIN:-/data2/wangmeiqi/anaconda3/envs/syr_vit_train/bin/pytho
 GPU_INDEX=${GPU_INDEX:-2}
 LOCAL_LAYERS=${LOCAL_LAYERS:-4}
 RUN_NAME=${RUN_NAME:-scalelogic_d12e384_h12_local${LOCAL_LAYERS}_seed42_50k}
-EXPECTED_SOURCE_SET_SHA256=9e8af5d0bd8a42e3b3e913d6a94cbdb9f654c14f005c4db5e6697bb0c6997c94
+EXPECTED_SOURCE_SET_SHA256=f0e552495671556d8777b39d8bc6de056822556dfd8a81df90dfd281dde1d8c9
 
 SOURCE_FILES=(
   model.py
@@ -16,6 +16,7 @@ SOURCE_FILES=(
   enhancements_spatial.py
   enhancements_logic_tree.py
   enhancements_hadamard.py
+  enhancements_global_lut.py
   enhancements_expert.py
   __init__.py
   logic_backend.py

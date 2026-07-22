@@ -1,0 +1,118 @@
+{
+  "args": {
+    "attention_k": 8,
+    "batch_size": 128,
+    "checkpoint_every": 5000,
+    "data_root": "/home/spco/sow_linear/ViT-LGN_attention_clean_20260629/data/cifar-10",
+    "dataset_provenance": "cifar-10-python-local-archive",
+    "depth": 2,
+    "embed_dim": 96,
+    "eval_batch_size": 256,
+    "eval_every": 5000,
+    "learning_rate": 0.0005,
+    "min_learning_rate": 1e-05,
+    "num_heads": 3,
+    "out_dir": "/home/spco/sow_linear/.codex_uploads/lgn_vit_50k_20260712/results_50k",
+    "seeds": [
+      42,
+      43,
+      44
+    ],
+    "steps": 50000,
+    "valid_size": 5000,
+    "variants": [
+      "uniform-final1",
+      "score-gap-final1"
+    ],
+    "warmup_steps": 2000,
+    "weight_decay": 0.05
+  },
+  "best_validation_accuracy": 0.6476,
+  "elapsed_this_invocation_seconds": 16183.389625986922,
+  "final_validation_accuracy": 0.6476,
+  "history": [
+    {
+      "learning_rate": 0.0004952923936987915,
+      "step": 5000,
+      "train_loss": 1.6232565641403198,
+      "validation_accuracy": 0.5206
+    },
+    {
+      "learning_rate": 0.00046717622392718753,
+      "step": 10000,
+      "train_loss": 1.4275038242340088,
+      "validation_accuracy": 0.5518
+    },
+    {
+      "learning_rate": 0.00041653972469951687,
+      "step": 15000,
+      "train_loss": 1.4334735870361328,
+      "validation_accuracy": 0.5744
+    },
+    {
+      "learning_rate": 0.000348757440929447,
+      "step": 20000,
+      "train_loss": 1.2699284553527832,
+      "validation_accuracy": 0.596
+    },
+    {
+      "learning_rate": 0.00027102376666138505,
+      "step": 25000,
+      "train_loss": 1.454398512840271,
+      "validation_accuracy": 0.6116
+    },
+    {
+      "learning_rate": 0.0001915893339498824,
+      "step": 30000,
+      "train_loss": 1.4778608083724976,
+      "validation_accuracy": 0.615
+    },
+    {
+      "learning_rate": 0.00011888529291019752,
+      "step": 35000,
+      "train_loss": 1.311438798904419,
+      "validation_accuracy": 0.627
+    },
+    {
+      "learning_rate": 6.062843162864742e-05,
+      "step": 40000,
+      "train_loss": 1.3338526487350464,
+      "validation_accuracy": 0.631
+    },
+    {
+      "learning_rate": 2.3002118273699134e-05,
+      "step": 45000,
+      "train_loss": 1.25863516330719,
+      "validation_accuracy": 0.644
+    },
+    {
+      "learning_rate": 1e-05,
+      "step": 50000,
+      "train_loss": 1.1667234897613525,
+      "validation_accuracy": 0.6476
+    }
+  ],
+  "protocol_hash": "6a60ccd0810391b50c39bccd1678030431e5992856a870285a386b0c087ba9b7",
+  "provenance": {
+    "cuda": "12.4",
+    "cudnn": 90100,
+    "dataset": "cifar-10-python-local-archive",
+    "dataset_train_manifest_names_sizes_sha256": "2af4037d13d0e07fc4783dc5b84487fa8df4942699fe9c43076a3277e6fd49ed",
+    "deterministic_algorithms": true,
+    "files": {
+      "research_lgn_vit/experiments/run_long_horizon_value.py": "d3376f72ea3598ce9a2917fdf97cdbd46d81799170bcde65be31fb5278bd95df",
+      "vit_lgn/attention_clean/src/attention_logic.py": "c72193e55f5f2a841f94647753d7746e37d1315bacc5994ce4f386fe122ca8c2",
+      "vit_lgn/attention_clean/src/hardware_value_aggregation.py": "9b241c45f29cb54d1842255a0db57bb53c4f7c43938126fb7ac9d3e87561942c",
+      "vit_lgn/attention_clean/src/packed_xnor_topk.py": "0727d85311e03f9d65771deaf94999e36a2bc679f78304cb5089230354778a1b",
+      "vit_lgn/attention_clean/vit_tiny_attention_logic.py": "3c4a34188502c9622b526b424a989c99eb209b9f8f02152a6d281a8673c4e0eb",
+      "vit_lgn/attention_clean/vit_tiny_baseline.py": "f391b140e65431b954ba7bf4cdce9ad70765ac3a15a9b1d316309c1e296a3815"
+    },
+    "python": "3.10.0",
+    "split_spec_sha256": "ffcc7f10411958ffcea30f20c15587bcbe2bfcb812301d790b5304a1a33226c3",
+    "torch": "2.6.0+cu124",
+    "torchvision": "0.21.0+cu124"
+  },
+  "seed": 42,
+  "steps": 50000,
+  "variant": "score-gap-final1"
+}

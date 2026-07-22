@@ -61,13 +61,6 @@ class FixedHadamardGlobalMixerTest(unittest.TestCase):
         contract = mixer.deployment_contract()
         self.assertEqual(contract["patch_add_sub_per_channel"], 768)
         self.assertEqual(contract["runtime_scale_groups"], 6)
-        self.assertEqual(contract["input_code_signed_bits"], 8)
-        self.assertEqual(contract["first_butterfly_signed_bits"], 14)
-        self.assertEqual(contract["second_butterfly_signed_bits"], 20)
-        self.assertEqual(contract["normalized_global_signed_bits"], 14)
-        self.assertEqual(contract["patch_pre_branch_signed_bits"], 15)
-        self.assertEqual(contract["branch_output_accumulator_signed_bits"], 13)
-        self.assertIn("requantizes to A8", contract["output_boundary"])
         self.assertEqual(contract["general_multipliers"], 0)
         self.assertEqual(contract["learned_parameters"], 0)
 
@@ -134,70 +127,7 @@ class FixedHadamardGlobalMixerTest(unittest.TestCase):
                 learned_gap=True,
             )
 
-    def test_hybrid_keeps_periodic_content_routing_and_final_attention(self) -> None:
-        model = EnhancedFullDiscreteViT(
-            image_size=16,
-            patch_size=4,
-            dim=24,
-            depth=6,
-            heads=3,
-            topk=4,
-            mlp_ratio=2.0,
-            weight_bits=4,
-            activation_bits=8,
-            global_mixer="hybrid",
-            hybrid_attention_period=3,
-            hadamard_group_size=8,
-            hadamard_branch_shift=3,
-        )
-        attention_indices = [
-            index for index, block in enumerate(model.blocks)
-            if isinstance(block.attn, HardXNORScoreGapAttention)
-        ]
-        hadamard_indices = [
-            index for index, block in enumerate(model.blocks)
-            if isinstance(block.attn, FixedHadamardGlobalMixer)
-        ]
-        self.assertEqual(attention_indices, [2, 5])
-        self.assertEqual(hadamard_indices, [0, 1, 3, 4])
-        self.assertIsInstance(model.blocks[-1].attn, HardXNORScoreGapAttention)
-        contract = model.deployment_contract()
-        self.assertIn("every 3 blocks", contract["attention"])
-        self.assertEqual(
-            sum("gap" in item for item in contract["block_contracts"]), 2
-        )
-
-    def test_parallel_keeps_all_content_routers_and_adds_fixed_mixers(self) -> None:
-        model = EnhancedFullDiscreteViT(
-            image_size=16,
-            patch_size=4,
-            dim=24,
-            depth=2,
-            heads=3,
-            topk=4,
-            mlp_ratio=2.0,
-            weight_bits=4,
-            activation_bits=8,
-            global_mixer="parallel",
-            hadamard_group_size=8,
-            hadamard_branch_shift=4,
-        )
-        self.assertEqual(sum(
-            isinstance(module, HardXNORScoreGapAttention)
-            for module in model.modules()
-        ), 2)
-        self.assertEqual(sum(
-            isinstance(module, FixedHadamardGlobalMixer)
-            for module in model.modules()
-        ), 2)
-        output = model(torch.randn(2, 3, 16, 16))
-        self.assertEqual(tuple(output.shape), (2, 10))
-        contract = model.deployment_contract()
-        self.assertIn("parallel", contract["attention"])
-        self.assertTrue(all(
-            "gap" in item for item in contract["block_contracts"]
-        ))
-
 
 if __name__ == "__main__":
     unittest.main()
+

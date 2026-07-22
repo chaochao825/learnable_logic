@@ -6,6 +6,7 @@ import torch
 import torch.nn as nn
 
 from .enhancements_expert import FourModeStateSelectedFFN, ParallelBitSliceLogicFFN
+from .enhancements_global_lut import A8GlobalLUTTreeMixer
 from .enhancements_hadamard import FixedHadamardGlobalMixer
 from .enhancements_logic_tree import SharedLogicTreeConv3x3
 from .enhancements_lut import GroupwiseDiscreteActivationLUT, MonotonicHeadGapLUT
@@ -91,6 +92,27 @@ class ParallelContentHadamardMixer(nn.Module):
         }
 
 
+class ParallelContentGlobalLUTMixer(nn.Module):
+    """Keep hard content routing and add a nonlinear ROM-tree global branch."""
+
+    def __init__(self, content: nn.Module, lut_tree: A8GlobalLUTTreeMixer) -> None:
+        super().__init__()
+        self.content = content
+        self.lut_tree = lut_tree
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.content(x) + self.lut_tree(x)
+
+    def deployment_contract(self) -> dict[str, object]:
+        return {
+            "operator": "parallel_content_and_a8_global_lut_tree",
+            "content": "xnor_popcount_hard_topk",
+            "lut_tree": self.lut_tree.deployment_contract(),
+            "merge": "power_of_two_exponent_align_then_integer_add",
+            "general_multipliers_hard_forward": 0,
+        }
+
+
 def _copy_common_ffn(source: DiscreteGatedFFN, target: nn.Module) -> None:
     destination = target.base if hasattr(target, "base") else target
     for name in ("gate", "up", "down"):
@@ -113,6 +135,8 @@ class EnhancedFullDiscreteViT(FullDiscreteViT):
         hadamard_group_size: int = 32,
         hadamard_branch_shift: int = 2,
         hybrid_attention_period: int = 3,
+        global_lut_group_size: int = 32,
+        global_lut_branch_shift: int = 2,
         logic_expert_width: int = 0,
         logic_expert_count: int = 1,
         state_control: str = "none",
@@ -124,7 +148,9 @@ class EnhancedFullDiscreteViT(FullDiscreteViT):
             raise ValueError("unsupported state_control")
         if local_operator not in {"depthwise_shiftadd", "logic_tree3x3"}:
             raise ValueError("unsupported local_operator")
-        if global_mixer not in {"attention", "hadamard", "hybrid", "parallel"}:
+        if global_mixer not in {
+            "attention", "hadamard", "hybrid", "parallel", "parallel_lut_tree"
+        }:
             raise ValueError("unsupported global_mixer")
         if global_mixer == "hadamard" and learned_gap:
             raise ValueError("learned_gap is only defined for the attention mixer")
@@ -170,6 +196,20 @@ class EnhancedFullDiscreteViT(FullDiscreteViT):
                     )
                 else:
                     block.attn = fixed_mixer
+
+        if global_mixer == "parallel_lut_tree":
+            for index, block in enumerate(self.blocks):
+                block.attn = ParallelContentGlobalLUTMixer(
+                    content=block.attn,
+                    lut_tree=A8GlobalLUTTreeMixer(
+                        dim=dim,
+                        patch_tokens=self.patch_embed.num_patches,
+                        block_index=index,
+                        activation_bits=activation_bits,
+                        group_size=global_lut_group_size,
+                        branch_shift=global_lut_branch_shift,
+                    ),
+                )
 
         for index, block in enumerate(self.blocks):
             original_ffn = block.ffn
@@ -227,6 +267,8 @@ class EnhancedFullDiscreteViT(FullDiscreteViT):
             "hadamard_group_size": hadamard_group_size,
             "hadamard_branch_shift": hadamard_branch_shift,
             "hybrid_attention_period": hybrid_attention_period,
+            "global_lut_group_size": global_lut_group_size,
+            "global_lut_branch_shift": global_lut_branch_shift,
             "logic_expert_width": logic_expert_width,
             "logic_expert_count": logic_expert_count,
             "state_control": state_control,
@@ -276,6 +318,17 @@ class EnhancedFullDiscreteViT(FullDiscreteViT):
                     "global_mixer": mixer_contract,
                     "ffn": ffn_contract,
                 }
+            elif isinstance(block.attn, ParallelContentGlobalLUTMixer):
+                gap_contract = (
+                    block.attn.content.gap_lut.deployment_contract()
+                    if block.attn.content.gap_lut is not None
+                    else {"weights": [1, 2, 4, 8], "mapping": "fixed score-gap"}
+                )
+                block_contract = {
+                    "gap": gap_contract,
+                    "global_mixer": block.attn.deployment_contract(),
+                    "ffn": ffn_contract,
+                }
             elif isinstance(block.attn, FixedHadamardGlobalMixer):
                 mixer_contract = block.attn.deployment_contract()
                 block_contract = {
@@ -319,6 +372,13 @@ class EnhancedFullDiscreteViT(FullDiscreteViT):
             )
             base["global_mixer"] = (
                 "content-dependent routing + weak fixed H-D-H/N side branch"
+            )
+        elif self.enhancement_config["global_mixer"] == "parallel_lut_tree":
+            base["attention"] = (
+                "hard XNOR/Top-K in every block, parallel with nonlinear A8 ROM tree"
+            )
+            base["global_mixer"] = (
+                "content-dependent routing + group-shared A8 pair-LUT reduction/broadcast"
             )
         else:
             base["attention"] = (

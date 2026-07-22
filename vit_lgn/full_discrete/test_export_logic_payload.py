@@ -297,7 +297,7 @@ class LogicPayloadExportTest(unittest.TestCase):
             local_layers=1,
         ).eval()
         payload = export_logic_payload(model)
-        self.assertEqual(payload["schema"]["version"], 2)
+        self.assertEqual(payload["schema"]["version"], SCHEMA_VERSION)
         self.assertEqual(payload["attention"], [])
         self.assertEqual(len(payload["global_mixers"]), 2)
         for index, mixer in enumerate(payload["global_mixers"]):
@@ -309,6 +309,11 @@ class LogicPayloadExportTest(unittest.TestCase):
             self.assertEqual(mixer["block_index"], index)
             self.assertEqual(mixer["normalization_right_shift"], 4)
             self.assertEqual(mixer["patch_add_sub_per_channel"], 128)
+            self.assertEqual(mixer["input_code_signed_bits"], 8)
+            self.assertEqual(mixer["first_butterfly_signed_bits"], 12)
+            self.assertEqual(mixer["second_butterfly_signed_bits"], 16)
+            self.assertEqual(mixer["patch_pre_branch_signed_bits"], 13)
+            self.assertEqual(mixer["branch_output_accumulator_signed_bits"], 11)
             self.assertEqual(tuple(mixer["sign_mask_int8"].shape), (16,))
             self.assertEqual(set(mixer["sign_mask_int8"].tolist()), {-1, 1})
         validate_logic_payload(payload)
@@ -339,6 +344,160 @@ class LogicPayloadExportTest(unittest.TestCase):
             exported = export_checkpoint(checkpoint_path, output_path)
         self.assertEqual(len(exported["global_mixers"]), 2)
         self.assertEqual(exported["attention"], [])
+
+    def test_hybrid_topology_finds_attention_after_fixed_first_block(self) -> None:
+        model = EnhancedFullDiscreteViT(
+            image_size=16,
+            patch_size=4,
+            dim=24,
+            depth=3,
+            heads=3,
+            topk=4,
+            mlp_ratio=2.0,
+            weight_bits=7,
+            activation_bits=8,
+            global_mixer="hybrid",
+            hybrid_attention_period=3,
+            hadamard_group_size=8,
+        ).eval()
+        payload = export_logic_payload(model)
+        self.assertEqual(len(payload["global_mixers"]), 2)
+        self.assertEqual(len(payload["attention"]), 1)
+        self.assertEqual(payload["topology"]["heads"], 3)
+        self.assertEqual(payload["topology"]["head_dim"], 8)
+        self.assertEqual(payload["topology"]["topk"], 4)
+        self.assertEqual(payload["topology"]["qk_lanes"], 7)
+        validate_logic_payload(payload)
+
+    def test_global_lut_tree_exports_all_learned_integer_roms(self) -> None:
+        model = EnhancedFullDiscreteViT(
+            image_size=8,
+            patch_size=4,
+            dim=8,
+            depth=1,
+            heads=2,
+            topk=2,
+            mlp_ratio=2.0,
+            weight_bits=7,
+            activation_bits=8,
+            qk_lanes=2,
+            global_mixer="parallel_lut_tree",
+            global_lut_group_size=4,
+            global_lut_branch_shift=2,
+        ).eval()
+        payload = export_logic_payload(model)
+        self.assertEqual(payload["schema"]["version"], 5)
+        self.assertEqual(len(payload["attention"]), 1)
+        self.assertEqual(len(payload["global_mixers"]), 1)
+        mixer = payload["global_mixers"][0]
+        self.assertEqual(
+            mixer["operator"], "group_shared_a8_pair_lut_global_tree"
+        )
+        self.assertEqual(mixer["reduction_stages"], 2)
+        self.assertEqual(mixer["runtime_scale_groups"], 2)
+        self.assertEqual(mixer["tables_per_block"], 8)
+        self.assertEqual(mixer["hard_payload_bits"], 4_194_304)
+        self.assertEqual(mixer["rom_reads_per_image_per_block"], 72)
+        self.assertEqual(mixer["rom_reads_per_group_per_block"], 36)
+        self.assertEqual(
+            mixer["single_port_rom_cycles_per_block_groups_parallel"], 36
+        )
+        self.assertEqual(
+            mixer["group_size_ports_cycles_per_block_groups_parallel"], 9
+        )
+        self.assertEqual(mixer["ports_per_active_table_for_group_parallelism"], 4)
+        self.assertEqual(
+            mixer["input_requantization"]["maximum_reduction_axes_grouped"],
+            [1, 3],
+        )
+        self.assertEqual(
+            mixer["parallel_merge"]["intermediate_requantization"], "none"
+        )
+        self.assertEqual(
+            mixer["outer_residual_boundary"]["output_scale_granularity"],
+            "per_batch_per_token",
+        )
+        self.assertEqual(tuple(mixer["reduce_table_int8"].shape), (2, 2, 256, 256))
+        self.assertEqual(tuple(mixer["context_table_int8"].shape), (2, 256, 256))
+        self.assertEqual(tuple(mixer["broadcast_table_int8"].shape), (2, 256, 256))
+        self.assertTrue(all(
+            table.dtype == torch.int8
+            for table in (
+                mixer["reduce_table_int8"],
+                mixer["context_table_int8"],
+                mixer["broadcast_table_int8"],
+            )
+        ))
+        validate_logic_payload(payload)
+
+        corrupted = export_logic_payload(model)
+        corrupted["global_mixers"][0]["broadcast_table_int8"][0, 0, 0] = -128
+        with self.assertRaisesRegex(ValueError, "value range"):
+            validate_logic_payload(corrupted)
+
+        corrupted = export_logic_payload(model)
+        corrupted["global_mixers"][0]["runtime_scale_groups"] = 1
+        with self.assertRaisesRegex(ValueError, "cross-topology"):
+            validate_logic_payload(corrupted)
+        corrupted = export_logic_payload(model)
+        corrupted["global_mixers"][0]["block_index"] = 1
+        with self.assertRaisesRegex(ValueError, "cross-topology"):
+            validate_logic_payload(corrupted)
+        corrupted = export_logic_payload(model)
+        corrupted["global_mixers"][0]["input_requantization"][
+            "maximum_reduction_axes_grouped"
+        ] = [3]
+        with self.assertRaisesRegex(ValueError, "input requantization"):
+            validate_logic_payload(corrupted)
+        corrupted = export_logic_payload(model)
+        corrupted["global_mixers"][0]["parallel_merge"][
+            "intermediate_requantization"
+        ] = "A8"
+        with self.assertRaisesRegex(ValueError, "parallel merge"):
+            validate_logic_payload(corrupted)
+        corrupted = export_logic_payload(model)
+        corrupted["global_mixers"].clear()
+        with self.assertRaisesRegex(ValueError, "mode and per-block LUT"):
+            validate_logic_payload(corrupted)
+        corrupted = export_logic_payload(model)
+        corrupted["attention"].clear()
+        with self.assertRaisesRegex(ValueError, "cross-topology"):
+            validate_logic_payload(corrupted)
+        corrupted = export_logic_payload(model)
+        corrupted["attention"][0]["name"] = "blocks.0.attn.renamed"
+        with self.assertRaisesRegex(ValueError, "cross-topology"):
+            validate_logic_payload(corrupted)
+
+        args = {
+            "image_size": 8, "patch_size": 4,
+            "dim": 8, "depth": 1, "heads": 2, "topk": 2,
+            "mlp_ratio": 2.0, "weight_magnitude_bits": 7,
+            "activation_bits": 8, "qk_lanes": 2,
+            "norm_kind": "rms_lut", "final_norm_kind": "same",
+            "learned_gap": False, "group_lut_groups": 0,
+            "local_layers": 0, "local_operator": "depthwise_shiftadd",
+            "global_mixer": "parallel_lut_tree",
+            "global_lut_group_size": 4, "global_lut_branch_shift": 2,
+            "logic_expert_width": 0, "logic_expert_count": 1,
+            "state_control": "none", "state_expert_width": 0,
+        }
+        checkpoint = {
+            "step": 1_000,
+            "model": model.state_dict(),
+            "args": args,
+            "protocol_sha256": "global-lut-protocol",
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            checkpoint_path = Path(directory) / "checkpoint.pt"
+            output_path = Path(directory) / "payload.pt"
+            torch.save(checkpoint, checkpoint_path)
+            exported = export_checkpoint(checkpoint_path, output_path)
+        self.assertEqual(len(exported["attention"]), 1)
+        self.assertEqual(len(exported["global_mixers"]), 1)
+        self.assertEqual(
+            exported["global_mixers"][0]["operator"],
+            "group_shared_a8_pair_lut_global_tree",
+        )
 
     def test_checkpoint_reconstructs_logic_tree_operator_strictly(self) -> None:
         model = EnhancedFullDiscreteViT(
@@ -446,7 +605,7 @@ class LogicPayloadExportTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "ROM payload"):
             validate_logic_payload(payload)
 
-    def test_schema_v1_rejects_non_a8_product_operands(self) -> None:
+    def test_schema_rejects_non_a8_product_operands(self) -> None:
         model = FullDiscreteViT(
             dim=24, depth=1, heads=3, mlp_ratio=2.0, activation_bits=9
         ).eval()

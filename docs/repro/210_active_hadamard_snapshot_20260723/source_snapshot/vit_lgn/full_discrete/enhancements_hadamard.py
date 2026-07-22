@@ -80,7 +80,7 @@ def fixed_hadamard_sign_mask(length: int, block_index: int) -> torch.Tensor:
 
 
 class FixedHadamardGlobalMixer(nn.Module):
-    """A8-input, parameter-free global mixer with a wide integer reference."""
+    """A8-compatible, parameter-free global mixer with an integer reference."""
 
     def __init__(
         self,
@@ -110,24 +110,6 @@ class FixedHadamardGlobalMixer(nn.Module):
         self.normalization_shift = int(math.log2(self.patch_tokens))
         self.qmax = (1 << (self.activation_bits - 1)) - 1
         self.qmin = -self.qmax
-        self.first_butterfly_signed_bits = (
-            self.activation_bits + self.normalization_shift
-        )
-        self.second_butterfly_signed_bits = (
-            self.activation_bits + 2 * self.normalization_shift
-        )
-        self.normalized_global_signed_bits = self.first_butterfly_signed_bits
-        maximum_pre_branch = (self.patch_tokens + 1) * self.qmax
-        self.patch_pre_branch_signed_bits = maximum_pre_branch.bit_length() + 1
-        if self.branch_shift:
-            maximum_branch_output = (
-                maximum_pre_branch + (1 << (self.branch_shift - 1))
-            ) >> self.branch_shift
-        else:
-            maximum_branch_output = maximum_pre_branch
-        self.branch_output_accumulator_signed_bits = (
-            maximum_branch_output.bit_length() + 1
-        )
         self.register_buffer(
             "sign_mask",
             fixed_hadamard_sign_mask(self.patch_tokens, self.block_index),
@@ -213,6 +195,8 @@ class FixedHadamardGlobalMixer(nn.Module):
         return _ste(hard, self.soft_reference(tokens))
 
     def deployment_contract(self) -> dict[str, object]:
+        first_bits = self.activation_bits + self.normalization_shift
+        second_bits = first_bits + self.normalization_shift
         return {
             "operator": "fixed_hadamard_sign_hadamard_global_mixer",
             "patch_tokens": self.patch_tokens,
@@ -224,17 +208,8 @@ class FixedHadamardGlobalMixer(nn.Module):
             "branch_right_shift": self.branch_shift,
             "rounding": "nearest, half-way magnitude away from zero",
             "sign_mask": [int(value) for value in self.sign_mask.cpu().tolist()],
-            "input_code_signed_bits": self.activation_bits,
-            "first_butterfly_signed_bits": self.first_butterfly_signed_bits,
-            "second_butterfly_signed_bits": self.second_butterfly_signed_bits,
-            "normalized_global_signed_bits": self.normalized_global_signed_bits,
-            "patch_pre_branch_signed_bits": self.patch_pre_branch_signed_bits,
-            "branch_output_accumulator_signed_bits": (
-                self.branch_output_accumulator_signed_bits
-            ),
-            "output_boundary": (
-                "wide branch code; enclosing residual merge requantizes to A8"
-            ),
+            "first_butterfly_signed_bits": first_bits,
+            "second_butterfly_signed_bits": second_bits,
             "patch_add_sub_per_channel": (
                 2 * self.patch_tokens * self.normalization_shift
             ),
@@ -243,3 +218,4 @@ class FixedHadamardGlobalMixer(nn.Module):
             "global_path": "two FWHTs + fixed sign XOR/negate + shifts",
             "cls_path": "rounded patch mean to CLS; CLS broadcast to patches",
         }
+

@@ -93,4 +93,68 @@ tree therefore added no deployed hard expression in this protocol; the
 one-layer difference is a training-surrogate effect or single-seed noise.
 
 The complete method/result/probe audit is
-[`docs/reports/full_discrete_logic_gate_report_20260716.md`](../../docs/reports/full_discrete_logic_gate_report_20260716.md).
+[`docs/full_discrete_logic_gate_report_20260715.md`](../../docs/full_discrete_logic_gate_report_20260715.md).
+
+## ScaleLogic-ViT and fixed global mixer ablation
+
+`enhancements_hadamard.py` adds a parameter-free integer Walsh--Hadamard
+global branch.  Its hard value is computed by two FWHT butterfly networks,
+one frozen sign mask, rounded power-of-two shifts, a rounded patch mean for
+CLS, and a CLS broadcast to every patch.  The exporter records the complete
+sign mask and arithmetic ABI in the integer payload schema.
+
+The fixed branch is available as a full attention replacement, a periodic
+hybrid, or a weak parallel side branch.  All three 1k probes underperform the
+matched content-dependent XNOR/popcount Top-K control, so the formal scalable
+candidate keeps hard attention.  It instead uses 12 heads at width 384 to hold
+head dimension 32/XNOR width 224 constant and applies the spatially shared
+Wmag4 3x3 branch in the first four blocks.  This separates width scaling from
+the score-gap quantizer width confound in the earlier six-head matrix.
+
+The design rationale, exact static accounting, negative mixer ablation and
+frozen 50k paired protocol are documented in
+[`docs/logic_vit_scaling_design_20260716.md`](../../docs/logic_vit_scaling_design_20260716.md).
+The report deliberately treats 5k accuracy as an intermediate diagnostic; the
+method conclusion requires both the 50k local4 candidate and its local0 paired
+control.
+
+## Nonlinear A8 global LUT tree
+
+`enhancements_global_lut.py` implements the hardware-expensive nonlinear
+alternative to a fixed FFT/Hadamard.  In every enabled block it:
+
+1. quantizes all tokens with one power-of-two scale per 32-channel group;
+2. reduces 64 patches through six balanced stages of two-input A8-by-A8 ROMs;
+3. fuses the root with CLS through another ROM;
+4. broadcasts that context to CLS and every patch through a final ROM and a
+   rounded right shift.
+
+ROMs are shared across spatial tree nodes and channels within a group, while
+stages, channel groups and blocks have independent payloads.  Hard forward is
+only signed-code biasing, address concatenation, ROM indexing, fixed wiring and
+shifts.  A four-entry bilinear interpolation is training-only and the returned
+forward value remains the exact hard lookup.  At d12/e384, one block contains
+96 ROMs, 6,291,456 learned A8 entries (6 MiB), and 12 blocks contain 72 MiB of
+hard table payload.  These bytes are not reported as standard-cell gate count.
+
+The current exporter is schema v5 and serializes every int8 reduce/context/
+broadcast table together with the input group-requantizer, signed branch shift,
+content/LUT exponent alignment, and enclosing residual A8 requantization.  It
+cross-checks group, token, block, expected mixer mode, and content-router
+linkage against the model topology.  The
+contract reports 49,536 ROM reads per d12/e384 block and 4,128 cycles when
+groups are parallel but each active ROM is single-ported; 32 ports per active
+table reduce that component to 129 cycles.  Sharing the table payload therefore
+does not imply free throughput.  This branch is evaluated in parallel with hard
+Top-K rather than replacing content routing, because the fixed-mixer ablation
+showed that a global path without content dependence is insufficient.
+Exponent-aligned adders must use `8 + exponent_span + ceil(log2(branches))`
+signed bits with no wrap.  A fixed-width implementation therefore still needs
+a system-level maximum exponent range or an explicit saturation contract.
+
+The matched d6/e192 1k gate rejects this branch for long training: 45.58%
+versus 48.80% for attention alone.  It changes 42,953 hard entries, so the
+negative result is not a frozen-table artifact; its LUT gradient norm is only
+0.00372 versus 6.222 for the base model, ruling out global-gradient clipping as
+the cause.  The full A8-by-A8 address space is expressive but too sparsely
+covered to be sample-efficient.

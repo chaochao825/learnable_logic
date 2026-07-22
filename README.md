@@ -104,42 +104,70 @@ Highlights:
   intentionally kept on 210 and listed in the weight manifest instead of being
   committed to GitHub.
 
-## Full-discrete ViT and ScaleLogic extension
+## Fully discrete ViT and logic-gate audit (2026-07-15)
 
-The 34-server snapshot under `vit_lgn/full_discrete/` adds an
-accuracy-first, fully discrete ViT path with an explicit transaction-level
-deployment contract:
+The cumulative `vit_lgn/full_discrete/` branch now includes the scalable
+Wmag/A8 model, enhancement ablations, integer transaction backend, minimal
+shared 3x3 logic tree, and both scale launchers.  Completed 50k results and the
+current deployment boundary are consolidated in:
 
-- signed Wmag7/Wmag4 bit-plane projections with power-of-two scales
-- A8 activations and exact A8-by-U4 product-LUT reference operations
-- packed XNOR/popcount Q/K scoring and deterministic hard Top-K
-- Q0.15 RMS-LUT, exponent-only Shift-RMS, requant-only, and no-norm controls
-- optional local shift-add, Hadamard/LHVM, LUT, expert, spatial, and shared
-  logic-tree operators
-- an exporter that removes FP32 shadow parameters, AdamW state, and STE-only
-  training objects from the deployment payload
+- [`docs/full_discrete_logic_gate_report_20260715.md`](docs/full_discrete_logic_gate_report_20260715.md)
+- [`docs/tables/full_discrete_50k_results_20260715.csv`](docs/tables/full_discrete_50k_results_20260715.csv)
+- [`docs/tables/score_gap_50k_results_20260715.csv`](docs/tables/score_gap_50k_results_20260715.csv)
+- [`docs/tables/full_discrete_scale_probe_20260715.csv`](docs/tables/full_discrete_scale_probe_20260715.csv)
+- [`docs/repro/score_gap_50k_20260712/`](docs/repro/score_gap_50k_20260712/README.md): exact source snapshot and six raw results
+- [`docs/repro/full_discrete_scale_probe_20260715/`](docs/repro/full_discrete_scale_probe_20260715/README.md): executable bounded probe and raw JSON
 
-This snapshot is worth continuing, but its strongest current evidence is the
-integer/bit-plane inference contract rather than a demonstrated Hadamard
-advantage. The imported CPU suite passes 116 tests. Historical 50k results
-show that block normalization remains important, while the three-layer shared
-logic tree collapses and never changes its deployed hard LUTs. The 1k
-Hadamard/LHVM runs are smoke tests only and do not establish final accuracy.
+Current headline: the d6/e192 hard-discrete model reaches 75.30% on the fixed
+5,000-example CIFAR-10 validation split, but its main capacity is still dense
+Wmag7 shift/add projection.  The learned local logic-tree tables never left
+identity in 50k, and the independent whole-model integer/RTL executor is not
+yet complete.  The report deliberately separates a hard-discrete numerical
+model, a transaction-level integer specification, and a complete logic-gate
+executor.
 
-As of the captured 34-server checkpoint, the active `d12/e384/h12` ScaleLogic
-run uses ordinary attention globally and depthwise shift-add in the first four
-blocks; it is not a Hadamard-global run. It reached validation accuracy
-`0.5958` at 5k, `0.6664` at 10k, `0.6830` at 15k, and `0.6960` at 20k
-of 50k planned steps. Checkpoints and raw run state remain on server 34 and
-are not committed here.
+## ScaleLogic-ViT scaling experiment (2026-07-16)
 
-See:
+The next accuracy-first candidate fixes the earlier width-scaling confound by
+using 12 heads at d12/e384, keeping `head_dim=32` and the Q/K XNOR width at 224.
+It adds four early spatially shared Wmag4 depthwise 3x3 branches and retains
+content-dependent hard Top-K routing.  A multiplier-free fixed Hadamard global
+mixer was also implemented and exported, but matched 1k probes show that it is
+a useful negative hardware ablation rather than the primary accuracy path.
 
-- `docs/reports/full_discrete_logic_gate_report_20260716.md` for the method,
-  provenance, evidence audit, value judgment, and next experiments
-- `docs/tables/full_discrete_results_20260716.csv` for normalized historical,
-  smoke-test, and in-progress result rows
-- `docs/protocols/scalelogic_d12e384_h12_local4_seed42_50k.protocol.json` for
-  the frozen active-run protocol and source hashes
-- `docs/protocols/full_discrete_publish_source_hashes_20260716.json` for the
-  text-normalized GitHub snapshot hashes
+- [`docs/logic_vit_scaling_design_20260716.md`](docs/logic_vit_scaling_design_20260716.md)
+- [`docs/tables/logic_hadamard_smoke_20260716.csv`](docs/tables/logic_hadamard_smoke_20260716.csv)
+- [`docs/reports/logic_hadamard_review_20260716.md`](docs/reports/logic_hadamard_review_20260716.md)
+- [`docs/reports/global_lut_tree_review_20260716.md`](docs/reports/global_lut_tree_review_20260716.md)
+- [`docs/tables/global_lut_smoke_20260716.csv`](docs/tables/global_lut_smoke_20260716.csv)
+- [`docs/tables/scalelogic_50k_live_20260716.csv`](docs/tables/scalelogic_50k_live_20260716.csv)
+
+The first formal 5k point is recorded only as an intermediate diagnostic.  A
+claim about scaling or the local inductive bias waits for the paired 50k
+candidate/control results.
+
+The same branch now also contains an accuracy-expensive nonlinear global
+option: a six-stage group-shared A8-by-A8 ROM reduction tree, root/CLS fusion
+ROM, and broadcast ROM in parallel with hard Top-K.  At d12/e384 its 12-block
+hard table payload is 72 MiB.  It is fully exported as schema v5 and is kept out
+of the 50k queue until a matched 1k probe demonstrates value over attention.
+Schema v5 additionally freezes the input group-requantizer, signed shift,
+content/LUT exponent-aligned merge, outer residual A8 boundary, and
+cross-topology linkage, including one content router and one LUT tree per block.
+It also reports ROM reads and port/cycle assumptions:
+payload sharing is not mistaken for free multi-port throughput.  A packed
+C++/CUDA/RTL executor is still a separate deliverable.
+
+### Mainline 20k continuation
+
+The later `main` audit remains the authoritative checkpoint record for the
+active `d12/e384/h12` ScaleLogic run.  It uses ordinary attention globally and
+depthwise shift-add in the first four blocks; it is not a Hadamard-global run.
+Validation accuracy reached `0.5958` at 5k, `0.6664` at 10k, `0.6830` at 15k,
+and `0.6960` at 20k of 50k planned steps.  These are intermediate points, not
+a completed matched comparison.
+
+- [`docs/reports/full_discrete_logic_gate_report_20260716.md`](docs/reports/full_discrete_logic_gate_report_20260716.md)
+- [`docs/tables/full_discrete_results_20260716.csv`](docs/tables/full_discrete_results_20260716.csv)
+- [`docs/protocols/scalelogic_d12e384_h12_local4_seed42_50k.protocol.json`](docs/protocols/scalelogic_d12e384_h12_local4_seed42_50k.protocol.json)
+- [`docs/protocols/full_discrete_publish_source_hashes_20260716.json`](docs/protocols/full_discrete_publish_source_hashes_20260716.json)

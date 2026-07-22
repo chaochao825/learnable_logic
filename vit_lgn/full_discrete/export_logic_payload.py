@@ -36,6 +36,7 @@ from .enhancements_expert import (
     FourModeStateSelectedFFN,
     ParallelBitSliceLogicFFN,
 )
+from .enhancements_global_lut import A8GlobalLUTTreeMixer, LUT_ENTRIES
 from .enhancements_hadamard import FixedHadamardGlobalMixer
 from .enhancements_lut import GroupwiseDiscreteActivationLUT
 from .enhancements_logic_tree import SITE_OFFSETS, SharedLogicTreeConv3x3
@@ -52,7 +53,7 @@ from .shiftadd import ShiftAddLinear, _power_of_two_scale
 
 
 SCHEMA_NAME = "learnable-logic-full-discrete-inference"
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 5
 SCHEMA_TOP_LEVEL_KEYS = (
     "schema",
     "source",
@@ -282,6 +283,15 @@ def _hadamard_payload(
         "normalization_right_shift": module.normalization_shift,
         "branch_right_shift": module.branch_shift,
         "rounding": "nearest_half_way_magnitude_away_from_zero",
+        "input_code_signed_bits": module.activation_bits,
+        "first_butterfly_signed_bits": module.first_butterfly_signed_bits,
+        "second_butterfly_signed_bits": module.second_butterfly_signed_bits,
+        "normalized_global_signed_bits": module.normalized_global_signed_bits,
+        "patch_pre_branch_signed_bits": module.patch_pre_branch_signed_bits,
+        "branch_output_accumulator_signed_bits": (
+            module.branch_output_accumulator_signed_bits
+        ),
+        "output_boundary": "wide_branch_then_enclosing_residual_a8_requantizer",
         "sign_mask_int8": module.sign_mask.detach().cpu().to(torch.int8),
         "butterfly_stages_per_transform": module.normalization_shift,
         "transform_count": 2,
@@ -291,6 +301,114 @@ def _hadamard_payload(
         "cls_path": "rounded_patch_mean_then_broadcast",
         "learned_parameters": 0,
         "general_multipliers": 0,
+    }
+
+
+@torch.no_grad()
+def _global_lut_tree_payload(
+    name: str, module: A8GlobalLUTTreeMixer
+) -> dict[str, object]:
+    tables = module.hard_table_payloads()
+    contract = module.deployment_contract()
+    parent_block = f"blocks.{module.block_index}"
+    parent_wrapper = f"{parent_block}.attn"
+    return {
+        "name": name,
+        "operator": "group_shared_a8_pair_lut_global_tree",
+        "parent_block": parent_block,
+        "parent_parallel_wrapper": parent_wrapper,
+        "content_branch": f"{parent_wrapper}.content",
+        "patch_tokens": module.patch_tokens,
+        "block_index": module.block_index,
+        "activation_bits": module.activation_bits,
+        "group_size": module.group_size,
+        "runtime_scale_groups": module.groups,
+        "reduction_stages": module.stages,
+        "branch_right_shift": module.branch_shift,
+        "branch_shift_rounding": (
+            "sign(x)*floor((abs(x)+2**(shift-1))/2**shift); "
+            "shift=0 is identity"
+        ),
+        "input_requantization": {
+            "source": f"{parent_block}.norm1",
+            "input_layout": "batch_sequence_embedding",
+            "grouped_layout": "batch_sequence_group_channel",
+            "maximum_reduction_axes_grouped": [1, 3],
+            "scale_granularity": "per_batch_per_group",
+            "signed_code_min": -127,
+            "signed_code_max": 127,
+            "scale_floor_exponent": -24,
+            "scale_exponent_rule": (
+                "max(-24,round_ties_to_even(log2(max_abs/127)))"
+            ),
+            "hardware_exponent_rule": (
+                "leading_one_plus_exact_squared_boundary_compare; no_log2_or_pow"
+            ),
+            "code_rounding": "nearest_ties_to_even",
+            "zero_input_exponent": -24,
+        },
+        "parallel_merge": {
+            "operation": "exact_power_of_two_exponent_align_then_signed_integer_add",
+            "content_branch": f"{parent_wrapper}.content",
+            "lut_branch": name,
+            "common_exponent": (
+                "elementwise_min(content_per_token_exponent,lut_per_group_exponent)"
+            ),
+            "intermediate_requantization": "none",
+            "accumulator_width_rule": "8 + exponent_span + 1 signed bits",
+            "overflow_policy": (
+                "no_wrap; widen_before_add; saturation_only_at_outer_A8_requantizer"
+            ),
+            "fixed_width_status": "requires_system_exponent_range_contract",
+        },
+        "outer_residual_boundary": {
+            "residual_branch": f"{parent_block}.residual_input",
+            "operation": "exact_power_of_two_exponent_align_three_way_add",
+            "output_requantizer": f"{parent_block}.residual_quantizer",
+            "maximum_reduction_axis": -1,
+            "output_scale_granularity": "per_batch_per_token",
+            "signed_code_min": -127,
+            "signed_code_max": 127,
+            "scale_floor_exponent": -24,
+            "code_rounding": "nearest_ties_to_even",
+            "saturation": "only_at_final_A8_requantization",
+            "accumulator_width_rule": "8 + exponent_span + 2 signed bits",
+            "overflow_policy": (
+                "no_wrap; widen_before_add; saturation_only_at_final_A8_requantizer"
+            ),
+            "fixed_width_status": "requires_system_exponent_range_contract",
+        },
+        "address_bias": 128,
+        "address_axis_bits": 8,
+        "entries_per_table": LUT_ENTRIES,
+        "payload_bits_per_entry": 8,
+        "tables_per_block": int(contract["tables_per_block"]),
+        "hard_payload_bits": int(contract["hard_payload_bits"]),
+        "rom_reads_per_image_per_block": int(
+            contract["rom_reads_per_image_per_block"]
+        ),
+        "rom_reads_per_group_per_block": int(
+            contract["rom_reads_per_group_per_block"]
+        ),
+        "single_port_rom_cycles_per_block_groups_parallel": int(
+            contract["single_port_rom_cycles_per_block_groups_parallel"]
+        ),
+        "group_size_ports_cycles_per_block_groups_parallel": int(
+            contract["group_size_ports_cycles_per_block_groups_parallel"]
+        ),
+        "ports_per_active_table_for_group_parallelism": int(
+            contract["ports_per_active_table_for_group_parallelism"]
+        ),
+        "reduce_table_int8": tables["reduce_table_int8"].cpu(),
+        "context_table_int8": tables["context_table_int8"].cpu(),
+        "broadcast_table_int8": tables["broadcast_table_int8"].cpu(),
+        "spatial_sharing": "one_table_per_stage_group_across_tree_nodes",
+        "channel_sharing": "one_table_across_channels_inside_group",
+        "output_code_signed_bits": 8,
+        "learned_payload_entries": int(contract["tables_per_block"]) * LUT_ENTRIES,
+        "learned_connections": False,
+        "general_multipliers_hard_forward": 0,
+        "rom_port_tradeoff": str(contract["rom_port_tradeoff"]),
     }
 
 
@@ -334,18 +452,21 @@ def _rms_lut(bits: int) -> dict[str, object]:
 
 
 def _model_topology(model: FullDiscreteViT) -> dict[str, object]:
-    first_mixer = model.blocks[0].attn if model.blocks else None
-    first_attention = None
-    if first_mixer is not None:
-        first_attention = next(
-            (
-                module for module in first_mixer.modules()
-                if isinstance(module, HardXNORScoreGapAttention)
-            ),
-            None,
-        )
+    # Hybrid models may put a fixed mixer in block zero and retain hard
+    # attention only in later periodic blocks.  Search the complete topology
+    # so heads/Top-K/QK-lanes describe the retained content router rather than
+    # becoming spuriously null whenever the first block is fixed.
+    first_attention = next(
+        (
+            module for module in model.modules()
+            if isinstance(module, HardXNORScoreGapAttention)
+        ),
+        None,
+    )
     patch_features = model.patch_embed.projection.in_features
     patch_area = model.patch_embed.patch_size * model.patch_embed.patch_size
+    enhancement_config = getattr(model, "enhancement_config", {})
+    global_mixer_mode = str(enhancement_config.get("global_mixer", "attention"))
     return {
         "model_type": type(model).__name__,
         "patch_size": model.patch_embed.patch_size,
@@ -355,10 +476,12 @@ def _model_topology(model: FullDiscreteViT) -> dict[str, object]:
         "embedding_dim": int(model.position.shape[2]),
         "depth": len(model.blocks),
         "heads": int(first_attention.heads) if first_attention is not None else 0,
+        "head_dim": int(first_attention.head_dim) if first_attention is not None else 0,
         "topk": int(first_attention.topk) if first_attention is not None else 0,
         "qk_lanes": int(first_attention.qk_lanes) if first_attention is not None else 0,
         "classes": model.head.out_features,
         "activation_bits": model.activation_bits,
+        "global_mixer_mode": global_mixer_mode,
         "norm_kind": model.norm_kind,
         "final_norm_kind": model.final_norm_kind,
         "block_order": [f"blocks.{index}" for index in range(len(model.blocks))],
@@ -581,7 +704,7 @@ def export_logic_payload(
         raise TypeError("model must be FullDiscreteViT or EnhancedFullDiscreteViT")
     if model.activation_bits != 8:
         raise ValueError(
-            "schema v2 defines an A8-by-U4 product ROM; activation_bits must be 8"
+            "schema v5 defines an A8-by-U4 product ROM; activation_bits must be 8"
         )
     if requantize_magnitude_bits is not None and not (
         1 <= requantize_magnitude_bits <= 8
@@ -604,6 +727,11 @@ def export_logic_payload(
         for name, module in named_modules
         if isinstance(module, FixedHadamardGlobalMixer)
     ]
+    global_mixers.extend(
+        _global_lut_tree_payload(name, module)
+        for name, module in named_modules
+        if isinstance(module, A8GlobalLUTTreeMixer)
+    )
     norms: list[dict[str, object]] = []
     for name, module in named_modules:
         if isinstance(module, DiscreteRMSNorm):
@@ -730,7 +858,9 @@ def export_logic_payload(
             }),
             "rms_reciprocal_sqrt_runtime": "integer_rom_lookup_if_present",
             "general_learned_multipliers": 0,
-            "floating_inference_state": False,
+            "payload_contains_floating_inference_state": False,
+            "pytorch_reference_uses_float_carrier": True,
+            "standalone_packed_executor_included": False,
         },
     }
     if tuple(payload) != SCHEMA_TOP_LEVEL_KEYS:
@@ -743,7 +873,7 @@ def validate_logic_payload(payload: Mapping[str, object]) -> None:
     """Reject training-only keys, floating tensors and floating scalar state."""
 
     if tuple(payload) != SCHEMA_TOP_LEVEL_KEYS:
-        raise ValueError("payload top-level schema does not match version 2")
+        raise ValueError(f"payload top-level schema does not match version {SCHEMA_VERSION}")
 
     def require_keys(value: object, required: tuple[str, ...], path: str) -> Mapping[str, object]:
         if not isinstance(value, Mapping):
@@ -755,9 +885,35 @@ def validate_logic_payload(payload: Mapping[str, object]) -> None:
 
     schema = require_keys(payload["schema"], ("name", "version", "encoding"), "schema")
     if schema["name"] != SCHEMA_NAME or schema["version"] != SCHEMA_VERSION:
-        raise ValueError("payload schema identity does not match version 2")
+        raise ValueError(f"payload schema identity does not match version {SCHEMA_VERSION}")
     if schema["encoding"] != "torch_save_integer_tensors_and_structural_metadata":
-        raise ValueError("payload schema encoding does not match version 1")
+        raise ValueError(f"payload schema encoding does not match version {SCHEMA_VERSION}")
+    topology = require_keys(
+        payload["topology"],
+        (
+            "patch_tokens", "sequence_tokens", "embedding_dim", "depth",
+            "activation_bits", "global_mixer_mode", "block_order",
+        ),
+        "topology",
+    )
+    topology_patch_tokens = int(topology["patch_tokens"])
+    topology_sequence_tokens = int(topology["sequence_tokens"])
+    topology_dim = int(topology["embedding_dim"])
+    topology_depth = int(topology["depth"])
+    global_mixer_mode = str(topology["global_mixer_mode"])
+    if (
+        topology_patch_tokens < 1
+        or topology_sequence_tokens != topology_patch_tokens + 1
+        or topology_dim < 1
+        or topology_depth < 1
+        or int(topology["activation_bits"]) != 8
+        or global_mixer_mode not in {
+            "attention", "hadamard", "hybrid", "parallel", "parallel_lut_tree"
+        }
+        or topology["block_order"]
+        != [f"blocks.{index}" for index in range(topology_depth)]
+    ):
+        raise ValueError("topology dimensions/order do not match schema v5")
     parameters = require_keys(payload["parameters"], ("cls_token", "position"), "parameters")
     for parameter_name in ("cls_token", "position"):
         require_keys(
@@ -801,6 +957,7 @@ def validate_logic_payload(payload: Mapping[str, object]) -> None:
             raise ValueError(f"shift_add_layers[{index}].scale exponent shape mismatch")
     if not isinstance(payload["attention"], list):
         raise ValueError("attention must be a list")
+    attention_names: set[str] = set()
     for index, attention in enumerate(payload["attention"]):
         item = require_keys(
             attention,
@@ -809,6 +966,10 @@ def validate_logic_payload(payload: Mapping[str, object]) -> None:
              "threshold_fraction_denominator_shift", "gap"),
             f"attention[{index}]",
         )
+        attention_name = str(item["name"])
+        if attention_name in attention_names:
+            raise ValueError(f"attention[{index}] duplicate name")
+        attention_names.add(attention_name)
         if item["topk_tie_rule"] != "score_descending_then_key_index_ascending":
             raise ValueError(f"attention[{index}] Top-K tie ABI mismatch")
         numerator = item["threshold_fraction_numerator"]
@@ -820,40 +981,282 @@ def validate_logic_payload(payload: Mapping[str, object]) -> None:
             raise ValueError(f"attention[{index}] threshold shift shape mismatch")
     if not isinstance(payload["global_mixers"], list):
         raise ValueError("global_mixers must be a list")
+    global_lut_block_indices: set[int] = set()
     for index, mixer in enumerate(payload["global_mixers"]):
-        item = require_keys(
-            mixer,
-            (
-                "name", "operator", "patch_tokens", "block_index",
-                "activation_bits", "group_size", "runtime_scale_groups",
-                "normalization_right_shift", "branch_right_shift", "rounding",
-                "sign_mask_int8", "butterfly_stages_per_transform",
-                "transform_count", "patch_add_sub_per_channel", "cls_path",
-                "learned_parameters", "general_multipliers",
-            ),
-            f"global_mixers[{index}]",
+        path = f"global_mixers[{index}]"
+        item = require_keys(mixer, ("name", "operator"), path)
+        operator = item["operator"]
+        if operator == "fixed_hadamard_sign_hadamard_global_mixer":
+            item = require_keys(
+                item,
+                (
+                    "patch_tokens", "block_index", "activation_bits", "group_size",
+                    "runtime_scale_groups", "normalization_right_shift",
+                    "branch_right_shift", "rounding", "input_code_signed_bits",
+                    "first_butterfly_signed_bits", "second_butterfly_signed_bits",
+                    "normalized_global_signed_bits", "patch_pre_branch_signed_bits",
+                    "branch_output_accumulator_signed_bits", "output_boundary",
+                    "sign_mask_int8", "butterfly_stages_per_transform",
+                    "transform_count", "patch_add_sub_per_channel", "cls_path",
+                    "learned_parameters", "general_multipliers",
+                ),
+                path,
+            )
+            patch_tokens = int(item["patch_tokens"])
+            if patch_tokens < 2 or patch_tokens & (patch_tokens - 1):
+                raise ValueError(f"{path} operator/topology mismatch")
+            stages = patch_tokens.bit_length() - 1
+            activation_bits = int(item["activation_bits"])
+            qmax = (1 << (activation_bits - 1)) - 1
+            maximum_pre_branch = (patch_tokens + 1) * qmax
+            branch_shift = int(item["branch_right_shift"])
+            maximum_branch_output = (
+                (maximum_pre_branch + (1 << (branch_shift - 1))) >> branch_shift
+                if branch_shift
+                else maximum_pre_branch
+            )
+            if (
+                int(item["normalization_right_shift"]) != stages
+                or int(item["butterfly_stages_per_transform"]) != stages
+                or int(item["transform_count"]) != 2
+                or int(item["patch_add_sub_per_channel"]) != 2 * patch_tokens * stages
+                or int(item["learned_parameters"]) != 0
+                or int(item["general_multipliers"]) != 0
+                or int(item["input_code_signed_bits"]) != activation_bits
+                or int(item["first_butterfly_signed_bits"])
+                != activation_bits + stages
+                or int(item["second_butterfly_signed_bits"])
+                != activation_bits + 2 * stages
+                or int(item["normalized_global_signed_bits"])
+                != activation_bits + stages
+                or int(item["patch_pre_branch_signed_bits"])
+                != maximum_pre_branch.bit_length() + 1
+                or int(item["branch_output_accumulator_signed_bits"])
+                != maximum_branch_output.bit_length() + 1
+                or item["output_boundary"]
+                != "wide_branch_then_enclosing_residual_a8_requantizer"
+            ):
+                raise ValueError(f"{path} arithmetic ABI mismatch")
+            sign_mask = item["sign_mask_int8"]
+            if not isinstance(sign_mask, torch.Tensor) or tuple(sign_mask.shape) != (
+                patch_tokens,
+            ):
+                raise ValueError(f"{path} sign mask shape mismatch")
+            if (bool(((sign_mask != -1) & (sign_mask != 1)).any())
+                    or int(sign_mask[0]) != 1):
+                raise ValueError(f"{path} sign mask value mismatch")
+        elif operator == "group_shared_a8_pair_lut_global_tree":
+            item = require_keys(
+                item,
+                (
+                    "parent_block", "parent_parallel_wrapper", "content_branch",
+                    "patch_tokens", "block_index", "activation_bits", "group_size",
+                    "runtime_scale_groups", "reduction_stages", "branch_right_shift",
+                    "branch_shift_rounding", "input_requantization",
+                    "parallel_merge", "outer_residual_boundary",
+                    "address_bias", "address_axis_bits", "entries_per_table",
+                    "payload_bits_per_entry", "tables_per_block", "hard_payload_bits",
+                    "rom_reads_per_image_per_block", "rom_reads_per_group_per_block",
+                    "single_port_rom_cycles_per_block_groups_parallel",
+                    "group_size_ports_cycles_per_block_groups_parallel",
+                    "ports_per_active_table_for_group_parallelism",
+                    "reduce_table_int8", "context_table_int8", "broadcast_table_int8",
+                    "spatial_sharing", "channel_sharing", "output_code_signed_bits",
+                    "learned_payload_entries", "learned_connections",
+                    "general_multipliers_hard_forward", "rom_port_tradeoff",
+                ),
+                path,
+            )
+            patch_tokens = int(item["patch_tokens"])
+            groups = int(item["runtime_scale_groups"])
+            group_size = int(item["group_size"])
+            block_index = int(item["block_index"])
+            if (patch_tokens < 2 or patch_tokens & (patch_tokens - 1)
+                    or groups < 1 or group_size < 1):
+                raise ValueError(f"{path} operator/topology mismatch")
+            if (
+                patch_tokens != topology_patch_tokens
+                or groups * group_size != topology_dim
+                or not 0 <= block_index < topology_depth
+                or block_index in global_lut_block_indices
+                or item["name"] != f"blocks.{block_index}.attn.lut_tree"
+                or item["parent_block"] != f"blocks.{block_index}"
+                or item["parent_parallel_wrapper"] != f"blocks.{block_index}.attn"
+                or item["content_branch"] != f"blocks.{block_index}.attn.content"
+                or item["content_branch"] not in attention_names
+            ):
+                raise ValueError(f"{path} cross-topology linkage mismatch")
+            global_lut_block_indices.add(block_index)
+            stages = patch_tokens.bit_length() - 1
+            tables = (stages + 2) * groups
+            transactions_per_channel = 2 * patch_tokens + 1
+            if (
+                int(item["activation_bits"]) != 8
+                or int(item["reduction_stages"]) != stages
+                or not 0 <= int(item["branch_right_shift"]) <= 7
+                or item["branch_shift_rounding"]
+                != "sign(x)*floor((abs(x)+2**(shift-1))/2**shift); shift=0 is identity"
+                or int(item["address_bias"]) != 128
+                or int(item["address_axis_bits"]) != 8
+                or int(item["entries_per_table"]) != LUT_ENTRIES
+                or int(item["payload_bits_per_entry"]) != 8
+                or int(item["tables_per_block"]) != tables
+                or int(item["hard_payload_bits"]) != tables * LUT_ENTRIES * 8
+                or int(item["rom_reads_per_image_per_block"])
+                != transactions_per_channel * topology_dim
+                or int(item["rom_reads_per_group_per_block"])
+                != transactions_per_channel * group_size
+                or int(item["single_port_rom_cycles_per_block_groups_parallel"])
+                != transactions_per_channel * group_size
+                or int(item["group_size_ports_cycles_per_block_groups_parallel"])
+                != transactions_per_channel
+                or int(item["ports_per_active_table_for_group_parallelism"])
+                != group_size
+                or int(item["learned_payload_entries"]) != tables * LUT_ENTRIES
+                or int(item["output_code_signed_bits"]) != 8
+                or bool(item["learned_connections"])
+                or int(item["general_multipliers_hard_forward"]) != 0
+                or item["spatial_sharing"]
+                != "one_table_per_stage_group_across_tree_nodes"
+                or item["channel_sharing"]
+                != "one_table_across_channels_inside_group"
+                or item["rom_port_tradeoff"]
+                != (
+                    "one independent address per channel; sharing payload storage does not "
+                    "imply free multi-port throughput"
+                )
+            ):
+                raise ValueError(f"{path} arithmetic ABI mismatch")
+            input_requant = require_keys(
+                item["input_requantization"],
+                (
+                    "source", "input_layout", "grouped_layout",
+                    "maximum_reduction_axes_grouped", "scale_granularity",
+                    "signed_code_min", "signed_code_max", "scale_floor_exponent",
+                    "scale_exponent_rule", "hardware_exponent_rule",
+                    "code_rounding", "zero_input_exponent",
+                ),
+                f"{path}.input_requantization",
+            )
+            if (
+                input_requant["source"] != f"blocks.{block_index}.norm1"
+                or input_requant["input_layout"] != "batch_sequence_embedding"
+                or input_requant["grouped_layout"]
+                != "batch_sequence_group_channel"
+                or input_requant["maximum_reduction_axes_grouped"] != [1, 3]
+                or input_requant["scale_granularity"] != "per_batch_per_group"
+                or int(input_requant["signed_code_min"]) != -127
+                or int(input_requant["signed_code_max"]) != 127
+                or int(input_requant["scale_floor_exponent"]) != -24
+                or int(input_requant["zero_input_exponent"]) != -24
+                or input_requant["scale_exponent_rule"]
+                != "max(-24,round_ties_to_even(log2(max_abs/127)))"
+                or input_requant["hardware_exponent_rule"]
+                != "leading_one_plus_exact_squared_boundary_compare; no_log2_or_pow"
+                or input_requant["code_rounding"] != "nearest_ties_to_even"
+            ):
+                raise ValueError(f"{path} input requantization ABI mismatch")
+            parallel_merge = require_keys(
+                item["parallel_merge"],
+                (
+                    "operation", "content_branch", "lut_branch",
+                    "common_exponent", "intermediate_requantization",
+                    "accumulator_width_rule", "overflow_policy",
+                    "fixed_width_status",
+                ),
+                f"{path}.parallel_merge",
+            )
+            if (
+                parallel_merge["operation"]
+                != "exact_power_of_two_exponent_align_then_signed_integer_add"
+                or parallel_merge["content_branch"]
+                != f"blocks.{block_index}.attn.content"
+                or parallel_merge["lut_branch"] != item["name"]
+                or parallel_merge["common_exponent"]
+                != "elementwise_min(content_per_token_exponent,lut_per_group_exponent)"
+                or parallel_merge["intermediate_requantization"] != "none"
+                or parallel_merge["accumulator_width_rule"]
+                != "8 + exponent_span + 1 signed bits"
+                or parallel_merge["overflow_policy"]
+                != (
+                    "no_wrap; widen_before_add; "
+                    "saturation_only_at_outer_A8_requantizer"
+                )
+                or parallel_merge["fixed_width_status"]
+                != "requires_system_exponent_range_contract"
+            ):
+                raise ValueError(f"{path} parallel merge ABI mismatch")
+            residual = require_keys(
+                item["outer_residual_boundary"],
+                (
+                    "residual_branch", "operation", "output_requantizer",
+                    "maximum_reduction_axis", "output_scale_granularity",
+                    "signed_code_min", "signed_code_max", "scale_floor_exponent",
+                    "code_rounding", "saturation", "accumulator_width_rule",
+                    "overflow_policy", "fixed_width_status",
+                ),
+                f"{path}.outer_residual_boundary",
+            )
+            if (
+                residual["residual_branch"] != f"blocks.{block_index}.residual_input"
+                or residual["operation"]
+                != "exact_power_of_two_exponent_align_three_way_add"
+                or residual["output_requantizer"]
+                != f"blocks.{block_index}.residual_quantizer"
+                or int(residual["maximum_reduction_axis"]) != -1
+                or residual["output_scale_granularity"] != "per_batch_per_token"
+                or int(residual["signed_code_min"]) != -127
+                or int(residual["signed_code_max"]) != 127
+                or int(residual["scale_floor_exponent"]) != -24
+                or residual["code_rounding"] != "nearest_ties_to_even"
+                or residual["saturation"] != "only_at_final_A8_requantization"
+                or residual["accumulator_width_rule"]
+                != "8 + exponent_span + 2 signed bits"
+                or residual["overflow_policy"]
+                != (
+                    "no_wrap; widen_before_add; "
+                    "saturation_only_at_final_A8_requantizer"
+                )
+                or residual["fixed_width_status"]
+                != "requires_system_exponent_range_contract"
+            ):
+                raise ValueError(f"{path} outer residual ABI mismatch")
+            expected_shapes = {
+                "reduce_table_int8": (stages, groups, 256, 256),
+                "context_table_int8": (groups, 256, 256),
+                "broadcast_table_int8": (groups, 256, 256),
+            }
+            for table_name, expected_shape in expected_shapes.items():
+                table = item[table_name]
+                if (not isinstance(table, torch.Tensor)
+                        or table.dtype != torch.int8
+                        or tuple(table.shape) != expected_shape):
+                    raise ValueError(f"{path}.{table_name} shape/dtype mismatch")
+                if bool((table < -127).any() | (table > 127).any()):
+                    raise ValueError(f"{path}.{table_name} value range mismatch")
+        else:
+            raise ValueError(f"{path} unsupported operator")
+    expected_lut_blocks = (
+        set(range(topology_depth))
+        if global_mixer_mode == "parallel_lut_tree"
+        else set()
+    )
+    if global_lut_block_indices != expected_lut_blocks:
+        raise ValueError(
+            "global mixer mode and per-block LUT payloads are inconsistent"
         )
-        patch_tokens = int(item["patch_tokens"])
-        if (item["operator"] != "fixed_hadamard_sign_hadamard_global_mixer"
-                or patch_tokens < 2 or patch_tokens & (patch_tokens - 1)):
-            raise ValueError(f"global_mixers[{index}] operator/topology mismatch")
-        stages = patch_tokens.bit_length() - 1
+    if global_mixer_mode == "parallel_lut_tree":
+        expected_content = {
+            f"blocks.{index}.attn.content" for index in range(topology_depth)
+        }
         if (
-            int(item["normalization_right_shift"]) != stages
-            or int(item["butterfly_stages_per_transform"]) != stages
-            or int(item["transform_count"]) != 2
-            or int(item["patch_add_sub_per_channel"]) != 2 * patch_tokens * stages
-            or int(item["learned_parameters"]) != 0
-            or int(item["general_multipliers"]) != 0
+            attention_names != expected_content
+            or len(payload["global_mixers"]) != topology_depth
         ):
-            raise ValueError(f"global_mixers[{index}] arithmetic ABI mismatch")
-        sign_mask = item["sign_mask_int8"]
-        if not isinstance(sign_mask, torch.Tensor) or tuple(sign_mask.shape) != (
-            patch_tokens,
-        ):
-            raise ValueError(f"global_mixers[{index}] sign mask shape mismatch")
-        if bool(((sign_mask != -1) & (sign_mask != 1)).any()) or int(sign_mask[0]) != 1:
-            raise ValueError(f"global_mixers[{index}] sign mask value mismatch")
+            raise ValueError(
+                "parallel global LUT topology must bind one content router and "
+                "one LUT tree per block"
+            )
     if not isinstance(payload["rms_norms"], list):
         raise ValueError("rms_norms must be a list")
     for index, rms_norm in enumerate(payload["rms_norms"]):
@@ -990,9 +1393,20 @@ def validate_logic_payload(payload: Mapping[str, object]) -> None:
         ):
             raise ValueError(f"local_branches[{index}] logic-tree ABI mismatch")
     arithmetic = require_keys(
-        payload["arithmetic_contract"], ("a8_by_u4_product_rom",),
+        payload["arithmetic_contract"],
+        (
+            "a8_by_u4_product_rom", "payload_contains_floating_inference_state",
+            "pytorch_reference_uses_float_carrier",
+            "standalone_packed_executor_included",
+        ),
         "arithmetic_contract",
     )
+    if (
+        bool(arithmetic["payload_contains_floating_inference_state"])
+        or not bool(arithmetic["pytorch_reference_uses_float_carrier"])
+        or bool(arithmetic["standalone_packed_executor_included"])
+    ):
+        raise ValueError("reference/payload execution-boundary declaration mismatch")
     product_rom = require_keys(
         arithmetic["a8_by_u4_product_rom"], ("address", "product_rom_int16"),
         "arithmetic_contract.a8_by_u4_product_rom",
@@ -1052,6 +1466,8 @@ def _model_kwargs_from_checkpoint_args(args: Mapping[str, Any]) -> dict[str, obj
         "hadamard_group_size": int(args.get("hadamard_group_size", 32)),
         "hadamard_branch_shift": int(args.get("hadamard_branch_shift", 2)),
         "hybrid_attention_period": int(args.get("hybrid_attention_period", 3)),
+        "global_lut_group_size": int(args.get("global_lut_group_size", 32)),
+        "global_lut_branch_shift": int(args.get("global_lut_branch_shift", 2)),
         "logic_expert_width": int(args.get("logic_expert_width", 0)),
         "logic_expert_count": int(args.get("logic_expert_count", 1)),
         "state_control": str(args.get("state_control", "none")),

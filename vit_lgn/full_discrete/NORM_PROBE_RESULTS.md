@@ -37,5 +37,5 @@ no final norm, 74.74% for RMS blocks with no final norm, 70.10% for
 requant-only, and 70.64% for no norm.  The frozen-checkpoint counterfactual
 above remains useful because it shows immediate sensitivity, while the formal
 queue measures how much training can adapt.  See
-[`docs/reports/full_discrete_logic_gate_report_20260716.md`](../../docs/reports/full_discrete_logic_gate_report_20260716.md)
+[`docs/full_discrete_logic_gate_report_20260715.md`](../../docs/full_discrete_logic_gate_report_20260715.md)
 for the result hashes and interpretation.
