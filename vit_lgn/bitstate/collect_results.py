@@ -48,6 +48,7 @@ RESULT_FIELDS = (
     "seed",
     "state_width",
     "encoder_kind",
+    "global_token_mode",
     "local_depth",
     "global_depth",
     "heads",
@@ -64,6 +65,9 @@ RESULT_FIELDS = (
     "gate_init_normal_std",
     "hardening_logit_scale",
     "soft_warmup_epochs",
+    "optimizer",
+    "learning_rate",
+    "lr_schedule",
 )
 
 
@@ -118,6 +122,9 @@ def summary_row(
         run=str(path.parent.relative_to(root)),
         state_width=model.get("state_width", training.get("state_width", "")),
         encoder_kind=model.get("encoder_kind", training.get("encoder_kind", "")),
+        global_token_mode=model.get(
+            "global_token_mode", training.get("global_token_mode", "majority")
+        ),
         local_depth=model.get("local_depth", training.get("local_depth", "")),
         global_depth=model.get("global_depth", training.get("global_depth", "")),
         heads=model.get("heads", training.get("heads", "")),
@@ -136,6 +143,9 @@ def summary_row(
         gate_init_normal_std=training.get("gate_init_normal_std", ""),
         hardening_logit_scale=training.get("hardening_logit_scale", ""),
         soft_warmup_epochs=training.get("soft_warmup_epochs", ""),
+        optimizer=training.get("optimizer", ""),
+        learning_rate=training.get("learning_rate", ""),
+        lr_schedule=training.get("lr_schedule", ""),
     )
     for epoch in summary.get("history") or []:
         if float(epoch.get("discrete_acc", 0.0)) >= 0.2:

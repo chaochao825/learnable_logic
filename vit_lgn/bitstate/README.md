@@ -123,3 +123,10 @@ truth-table commitment without changing any selected gate. Entropy pressure
 can be ramped with `--gate-entropy-weight-start` and
 `--gate-entropy-weight-end` so early exploration and late commitment are
 controlled separately.
+
+The default global token applies one majority comparison per state channel.
+`--global-token-mode learned_count` replaces that information bottleneck with
+one trainable count threshold per channel. Its forward value is still exactly
+Boolean; deployment stores only rounded integer thresholds, and execution uses
+patchwise popcount plus integer comparison. `hard_scale16_count_token` exposes
+this as a separate H200 ablation without changing the matched baseline runs.

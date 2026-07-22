@@ -152,6 +152,7 @@ class RedundantPredicatePatchEncoder(ThermometerPatchEncoder):
         identity_width: int = 0,
         predicate_temperature: float = 1.0,
         predicate_chunk_size: int = 1024,
+        global_token_mode: str = "majority",
         seed: int = 0,
         append_global_token: bool = True,
     ) -> None:
@@ -169,6 +170,8 @@ class RedundantPredicatePatchEncoder(ThermometerPatchEncoder):
             raise ValueError(predicate_chunk_size)
         if identity_width < 0:
             raise ValueError(identity_width)
+        if global_token_mode not in {"majority", "learned_count"}:
+            raise ValueError(global_token_mode)
 
         automatic_identity = min(self.raw_patch_width, self.state_width)
         self.identity_width = min(
@@ -180,6 +183,7 @@ class RedundantPredicatePatchEncoder(ThermometerPatchEncoder):
         self.predicate_fanin = min(int(predicate_fanin), self.raw_patch_width)
         self.predicate_temperature = float(predicate_temperature)
         self.predicate_chunk_size = int(predicate_chunk_size)
+        self.global_token_mode = global_token_mode
 
         identity_route = torch.div(
             torch.arange(self.identity_width, dtype=torch.long) * self.raw_patch_width,
@@ -233,6 +237,28 @@ class RedundantPredicatePatchEncoder(ThermometerPatchEncoder):
         self.threshold_logits = nn.Parameter(threshold_logits)
         self.polarity_logits = nn.Parameter(polarity_logits)
 
+        if self.global_token_mode == "learned_count":
+            initial_global_thresholds = 1 + torch.div(
+                torch.arange(self.state_width, dtype=torch.long) * self.patch_tokens,
+                self.state_width,
+                rounding_mode="floor",
+            )
+            initial_global_thresholds = initial_global_thresholds[
+                torch.randperm(self.state_width, generator=generator)
+            ]
+            if self.patch_tokens == 1:
+                global_threshold_logits = torch.zeros(self.state_width)
+            else:
+                target = initial_global_thresholds.to(torch.float32).clamp(
+                    1.25,
+                    self.patch_tokens - 0.25,
+                )
+                fraction = (target - 1.0) / (self.patch_tokens - 1.0)
+                global_threshold_logits = torch.logit(fraction.clamp(1e-4, 1 - 1e-4))
+            self.global_threshold_logits = nn.Parameter(global_threshold_logits)
+        else:
+            self.register_parameter("global_threshold_logits", None)
+
     def _threshold_real(self) -> Tensor:
         if self.predicate_fanin == 1:
             return torch.ones_like(self.threshold_logits)
@@ -240,6 +266,31 @@ class RedundantPredicatePatchEncoder(ThermometerPatchEncoder):
 
     def hard_thresholds(self) -> Tensor:
         return self._threshold_real().detach().round().clamp(1, self.predicate_fanin).long()
+
+    def _global_threshold_real(self) -> Tensor:
+        if self.global_token_mode != "learned_count":
+            raise RuntimeError("global count thresholds are disabled")
+        if self.patch_tokens == 1:
+            return torch.ones_like(self.global_threshold_logits)
+        return 1.0 + (self.patch_tokens - 1.0) * torch.sigmoid(
+            self.global_threshold_logits
+        )
+
+    def hard_global_thresholds(self) -> Tensor:
+        if self.global_token_mode == "majority":
+            return torch.full(
+                (self.state_width,),
+                math.ceil(self.patch_tokens / 2),
+                device=self.threshold_logits.device,
+                dtype=torch.long,
+            )
+        return (
+            self._global_threshold_real()
+            .detach()
+            .round()
+            .clamp(1, self.patch_tokens)
+            .long()
+        )
 
     def _predicate_chunk(
         self,
@@ -306,13 +357,21 @@ class RedundantPredicatePatchEncoder(ThermometerPatchEncoder):
     ) -> Tensor:
         if not self.append_global_token:
             return state
-        hard_global = hard_state.to(torch.int32).sum(dim=1) * 2 >= self.patch_tokens
+        hard_global = (
+            hard_state.to(torch.int32).sum(dim=1) >= self.hard_global_thresholds()
+        )
         if mode == "hard":
             global_token = hard_global.to(state.dtype)
         else:
-            majority_threshold = math.ceil(self.patch_tokens / 2) - 0.5
+            if self.global_token_mode == "majority":
+                threshold = state.new_full(
+                    (self.state_width,),
+                    math.ceil(self.patch_tokens / 2),
+                )
+            else:
+                threshold = self._global_threshold_real()
             soft_global = torch.sigmoid(
-                (state.sum(dim=1) - majority_threshold)
+                (state.sum(dim=1) - threshold + 0.5)
                 / (self.predicate_temperature * tau)
             )
             if mode == "soft":
@@ -339,7 +398,12 @@ class RedundantPredicatePatchEncoder(ThermometerPatchEncoder):
             base = counts >= hard_thresholds[start:end]
             predicates.append(torch.where(hard_polarity[start:end], base, ~base))
         state = torch.cat((identity, *predicates), dim=-1)
-        return self._append_global_bits(state)
+        if not self.append_global_token:
+            return state
+        global_token = (
+            state.to(torch.int32).sum(dim=1) >= self.hard_global_thresholds()
+        )
+        return torch.cat((global_token.unsqueeze(1), state), dim=1)
 
     def forward(
         self,
@@ -383,4 +447,8 @@ class RedundantPredicatePatchEncoder(ThermometerPatchEncoder):
             "predicate_polarity": (self.polarity_logits.detach() >= 0).cpu(),
             "predicate_fanin": self.predicate_fanin,
             "predicate_count": self.predicate_width,
+            "global_token_mode": self.global_token_mode,
+            "global_token_thresholds": (
+                self.hard_global_thresholds().cpu().to(torch.int32)
+            ),
         }

@@ -575,6 +575,7 @@ def train(args: argparse.Namespace) -> dict[str, object]:
         encoder_identity_width=args.encoder_identity_width,
         predicate_temperature=args.predicate_temperature,
         predicate_chunk_size=args.predicate_chunk_size,
+        global_token_mode=args.global_token_mode,
         gate_init_strength=args.gate_init_strength,
         local_depth=args.local_depth,
         global_depth=args.global_depth,
@@ -1005,6 +1006,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--encoder-identity-width", type=int, default=0)
     parser.add_argument("--predicate-temperature", type=float, default=1.0)
     parser.add_argument("--predicate-chunk-size", type=int, default=1024)
+    parser.add_argument(
+        "--global-token-mode",
+        choices=("majority", "learned_count"),
+        default="majority",
+    )
     parser.add_argument(
         "--gate-init-strength",
         type=float,

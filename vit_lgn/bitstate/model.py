@@ -23,6 +23,7 @@ class BitStateConfig:
     encoder_identity_width: int = 0
     predicate_temperature: float = 1.0
     predicate_chunk_size: int = 1024
+    global_token_mode: str = "majority"
     gate_init_strength: float = -1.0
     local_depth: int = 2
     global_depth: int = 2
@@ -57,6 +58,13 @@ class BitStateConfig:
             raise ValueError((self.image_size, self.patch_size))
         if self.encoder_kind not in {"thermometer", "redundant_predicate"}:
             raise ValueError(self.encoder_kind)
+        if self.global_token_mode not in {"majority", "learned_count"}:
+            raise ValueError(self.global_token_mode)
+        if (
+            self.encoder_kind != "redundant_predicate"
+            and self.global_token_mode != "majority"
+        ):
+            raise ValueError("learned_count global tokens require redundant_predicate encoding")
         if self.encoder_identity_width < 0 or self.predicate_temperature <= 0.0:
             raise ValueError((self.encoder_identity_width, self.predicate_temperature))
         if self.gate_init_strength != -1.0 and self.gate_init_strength <= 0.0:
@@ -108,6 +116,7 @@ class BitStateViT(nn.Module):
                 identity_width=config.encoder_identity_width,
                 predicate_temperature=config.predicate_temperature,
                 predicate_chunk_size=config.predicate_chunk_size,
+                global_token_mode=config.global_token_mode,
                 seed=config.seed + 500,
             )
         else:

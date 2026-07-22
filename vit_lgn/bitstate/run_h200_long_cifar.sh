@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-variant="${1:?usage: run_h200_long_cifar.sh dlgn|anneal|gumbel|dlgn_normal_adam|anneal_normal_adam|gumbel_normal_adam_tau010|gumbel_normal_adam_tau100|hard_scale4|hard_scale16|hard_scale4_ramp050 [output-root]}"
+variant="${1:?usage: run_h200_long_cifar.sh dlgn|anneal|gumbel|dlgn_normal_adam|anneal_normal_adam|gumbel_normal_adam_tau010|gumbel_normal_adam_tau100|hard_scale4|hard_scale16|hard_scale16_count_token|hard_scale4_ramp050 [output-root]}"
 output_root="${2:-remote_runs/h200_long_cifar_20260723}"
 python_bin="${PYTHON_BIN:-/home/wangmeiqi/miniconda3/envs/lgn/bin/python}"
 data_root="${CIFAR10_ROOT:-/home/wangmeiqi/phz/attention-clean/data/cifar-10}"
@@ -17,6 +17,8 @@ identity_width="${IDENTITY_WIDTH:-192}"
 qk_bits="${QK_BITS:-64}"
 votes_per_class="${VOTES_PER_CLASS:-64}"
 group_sum_temperature="${GROUP_SUM_TEMPERATURE:-8}"
+global_token_mode="${GLOBAL_TOKEN_MODE:-majority}"
+soft_warmup_epochs="${SOFT_WARMUP_EPOCHS:-15}"
 seed="${SEED:-0}"
 
 common=(
@@ -35,6 +37,7 @@ common=(
   --predicate-fanin 9
   --predicate-chunk-size 1024
   --encoder-identity-width "${identity_width}"
+  --global-token-mode "${global_token_mode}"
   --gate-init-strength 0.1
   --local-depth 2
   --global-depth 2
@@ -51,7 +54,7 @@ common=(
   --tau 1.0
   --tau-start 3.0
   --tau-end 0.5
-  --soft-warmup-epochs 15
+  --soft-warmup-epochs "${soft_warmup_epochs}"
   --state-balance-weight 0.05
   --state-diversity-weight 0.02
   --state-flip-weight 0.02
@@ -146,6 +149,13 @@ case "${variant}" in
     ;;
   hard_scale16)
     variant_args=(--method progressive_hard_st --hardening-logit-scale 16)
+    ;;
+  hard_scale16_count_token)
+    variant_args=(
+      --method progressive_hard_st
+      --hardening-logit-scale 16
+      --global-token-mode learned_count
+    )
     ;;
   hard_scale4_ramp050)
     variant_args=(

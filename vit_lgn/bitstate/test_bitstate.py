@@ -244,6 +244,32 @@ class BitStateTest(unittest.TestCase):
             self.assertGreater(float(parameter.grad.abs().sum()), 0.0)
         self.assertFalse(contains_float_tensor(encoder.deployment_payload()))
 
+    def test_learned_count_global_token_is_integer_exact_and_trainable(self) -> None:
+        encoder = RedundantPredicatePatchEncoder(
+            image_size=4,
+            patch_size=2,
+            in_channels=1,
+            threshold_levels=2,
+            state_width=16,
+            identity_width=4,
+            predicate_fanin=3,
+            predicate_chunk_size=5,
+            global_token_mode="learned_count",
+            seed=17,
+        )
+        images = torch.arange(32, dtype=torch.uint8).reshape(2, 1, 4, 4) * 8
+        carrier = encoder(images, mode="hard_st", tau=0.8)
+        bits = encoder.forward_bits(images)
+        torch.testing.assert_close(carrier.detach().bool(), bits)
+        self.assertGreater(torch.unique(encoder.hard_global_thresholds()).numel(), 1)
+        carrier[:, 0].sum().backward()
+        self.assertIsNotNone(encoder.global_threshold_logits.grad)
+        self.assertTrue(bool(torch.isfinite(encoder.global_threshold_logits.grad).all()))
+        self.assertGreater(float(encoder.global_threshold_logits.grad.abs().sum()), 0.0)
+        payload = encoder.deployment_payload()
+        self.assertEqual(payload["global_token_mode"], "learned_count")
+        self.assertFalse(contains_float_tensor(payload))
+
     def test_local_block_hard_carrier_matches_bits(self) -> None:
         block = LocalBitLogicBlock(state_width=8, grid_size=2, update_fraction=0.5, seed=2)
         bits = torch.randint(0, 2, (2, 5, 8), dtype=torch.bool)
@@ -299,6 +325,7 @@ class BitStateTest(unittest.TestCase):
                 "encoder_kind": "redundant_predicate",
                 "predicate_fanin": 3,
                 "encoder_identity_width": 4,
+                "global_token_mode": "learned_count",
             }
         )
         model = BitStateViT(config).eval()
