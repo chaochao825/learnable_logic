@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-variant="${1:?usage: run_h200_long_cifar.sh dlgn|anneal|gumbel|hard_scale4|hard_scale16|hard_scale4_ramp050 [output-root]}"
+variant="${1:?usage: run_h200_long_cifar.sh dlgn|anneal|gumbel|dlgn_normal_adam|anneal_normal_adam|gumbel_normal_adam_tau010|gumbel_normal_adam_tau100|hard_scale4|hard_scale16|hard_scale4_ramp050 [output-root]}"
 output_root="${2:-remote_runs/h200_long_cifar_20260723}"
 python_bin="${PYTHON_BIN:-/home/wangmeiqi/miniconda3/envs/lgn/bin/python}"
 data_root="${CIFAR10_ROOT:-/home/wangmeiqi/phz/attention-clean/data/cifar-10}"
@@ -16,6 +16,7 @@ state_width="${STATE_WIDTH:-4096}"
 identity_width="${IDENTITY_WIDTH:-192}"
 qk_bits="${QK_BITS:-64}"
 votes_per_class="${VOTES_PER_CLASS:-64}"
+group_sum_temperature="${GROUP_SUM_TEMPERATURE:-8}"
 seed="${SEED:-0}"
 
 common=(
@@ -41,7 +42,7 @@ common=(
   --qk-bits "${qk_bits}"
   --topk 8
   --votes-per-class "${votes_per_class}"
-  --group-sum-temperature 8
+  --group-sum-temperature "${group_sum_temperature}"
   --learning-rate 0.002
   --min-learning-rate 0.00005
   --warmup-epochs 2
@@ -55,7 +56,7 @@ common=(
   --state-diversity-weight 0.02
   --state-flip-weight 0.02
   --gate-entropy-weight 0.01
-  --target-accuracy 0.5
+  --target-accuracy 0.2
   --inactive-batches 8
   --seed "${seed}"
   --augment
@@ -73,6 +74,72 @@ case "${variant}" in
     ;;
   gumbel)
     variant_args=(--method gumbel_st)
+    ;;
+  dlgn_normal_adam)
+    variant_args=(
+      --method soft
+      --gate-init-mode normal
+      --gate-init-normal-std 1
+      --optimizer adam
+      --learning-rate 0.01
+      --lr-schedule constant
+      --weight-decay 0
+      --label-smoothing 0
+      --state-balance-weight 0
+      --state-diversity-weight 0
+      --state-flip-weight 0
+      --gate-entropy-weight 0
+    )
+    ;;
+  anneal_normal_adam)
+    variant_args=(
+      --method anneal
+      --gate-init-mode normal
+      --gate-init-normal-std 1
+      --optimizer adam
+      --learning-rate 0.01
+      --lr-schedule constant
+      --weight-decay 0
+      --label-smoothing 0
+      --state-balance-weight 0
+      --state-diversity-weight 0
+      --state-flip-weight 0
+      --gate-entropy-weight 0
+    )
+    ;;
+  gumbel_normal_adam_tau010)
+    variant_args=(
+      --method gumbel_st
+      --gate-init-mode normal
+      --gate-init-normal-std 1
+      --optimizer adam
+      --learning-rate 0.01
+      --lr-schedule constant
+      --weight-decay 0
+      --label-smoothing 0
+      --tau 0.1
+      --state-balance-weight 0
+      --state-diversity-weight 0
+      --state-flip-weight 0
+      --gate-entropy-weight 0
+    )
+    ;;
+  gumbel_normal_adam_tau100)
+    variant_args=(
+      --method gumbel_st
+      --gate-init-mode normal
+      --gate-init-normal-std 1
+      --optimizer adam
+      --learning-rate 0.01
+      --lr-schedule constant
+      --weight-decay 0
+      --label-smoothing 0
+      --tau 1.0
+      --state-balance-weight 0
+      --state-diversity-weight 0
+      --state-flip-weight 0
+      --gate-entropy-weight 0
+    )
     ;;
   hard_scale4)
     variant_args=(--method progressive_hard_st --hardening-logit-scale 4)

@@ -71,6 +71,38 @@ a 45k/5k train/validation split, the full 10k test split, width 4096, and 30
 epochs. Environment variables such as `STATE_WIDTH`, `EPOCHS`, `TRAIN_LIMIT`,
 and `EVAL_LIMIT` are intended for bounded capacity and throughput probes.
 
+Completed campaigns can be consolidated without loading checkpoints:
+
+```bash
+python -m vit_lgn.bitstate.collect_results \
+  remote_runs/h200_screen_20260723 \
+  remote_runs/h200_commitment_screen_20260723 \
+  --infer-legacy-entropy-unused \
+  --output remote_runs/bitstate_results.csv
+```
+
+`unused_gate_ratio` follows the Mind-the-Gap gate-entropy definition. The
+separate `activation_inactive_gate_ratio` field measures hard gates whose
+outputs are constant on the sampled training batches. The collector flag
+repairs older bit-state summaries by reading their best checkpoints; without
+that flag it labels their legacy ratio explicitly instead of silently mixing
+the two definitions.
+
+The default `--gate-init-mode targeted` preserves the model's identity-biased
+Boolean state initialization. `--gate-init-mode normal
+--gate-init-normal-std 1` instead reproduces the DLGN/GLGN N(0,1) logit
+initialization for a paper-aligned baseline. The initialization mode is stored
+in every summary and should not be mixed during matched comparisons.
+
+Each new run also records soft-vs-hard MAE and binary flip ratio at the
+encoder, every local/global block boundary, and the vote head. For older
+checkpoints, the same metrics and both unused-gate definitions can be generated
+without retraining:
+
+```bash
+python -m vit_lgn.bitstate.analyze_checkpoint runs/example --device cuda
+```
+
 The anti-collapse diagnostics report hidden-state entropy, constant and
 duplicate bit ratios, layer-to-layer flip rate, gate entropy, and gate
 confidence. The compressed four-address LUT evaluator is algebraically

@@ -18,6 +18,7 @@ from torch.utils.data import DataLoader, Dataset, Subset, TensorDataset
 from .model import BitStateConfig, BitStateViT
 from .regularization import (
     collapse_regularization,
+    entropy_unused_gate_ratio,
     gate_distribution_metrics,
     gate_entropy_target_penalty,
 )
@@ -36,6 +37,7 @@ RESULT_COLUMNS = (
     "train_time",
     "epochs_to_target",
     "unused_gate_ratio",
+    "activation_inactive_gate_ratio",
     "gate_count",
     "predicate_count",
     "depth",
@@ -44,6 +46,9 @@ RESULT_COLUMNS = (
     "state_constant_ratio",
     "state_duplicate_ratio",
     "state_flip_rate",
+    "layer_gap_max_mae",
+    "layer_gap_max_flip_ratio",
+    "layer_gap_final_flip_ratio",
     "gate_entropy",
     "gate_confidence",
     "hard_carrier_acc",
@@ -140,6 +145,24 @@ def seed_everything(seed: int) -> None:
     torch.manual_seed(seed)
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(seed)
+
+
+@torch.no_grad()
+def initialize_gate_logits(
+    model: BitStateViT,
+    mode: str,
+    *,
+    normal_std: float,
+    seed: int,
+) -> None:
+    if mode == "targeted":
+        return
+    if mode != "normal" or normal_std <= 0.0:
+        raise ValueError((mode, normal_std))
+    generator = torch.Generator(device="cpu").manual_seed(seed)
+    for layer in model.gate_layers():
+        values = torch.randn(layer.logits.shape, generator=generator) * normal_std
+        layer.logits.copy_(values.to(device=layer.logits.device, dtype=layer.logits.dtype))
 
 
 def subset(dataset: Dataset, limit: int, seed: int) -> Dataset:
@@ -477,6 +500,63 @@ def measure_state_diagnostics(
     return {key: value / count for key, value in totals.items()}
 
 
+@torch.no_grad()
+def measure_layer_gap(
+    model: BitStateViT,
+    loader: DataLoader,
+    device: torch.device,
+    *,
+    tau: float,
+    max_batches: int,
+) -> list[dict[str, float | int | str]]:
+    names = (
+        ["encoder"]
+        + [f"local_{index + 1}" for index in range(model.config.local_depth)]
+        + [f"global_{index + 1}" for index in range(model.config.global_depth)]
+        + ["votes"]
+    )
+    absolute_error = [0.0] * len(names)
+    flips = [0] * len(names)
+    elements = [0] * len(names)
+    model.eval()
+    for batch_id, (images, _labels) in enumerate(loader):
+        if batch_id >= max_batches:
+            break
+        images = images.to(device, non_blocking=True)
+        _soft_logits, soft_trace = model(
+            images,
+            mode="soft",
+            tau=tau,
+            return_trace=True,
+        )
+        _hard_logits, hard_trace = model(
+            images,
+            mode="hard",
+            tau=tau,
+            return_trace=True,
+        )
+        if len(soft_trace) != len(names) or len(hard_trace) != len(names):
+            raise AssertionError((len(names), len(soft_trace), len(hard_trace)))
+        for index, (soft, hard) in enumerate(zip(soft_trace, hard_trace)):
+            absolute_error[index] += float((soft - hard).abs().sum())
+            flips[index] += int(
+                torch.count_nonzero((soft >= 0.5) != (hard >= 0.5))
+            )
+            elements[index] += soft.numel()
+    if not elements or min(elements) == 0:
+        raise ValueError("at least one layer-gap batch is required")
+    return [
+        {
+            "layer": index,
+            "name": name,
+            "mae": absolute_error[index] / elements[index],
+            "flip_ratio": flips[index] / elements[index],
+            "elements": elements[index],
+        }
+        for index, name in enumerate(names)
+    ]
+
+
 def train(args: argparse.Namespace) -> dict[str, object]:
     seed_everything(args.seed)
     device = torch.device(args.device)
@@ -509,6 +589,12 @@ def train(args: argparse.Namespace) -> dict[str, object]:
         seed=args.seed,
     )
     model = BitStateViT(config).to(device)
+    initialize_gate_logits(
+        model,
+        args.gate_init_mode,
+        normal_std=args.gate_init_normal_std,
+        seed=args.seed + 4000,
+    )
     teacher = None
     teacher_metadata: dict[str, object] | None = None
     if args.teacher_alpha > 0.0:
@@ -761,12 +847,22 @@ def train(args: argparse.Namespace) -> dict[str, object]:
     )
     first_images, _ = next(iter(test_loader))
     model.assert_bit_exact(first_images.to(device))
-    unused_ratio = measure_inactive(model, train_loader, device, args.inactive_batches)
+    activation_inactive_ratio = measure_inactive(
+        model, train_loader, device, args.inactive_batches
+    )
+    unused_ratio = entropy_unused_gate_ratio(model.gate_layers())
     state_diagnostics = measure_state_diagnostics(
         model,
         test_loader,
         device,
         args.inactive_batches,
+    )
+    layer_gap_diagnostics = measure_layer_gap(
+        model,
+        test_loader,
+        device,
+        tau=args.eval_tau,
+        max_batches=args.inactive_batches,
     )
     with torch.no_grad():
         final_gate_entropy, final_gate_confidence = gate_distribution_metrics(
@@ -792,6 +888,8 @@ def train(args: argparse.Namespace) -> dict[str, object]:
         "train_time": train_time,
         "epochs_to_target": epochs_to_target if epochs_to_target is not None else "",
         "unused_gate_ratio": unused_ratio,
+        "activation_inactive_gate_ratio": activation_inactive_ratio,
+        "unused_gate_definition": "mind_gap_entropy_above_initialization_2.5pct",
         "gate_count": model.gate_count(),
         "predicate_count": model.predicate_count(),
         "depth": model.logic_depth(),
@@ -800,6 +898,11 @@ def train(args: argparse.Namespace) -> dict[str, object]:
         "state_constant_ratio": state_diagnostics["state_constant_ratio"],
         "state_duplicate_ratio": state_diagnostics["state_duplicate_ratio"],
         "state_flip_rate": state_diagnostics["state_flip_rate"],
+        "layer_gap_max_mae": max(item["mae"] for item in layer_gap_diagnostics),
+        "layer_gap_max_flip_ratio": max(
+            item["flip_ratio"] for item in layer_gap_diagnostics
+        ),
+        "layer_gap_final_flip_ratio": layer_gap_diagnostics[-1]["flip_ratio"],
         "gate_entropy": float(final_gate_entropy),
         "gate_confidence": float(final_gate_confidence),
         "hard_carrier_acc": hard_carrier_acc,
@@ -822,6 +925,7 @@ def train(args: argparse.Namespace) -> dict[str, object]:
         "training_args": vars(args),
         "teacher": teacher_metadata,
         "state_diagnostics": state_diagnostics,
+        "layer_gap_diagnostics": layer_gap_diagnostics,
     }
 
     (output_dir / "summary.json").write_text(json.dumps(row, indent=2, sort_keys=True) + "\n")
@@ -907,6 +1011,12 @@ def parse_args() -> argparse.Namespace:
         default=-1.0,
         help="positive shared logit margin, or -1 for legacy per-module values",
     )
+    parser.add_argument(
+        "--gate-init-mode",
+        choices=("targeted", "normal"),
+        default="targeted",
+    )
+    parser.add_argument("--gate-init-normal-std", type=float, default=1.0)
     parser.add_argument("--local-depth", type=int, default=2)
     parser.add_argument("--global-depth", type=int, default=2)
     parser.add_argument("--heads", type=int, default=4)
@@ -966,6 +1076,8 @@ def parse_args() -> argparse.Namespace:
         parser.error("invalid predicate encoder settings")
     if args.gate_init_strength != -1.0 and args.gate_init_strength <= 0.0:
         parser.error("gate-init-strength must be positive or -1")
+    if args.gate_init_normal_std <= 0.0:
+        parser.error("gate-init-normal-std must be positive")
     if not 0.0 <= args.label_smoothing < 1.0:
         parser.error("label-smoothing must be in [0, 1)")
     if args.group_sum_temperature <= 0.0:

@@ -10,6 +10,9 @@ from torch import Tensor
 from .gates import HardSTGateLayer
 
 
+MIND_GAP_ENTROPY_THRESHOLD = 1.8843154907226562
+
+
 def gate_distribution_metrics(
     layers: Iterable[HardSTGateLayer],
     *,
@@ -24,6 +27,28 @@ def gate_distribution_metrics(
     ).mean()
     confidence = torch.cat([p.amax(dim=-1) for p in probabilities]).mean()
     return entropy, confidence
+
+
+@torch.no_grad()
+def entropy_unused_gate_ratio(
+    layers: Iterable[HardSTGateLayer],
+    *,
+    threshold: float = MIND_GAP_ENTROPY_THRESHOLD,
+) -> float:
+    """Return the Mind-the-Gap high-entropy unused-gate fraction."""
+
+    if threshold <= 0.0:
+        raise ValueError(threshold)
+    entropy_values = []
+    for layer in layers:
+        probabilities = F.softmax(layer.logits.detach(), dim=-1)
+        entropy_values.append(
+            -(probabilities * probabilities.clamp_min(1e-12).log()).sum(dim=-1)
+        )
+    if not entropy_values:
+        raise ValueError("at least one gate layer is required")
+    entropy = torch.cat(entropy_values)
+    return float((entropy > threshold).to(torch.float32).mean())
 
 
 def gate_entropy_target_penalty(

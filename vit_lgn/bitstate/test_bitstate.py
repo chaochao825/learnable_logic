@@ -3,6 +3,7 @@ from __future__ import annotations
 import unittest
 
 import torch
+import torch.nn.functional as F
 from torch.utils.data import TensorDataset
 
 from vit_lgn.bitstate.blocks import BinaryTopKBlock, LocalBitLogicBlock
@@ -16,9 +17,11 @@ from vit_lgn.bitstate.gates import (
 from vit_lgn.bitstate.model import BitStateConfig, BitStateViT
 from vit_lgn.bitstate.regularization import (
     collapse_regularization,
+    entropy_unused_gate_ratio,
     gate_entropy_target_penalty,
 )
 from vit_lgn.bitstate.train_bitstate import (
+    initialize_gate_logits,
     split_train_validation,
     supervised_distillation_loss,
 )
@@ -54,6 +57,73 @@ def contains_float_tensor(value: object) -> bool:
 
 
 class BitStateTest(unittest.TestCase):
+    def test_gumbel_st_matches_pytorch_hard_gumbel_gradients(self) -> None:
+        layer = HardSTGateLayer(
+            3,
+            2,
+            torch.tensor([0, 1]),
+            torch.tensor([1, 2]),
+            init_ops=torch.tensor([6, 7]),
+            init_strength=0.3,
+            surrogate_inputs=False,
+        )
+        actual_input = torch.tensor(
+            [[0.0, 1.0, 1.0], [1.0, 0.0, 1.0]], requires_grad=True
+        )
+        reference_input = actual_input.detach().clone().requires_grad_()
+        reference_logits = layer.logits.detach().clone().requires_grad_()
+
+        torch.manual_seed(123)
+        actual = layer(actual_input, mode="gumbel_st", tau=0.5)
+        actual.sum().backward()
+
+        torch.manual_seed(123)
+        weights = F.gumbel_softmax(
+            reference_logits,
+            tau=0.5,
+            hard=True,
+            dim=-1,
+        )
+        truth = TRUTH_TABLE.to(dtype=reference_input.dtype)
+        reference = relaxed_lut_output(
+            reference_input[..., layer.indices_0],
+            reference_input[..., layer.indices_1],
+            weights @ truth,
+        )
+        reference.sum().backward()
+
+        torch.testing.assert_close(actual, reference, rtol=0.0, atol=0.0)
+        torch.testing.assert_close(actual_input.grad, reference_input.grad)
+        torch.testing.assert_close(layer.logits.grad, reference_logits.grad)
+
+    def test_normal_gate_initialization_is_seeded_and_paper_scaled(self) -> None:
+        first = BitStateViT(small_config())
+        second = BitStateViT(small_config())
+        initialize_gate_logits(first, "normal", normal_std=1.0, seed=91)
+        initialize_gate_logits(second, "normal", normal_std=1.0, seed=91)
+        first_logits = torch.cat([layer.logits.flatten() for layer in first.gate_layers()])
+        second_logits = torch.cat([layer.logits.flatten() for layer in second.gate_layers()])
+        torch.testing.assert_close(first_logits, second_logits)
+        self.assertLess(abs(float(first_logits.detach().mean())), 0.1)
+        self.assertGreater(float(first_logits.detach().std()), 0.9)
+        self.assertLess(float(first_logits.detach().std()), 1.1)
+
+    def test_entropy_unused_metric_separates_uncommitted_and_sharp_gates(self) -> None:
+        layer = HardSTGateLayer(
+            2,
+            3,
+            torch.tensor([0, 0, 0]),
+            torch.tensor([1, 1, 1]),
+            init_ops=torch.tensor([6, 7, 8]),
+            init_strength=0.1,
+        )
+        self.assertEqual(entropy_unused_gate_ratio([layer]), 1.0)
+        with torch.no_grad():
+            selected = layer.logits.argmax(dim=-1, keepdim=True)
+            layer.logits.fill_(-10.0)
+            layer.logits.scatter_(1, selected, 10.0)
+        self.assertEqual(entropy_unused_gate_ratio([layer]), 0.0)
+
     def test_train_validation_split_is_deterministic_and_disjoint(self) -> None:
         dataset = TensorDataset(torch.arange(20))
         train_a, validation_a = split_train_validation(dataset, dataset, 5, 17)
