@@ -28,6 +28,9 @@ The raw large run directories remain on the 210 server.
    including matched-setting binarized-MNIST comparisons.
 5. Goal 8: local LUT truth tables are exported, minimized with ABC, and
    augmented with local XAG-style AND/XOR/NOT estimates.
+6. The 2026-07-23 integration adds deterministic Hard-ST, paper-matched CAGE
+   temperature control, equal-budget block accounting, and task-aware
+   per-block truth-table refitting with training-only candidate selection.
 
 ## Headline results
 
@@ -42,6 +45,10 @@ The raw large run directories remain on the 210 server.
   discrete accuracy versus `0.786667` for the earlier Goal 8 `b=2` baseline.
 - On Boolean tasks, direct `b>2` LUTs improve `majority9` and
   `random_sparse10`, stay flat on `parity8`, and increase logic cost.
+- The unpublished 210 Full-K capture shows that preserving `K+1` popcount
+  levels closes the binarized-MNIST teacher gap to `0.1%` at `K=16`, whereas
+  thresholding every hidden layer loses `9.6%`. This motivates the persistent
+  bit-state path rather than repeated one-bit re-encoding.
 
 ## Repository layout
 
@@ -50,6 +57,8 @@ The raw large run directories remain on the 210 server.
   write-up
 - `docs/reports/`: key stage reports
 - `docs/tables/`: small CSV tables referenced by the summary
+- `docs/repro/210_hard_lgn_results_20260723/`: byte-preserved Full-K and
+  soft-loss precision evidence captured from server 210
 
 ## Raw artifact location on 210
 

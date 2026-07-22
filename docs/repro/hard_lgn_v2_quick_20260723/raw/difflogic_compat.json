@@ -1,0 +1,17 @@
+{
+  "all_pass": true,
+  "checks": {
+    "gate_outputs_max_abs_diff": 0.0,
+    "gate_truth_table_max_abs_diff": 0.0,
+    "groupsum_max_abs_diff": 0.0,
+    "logiclayer_hard_forward_max_abs_diff": 0.0,
+    "logiclayer_soft_forward_max_abs_diff": 5.960464477539063e-08,
+    "random_connection_indices_match": true,
+    "weighted_gate_max_abs_diff": 5.960464477539063e-08
+  },
+  "reference": {
+    "functional": "/home/spco/convlogic/src/difflogic/functional.py",
+    "logic_layer": "/home/spco/convlogic/src/difflogic/difflogic.py"
+  },
+  "status": "ok"
+}

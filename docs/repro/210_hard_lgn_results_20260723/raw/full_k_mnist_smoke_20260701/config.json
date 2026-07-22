@@ -1,0 +1,45 @@
+{
+  "anneal_train": false,
+  "batch_size": 256,
+  "calibration_grid_size": 101,
+  "calibration_mode": "per_neuron",
+  "data_dir": "/home/spco/data",
+  "datasets": [
+    "binarized_mnist"
+  ],
+  "device": "auto",
+  "download_data": false,
+  "elapsed_seconds": 79.85568297700956,
+  "epochs": 80,
+  "estimator": "sinusoidal",
+  "eval_batch_size": 2048,
+  "final_readouts": [
+    "popcount",
+    "final_threshold"
+  ],
+  "group_tau": 1.0,
+  "image_max_test": 1000,
+  "image_max_train": 4000,
+  "init": "residual",
+  "init_strength": 0.98,
+  "k_values": [
+    4,
+    8,
+    16,
+    32
+  ],
+  "layers": 4,
+  "lr": 0.01,
+  "out_dir": "runs/full_k_mnist_smoke_20260701",
+  "quick": false,
+  "seeds": [
+    0
+  ],
+  "temp_end": 0.1,
+  "temp_eval": 1.0,
+  "temp_start": 2.0,
+  "threshold": 0.5,
+  "threshold_levels": 1,
+  "weight_decay": 0.0,
+  "width": 400
+}

@@ -11,8 +11,34 @@ Hard-LGN question:
 - standard relaxed DLGN with final argmax discretization
 - DLGN with temperature and entropy annealing
 - Gumbel-Softmax / straight-through LGN
+- deterministic Hard-ST and confidence-adaptive Hard-ST/Gumbel-ST (CAGE)
 - block-wise relaxed training with final argmax discretization
 - block-wise Hard-LGN with per-block truth-table refitting
+- task-aware block refitting with teacher-logit, local truth-table, task-loss,
+  and inactive-gate objectives selected on a training-only holdout
+
+The 2026-07-23 extension keeps the historical methods unchanged and adds
+`hard_st`, `hard_st_cage`, `gumbel_st_cage`, and
+`block_hard_task_refit`.  Use `--block-total-epochs` for a strict equal-epoch
+comparison with end-to-end methods; without it, the historical
+`--block-epochs` per-block behavior is retained.
+
+Matched-budget smoke test:
+
+```bash
+python hard_lgn_benchmark.py \
+  --quick \
+  --block-total-epochs 20 \
+  --methods dlgn dlgn_anneal gumbel_st hard_st_cage \
+            block_relaxed block_hard_refit block_hard_task_refit \
+  --refit-candidate-topk 16 \
+  --out-dir runs/hard_lgn_v2_quick
+```
+
+The required metrics remain in `results.csv`; method-native path gaps are in
+the `path_*` columns, per-block fitting/selection evidence is in
+`block_diagnostics.csv`, and depth-wise mismatch is in
+`layer_diagnostics.csv`.
 
 Run on the 210 server:
 

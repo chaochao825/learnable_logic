@@ -4,3 +4,5 @@ docs/repro/score_gap_50k_20260712/results/** -text diff whitespace=cr-at-eol
 docs/repro/full_discrete_scale_probe_20260715/probe_scale_checkpoint.py -text
 docs/repro/full_discrete_scale_probe_20260715/probe_result.json -text
 docs/repro/210_active_hadamard_snapshot_20260723/source_snapshot/** -text diff whitespace=cr-at-eol,-blank-at-eof
+docs/repro/210_hard_lgn_results_20260723/raw/** -text diff whitespace=cr-at-eol,-blank-at-eof
+docs/repro/hard_lgn_v2_quick_20260723/raw/** -text diff whitespace=cr-at-eol,-blank-at-eof

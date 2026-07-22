@@ -207,8 +207,13 @@ class SoftLogicLayer(nn.Module):
         a = x[..., self.indices_0]
         b = x[..., self.indices_1]
 
-        if mode == "hard":
-            probs = F.one_hot(self.logits.argmax(-1), 16).to(dtype=x.dtype)
+        if mode in {"hard", "hard_st"}:
+            hard_probs = F.one_hot(self.logits.argmax(-1), 16).to(dtype=x.dtype)
+            if mode == "hard_st":
+                soft_probs = F.softmax(self.logits / tau, dim=-1).to(dtype=x.dtype)
+                probs = hard_probs + soft_probs - soft_probs.detach()
+            else:
+                probs = hard_probs
         elif mode == "gumbel":
             probs = F.gumbel_softmax(self.logits, tau=tau, hard=gumbel_hard, dim=-1).to(dtype=x.dtype)
         elif mode == "soft":
@@ -223,6 +228,11 @@ class SoftLogicLayer(nn.Module):
 
     def hard_ops_argmax(self) -> torch.Tensor:
         return self.logits.detach().argmax(-1).cpu()
+
+    def selection_confidence(self) -> torch.Tensor:
+        """Mean raw-logit confidence used by the CAGE temperature controller."""
+
+        return F.softmax(self.logits, dim=-1).amax(dim=-1).mean()
 
 
 class FrozenHardLogicLayer(nn.Module):
@@ -939,6 +949,51 @@ def temp_schedule(epoch: int, epochs: int, start: float, end: float) -> float:
     return start * ((end / start) ** ratio)
 
 
+@dataclass
+class CageTemperature:
+    """Confidence-adaptive backward temperature for hard-forward training.
+
+    Confidence is measured from the raw gate logits, independent of the
+    backward temperature.  The EMA is linearly mapped from random confidence
+    (1 / num_choices) to full commitment, following CAGE's forward-aligned
+    temperature decoupling.
+    """
+
+    tau_max: float = 3.0
+    tau_min: float = 0.5
+    beta: float = 0.99
+    num_choices: int = 16
+    ema_confidence: float | None = None
+
+    def __post_init__(self) -> None:
+        if not 0.0 <= self.beta < 1.0:
+            raise ValueError(f"beta must be in [0, 1), got {self.beta}")
+        if self.tau_min <= 0.0 or self.tau_max < self.tau_min:
+            raise ValueError((self.tau_min, self.tau_max))
+        if self.num_choices < 2:
+            raise ValueError(self.num_choices)
+
+    def update(self, layers: Iterable[SoftLogicLayer]) -> tuple[float, float]:
+        layer_list = list(layers)
+        if not layer_list:
+            raise ValueError("CAGE needs at least one soft logic layer")
+        with torch.no_grad():
+            confidence = float(
+                torch.stack([layer.selection_confidence() for layer in layer_list]).mean().item()
+            )
+        random_confidence = 1.0 / self.num_choices
+        confidence = min(1.0, max(random_confidence, confidence))
+        if self.ema_confidence is None:
+            self.ema_confidence = random_confidence
+        self.ema_confidence = (
+            self.beta * self.ema_confidence + (1.0 - self.beta) * confidence
+        )
+        progress = (self.ema_confidence - random_confidence) / (1.0 - random_confidence)
+        progress = min(1.0, max(0.0, progress))
+        tau = self.tau_max + (self.tau_min - self.tau_max) * progress
+        return float(tau), confidence
+
+
 def train_end_to_end(
     method: str,
     dataset: DatasetBundle,
@@ -959,6 +1014,14 @@ def train_end_to_end(
     epochs_to_target = -1
     time_to_target = -1.0
     start_time = time.perf_counter()
+    cage = None
+    if method in {"hard_st_cage", "gumbel_st_cage"}:
+        cage = CageTemperature(
+            tau_max=args.cage_tau_max,
+            tau_min=args.cage_tau_min,
+            beta=args.cage_beta,
+        )
+    selection_confidence = float("nan")
 
     for epoch in range(1, args.epochs + 1):
         model.train()
@@ -968,6 +1031,12 @@ def train_end_to_end(
         elif method in {"gumbel_st", "gumbel_soft"}:
             tau = temp_schedule(epoch, args.epochs, args.gumbel_temp_start, args.gumbel_temp_end)
             entropy_coef = 0.0
+        elif method == "hard_st":
+            tau = args.hard_st_temp
+            entropy_coef = 0.0
+        elif method in {"hard_st_cage", "gumbel_st_cage"}:
+            tau = args.cage_tau_max
+            entropy_coef = 0.0
         else:
             tau = 1.0
             entropy_coef = 0.0
@@ -976,10 +1045,14 @@ def train_end_to_end(
             xb = xb.to(device)
             yb = yb.to(device)
             opt.zero_grad(set_to_none=True)
-            if method == "gumbel_st":
+            if cage is not None:
+                tau, selection_confidence = cage.update(model.soft_layers())
+            if method in {"gumbel_st", "gumbel_st_cage"}:
                 logits = model(xb, mode="gumbel", tau=tau, gumbel_hard=True)
             elif method == "gumbel_soft":
                 logits = model(xb, mode="gumbel", tau=tau, gumbel_hard=False)
+            elif method in {"hard_st", "hard_st_cage"}:
+                logits = model(xb, mode="hard_st", tau=tau)
             else:
                 logits = model(xb, mode="soft", tau=tau)
             loss = F.cross_entropy(logits, yb)
@@ -988,8 +1061,19 @@ def train_end_to_end(
             loss.backward()
             opt.step()
 
+        if cage is None:
+            with torch.no_grad():
+                selection_confidence = float(
+                    torch.stack(
+                        [layer.selection_confidence() for layer in model.soft_layers()]
+                    ).mean().item()
+                )
         soft_acc, soft_loss = evaluate(model, dataset.x_test, dataset.y_test, args.eval_batch_size, device, "soft", tau)
         disc_acc, disc_loss = evaluate(model, dataset.x_test, dataset.y_test, args.eval_batch_size, device, "hard", tau)
+        if method in {"hard_st", "hard_st_cage"}:
+            native_acc, native_loss = disc_acc, disc_loss
+        else:
+            native_acc, native_loss = soft_acc, soft_loss
         elapsed_time = time.perf_counter() - start_time
         if epochs_to_target < 0 and disc_acc >= dataset.target_acc:
             epochs_to_target = epoch
@@ -1006,6 +1090,9 @@ def train_end_to_end(
                 "discrete_acc": disc_acc,
                 "soft_loss": soft_loss,
                 "discrete_loss": disc_loss,
+                "native_acc": native_acc,
+                "native_loss": native_loss,
+                "selection_confidence": selection_confidence,
                 "tau": tau,
             }
         )
@@ -1016,8 +1103,16 @@ def train_end_to_end(
         final_tau = args.temp_end
     elif method in {"gumbel_st", "gumbel_soft"}:
         final_tau = args.gumbel_temp_end
+    elif method == "hard_st":
+        final_tau = args.hard_st_temp
+    elif method in {"hard_st_cage", "gumbel_st_cage"}:
+        final_tau = tau
     soft_acc, soft_loss = evaluate(model, dataset.x_test, dataset.y_test, args.eval_batch_size, device, "soft", final_tau)
     disc_acc, disc_loss = evaluate(model, dataset.x_test, dataset.y_test, args.eval_batch_size, device, "hard", final_tau)
+    if method in {"hard_st", "hard_st_cage"}:
+        path_soft_acc, path_soft_loss = disc_acc, disc_loss
+    else:
+        path_soft_acc, path_soft_loss = soft_acc, soft_loss
     layers = list(model.layers)
     hard_layers = [argmax_hard_layer(layer) for layer in model.soft_layers()]
     hard_model = LogicNet(hard_layers, dataset.num_classes, args.group_tau)
@@ -1038,12 +1133,12 @@ def train_end_to_end(
         soft_loss=soft_loss,
         discrete_loss=disc_loss,
         loss_gap=abs(soft_loss - disc_loss),
-        path_soft_acc=soft_acc,
+        path_soft_acc=path_soft_acc,
         path_discrete_acc=disc_acc,
-        path_acc_gap=abs(soft_acc - disc_acc),
-        path_soft_loss=soft_loss,
+        path_acc_gap=abs(path_soft_acc - disc_acc),
+        path_soft_loss=path_soft_loss,
         path_discrete_loss=disc_loss,
-        path_loss_gap=abs(soft_loss - disc_loss),
+        path_loss_gap=abs(path_soft_loss - disc_loss),
         train_time=train_time,
         epochs_to_target=epochs_to_target,
         time_to_target=time_to_target,
@@ -1080,6 +1175,8 @@ def train_one_block(
     seed: int,
     method: str,
     block_id: int,
+    block_epochs: int,
+    global_epoch_offset: int,
     run_start_time: float,
 ) -> tuple[SoftLogicLayer, list[dict[str, float | int | str]], float]:
     prefix_mode = "soft" if method == "block_relaxed" else "hard"
@@ -1091,7 +1188,7 @@ def train_one_block(
     epoch_rows = []
     start = time.perf_counter()
 
-    for epoch in range(1, args.block_epochs + 1):
+    for epoch in range(1, block_epochs + 1):
         block_model.train()
         for xb, yb in loader:
             xb = xb.to(device)
@@ -1112,7 +1209,7 @@ def train_one_block(
                 "seed": seed,
                 "block": block_id,
                 "epoch": epoch,
-                "global_epoch": block_id * args.block_epochs + epoch,
+                "global_epoch": global_epoch_offset + epoch,
                 "elapsed_time": elapsed_time,
                 "block_elapsed_time": time.perf_counter() - start,
                 "soft_acc": soft_acc,
@@ -1124,6 +1221,13 @@ def train_one_block(
         )
 
     return block_model.layers[0].cpu(), epoch_rows, time.perf_counter() - start  # type: ignore[return-value]
+
+
+def block_epoch_budget(args: argparse.Namespace, block_id: int, depth: int) -> int:
+    if args.block_total_epochs is None:
+        return int(args.block_epochs)
+    base, remainder = divmod(int(args.block_total_epochs), depth)
+    return base + int(block_id < remainder)
 
 
 @torch.no_grad()
@@ -1190,6 +1294,401 @@ def refit_truth_table_layer(
     ), stats
 
 
+def _hard_layer_outputs_from_ops(
+    layer: SoftLogicLayer,
+    x: torch.Tensor,
+    op_ids: torch.Tensor,
+) -> torch.Tensor:
+    x_binary = x.detach().cpu().round().clamp(0, 1)
+    idx0 = layer.indices_0.detach().cpu()
+    idx1 = layer.indices_1.detach().cpu()
+    address = (2 * x_binary[:, idx0].long() + x_binary[:, idx1].long()).clamp(0, 3)
+    truth = GATE_TRUTH.to(dtype=x_binary.dtype)
+    return truth[op_ids.detach().cpu().long().view(1, -1), address]
+
+
+def _block_metrics_from_ops(
+    layer: SoftLogicLayer,
+    x: torch.Tensor,
+    y: torch.Tensor,
+    op_ids: torch.Tensor,
+    num_classes: int,
+    group_tau: float,
+) -> tuple[float, float]:
+    logits = _block_logits_from_ops(layer, x, op_ids, num_classes, group_tau)
+    labels = y.detach().cpu().long()
+    loss = float(F.cross_entropy(logits, labels).item())
+    accuracy = float((logits.argmax(dim=-1) == labels).float().mean().item())
+    return accuracy, loss
+
+
+def _block_logits_from_ops(
+    layer: SoftLogicLayer,
+    x: torch.Tensor,
+    op_ids: torch.Tensor,
+    num_classes: int,
+    group_tau: float,
+) -> torch.Tensor:
+    outputs = _hard_layer_outputs_from_ops(layer, x, op_ids)
+    if outputs.shape[1] % num_classes != 0:
+        raise ValueError((outputs.shape, num_classes))
+    return outputs.reshape(outputs.shape[0], num_classes, -1).sum(dim=-1) / group_tau
+
+
+@torch.no_grad()
+def _soft_block_logits(
+    layer: SoftLogicLayer,
+    x: torch.Tensor,
+    num_classes: int,
+    group_tau: float,
+    batch_size: int,
+    device: torch.device,
+) -> torch.Tensor:
+    chunks = []
+    for start in range(0, x.shape[0], batch_size):
+        outputs = layer(x[start : start + batch_size].to(device), mode="soft", tau=1.0)
+        if outputs.shape[1] % num_classes != 0:
+            raise ValueError((outputs.shape, num_classes))
+        chunks.append(
+            outputs.reshape(outputs.shape[0], num_classes, -1).sum(dim=-1).cpu()
+            / group_tau
+        )
+    return torch.cat(chunks, dim=0)
+
+
+def _inactive_ratio_from_ops(
+    layer: SoftLogicLayer,
+    x: torch.Tensor,
+    op_ids: torch.Tensor,
+) -> float:
+    outputs = _hard_layer_outputs_from_ops(layer, x, op_ids)
+    inactive = (outputs.amax(dim=0) - outputs.amin(dim=0)) < 1e-6
+    return float(inactive.float().mean().item())
+
+
+@torch.no_grad()
+def refit_task_aware_layer(
+    layer: SoftLogicLayer,
+    x_ref: torch.Tensor,
+    y_ref: torch.Tensor,
+    num_classes: int,
+    args: argparse.Namespace,
+    device: torch.device,
+) -> tuple[FrozenHardLogicLayer, dict[str, float | int | str]]:
+    """Fit a hard block with local truth-table and downstream task objectives.
+
+    Candidate generation never reads the test set.  Local gate candidates are
+    ranked by relaxed-block reconstruction error, then coordinate descent
+    updates their truth tables against GroupSum cross entropy.  Argmax, local
+    refit, and task-refit blocks are selected on a deterministic holdout carved
+    from the training distribution.
+    """
+
+    if x_ref.shape[0] != y_ref.shape[0]:
+        raise ValueError((x_ref.shape, y_ref.shape))
+    if layer.out_dim % num_classes != 0:
+        raise ValueError((layer.out_dim, num_classes))
+    if not 0.0 < args.refit_validation_fraction < 1.0:
+        raise ValueError(args.refit_validation_fraction)
+    if args.refit_candidate_topk < 1 or args.refit_candidate_topk > 16:
+        raise ValueError(args.refit_candidate_topk)
+    if args.refit_coordinate_passes < 0:
+        raise ValueError(args.refit_coordinate_passes)
+
+    layer = clone_soft_layer(layer).to(device)
+    layer.eval()
+    generator = torch.Generator().manual_seed(args.refit_seed)
+    sample_count = min(int(x_ref.shape[0]), int(args.refit_samples))
+    sampled_indices = torch.randperm(x_ref.shape[0], generator=generator)[:sample_count]
+    x_task = x_ref[sampled_indices].detach().cpu().float().round().clamp(0, 1)
+    y_task = y_ref[sampled_indices].detach().cpu().long()
+    split = int(round(sample_count * (1.0 - args.refit_validation_fraction)))
+    if sample_count > 1:
+        split = max(1, min(sample_count - 1, split))
+    else:
+        split = sample_count
+    x_task_fit, y_task_fit = x_task[:split], y_task[:split]
+    x_task_val = x_task[split:] if split < sample_count else x_task_fit
+    y_task_val = y_task[split:] if split < sample_count else y_task_fit
+    teacher_task_fit_logits = _soft_block_logits(
+        layer,
+        x_task_fit,
+        num_classes,
+        args.group_tau,
+        args.eval_batch_size,
+        device,
+    )
+    teacher_task_val_logits = _soft_block_logits(
+        layer,
+        x_task_val,
+        num_classes,
+        args.group_tau,
+        args.eval_batch_size,
+        device,
+    )
+
+    if layer.in_dim <= args.exact_truth_max:
+        x_fit = exact_binary_inputs(layer.in_dim)
+        fit_source = "exact"
+    else:
+        x_fit = x_task_fit
+        fit_source = "sampled_train"
+
+    target_chunks = []
+    for start in range(0, x_fit.shape[0], args.eval_batch_size):
+        xb = x_fit[start : start + args.eval_batch_size].to(device)
+        target_chunks.append(layer(xb, mode="soft", tau=1.0).detach().cpu())
+    y_target = torch.cat(target_chunks, dim=0)
+
+    x_fit_binary = x_fit.detach().cpu().float().round().clamp(0, 1)
+    truth = GATE_TRUTH
+    idx0_cpu = layer.indices_0.detach().cpu()
+    idx1_cpu = layer.indices_1.detach().cpu()
+    local_mse = torch.empty(layer.out_dim, 16, dtype=torch.float32)
+    for gate_id in range(layer.out_dim):
+        a = x_fit_binary[:, int(idx0_cpu[gate_id])]
+        b = x_fit_binary[:, int(idx1_cpu[gate_id])]
+        address = (2 * a.long() + b.long()).clamp(0, 3)
+        candidates = truth[:, address].T
+        local_mse[gate_id] = (
+            (candidates - y_target[:, gate_id : gate_id + 1]).square().mean(dim=0)
+        )
+
+    argmax_ops = layer.hard_ops_argmax()
+    truth_ops = local_mse.argmin(dim=-1)
+    task_ops = truth_ops.clone()
+    task_outputs = _hard_layer_outputs_from_ops(layer, x_task_fit, task_ops)
+    per_class = layer.out_dim // num_classes
+    task_logits = task_outputs.reshape(task_outputs.shape[0], num_classes, per_class).sum(dim=-1)
+    task_logits = task_logits / args.group_tau
+    local_total = float(local_mse[torch.arange(layer.out_dim), task_ops].sum().item())
+    inactive_total = int(
+        ((task_outputs.amax(dim=0) - task_outputs.amin(dim=0)) < 1e-6).sum().item()
+    )
+    coordinate_updates = 0
+
+    coordinate_generator = torch.Generator().manual_seed(args.refit_seed + 104729)
+    for _ in range(args.refit_coordinate_passes):
+        pass_updates = 0
+        for gate_id_tensor in torch.randperm(layer.out_dim, generator=coordinate_generator):
+            gate_id = int(gate_id_tensor.item())
+            current_op = int(task_ops[gate_id].item())
+            shortlist = local_mse[gate_id].topk(
+                k=args.refit_candidate_topk,
+                largest=False,
+                sorted=True,
+            ).indices.tolist()
+            shortlist.extend(
+                [current_op, int(argmax_ops[gate_id].item()), int(truth_ops[gate_id].item())]
+            )
+            candidate_ops = sorted(set(int(op) for op in shortlist))
+            class_id = gate_id // per_class
+            current_output = task_outputs[:, gate_id]
+            best_op = current_op
+            best_output = current_output
+            best_logits = task_logits
+            current_ce = float(F.cross_entropy(task_logits, y_task_fit).item())
+            current_distill = float(F.mse_loss(task_logits, teacher_task_fit_logits).item())
+            current_local = local_total / layer.out_dim
+            current_inactive = inactive_total / layer.out_dim
+            best_rank = (
+                current_ce
+                + args.refit_distill_weight * current_distill
+                + args.refit_local_weight * current_local
+                + args.refit_inactive_weight * current_inactive,
+                current_ce,
+                current_distill,
+                current_inactive,
+                current_local,
+                current_op,
+            )
+
+            for candidate_op in candidate_ops:
+                if candidate_op == current_op:
+                    continue
+                candidate_output = truth[
+                    candidate_op,
+                    (
+                        2 * x_task_fit[:, int(idx0_cpu[gate_id])].long()
+                        + x_task_fit[:, int(idx1_cpu[gate_id])].long()
+                    ).clamp(0, 3),
+                ]
+                candidate_logits = task_logits.clone()
+                candidate_logits[:, class_id] += (
+                    candidate_output - current_output
+                ) / args.group_tau
+                candidate_ce = float(F.cross_entropy(candidate_logits, y_task_fit).item())
+                candidate_distill = float(
+                    F.mse_loss(candidate_logits, teacher_task_fit_logits).item()
+                )
+                candidate_local_total = (
+                    local_total
+                    - float(local_mse[gate_id, current_op].item())
+                    + float(local_mse[gate_id, candidate_op].item())
+                )
+                candidate_local = candidate_local_total / layer.out_dim
+                current_gate_inactive = int(
+                    float(current_output.max() - current_output.min()) < 1e-6
+                )
+                candidate_gate_inactive = int(
+                    float(candidate_output.max() - candidate_output.min()) < 1e-6
+                )
+                candidate_inactive_total = (
+                    inactive_total - current_gate_inactive + candidate_gate_inactive
+                )
+                candidate_inactive = candidate_inactive_total / layer.out_dim
+                rank = (
+                    candidate_ce
+                    + args.refit_distill_weight * candidate_distill
+                    + args.refit_local_weight * candidate_local
+                    + args.refit_inactive_weight * candidate_inactive,
+                    candidate_ce,
+                    candidate_distill,
+                    candidate_inactive,
+                    candidate_local,
+                    candidate_op,
+                )
+                if rank < best_rank:
+                    best_rank = rank
+                    best_op = candidate_op
+                    best_output = candidate_output
+                    best_logits = candidate_logits
+
+            if best_op != current_op:
+                old_inactive = int(float(current_output.max() - current_output.min()) < 1e-6)
+                new_inactive = int(float(best_output.max() - best_output.min()) < 1e-6)
+                inactive_total = inactive_total - old_inactive + new_inactive
+                local_total = (
+                    local_total
+                    - float(local_mse[gate_id, current_op].item())
+                    + float(local_mse[gate_id, best_op].item())
+                )
+                task_ops[gate_id] = best_op
+                task_outputs[:, gate_id] = best_output
+                task_logits = best_logits
+                pass_updates += 1
+                coordinate_updates += 1
+        if pass_updates == 0:
+            break
+
+    candidates_by_name = {
+        "argmax": argmax_ops,
+        "truth_table_refit": truth_ops,
+        "task_coordinate_refit": task_ops,
+    }
+    candidate_priority = {
+        "argmax": 0,
+        "truth_table_refit": 1,
+        "task_coordinate_refit": 2,
+    }
+    candidate_stats: dict[str, tuple[float, float, float, float, float]] = {}
+    for name, ops in candidates_by_name.items():
+        val_acc, val_loss = _block_metrics_from_ops(
+            layer,
+            x_task_val,
+            y_task_val,
+            ops,
+            num_classes,
+            args.group_tau,
+        )
+        mean_local_mse = float(local_mse[torch.arange(layer.out_dim), ops].mean().item())
+        inactive_ratio = _inactive_ratio_from_ops(layer, x_task_val, ops)
+        candidate_logits = _block_logits_from_ops(
+            layer,
+            x_task_val,
+            ops,
+            num_classes,
+            args.group_tau,
+        )
+        distill_mse = float(F.mse_loss(candidate_logits, teacher_task_val_logits).item())
+        candidate_stats[name] = (
+            val_acc,
+            val_loss,
+            mean_local_mse,
+            inactive_ratio,
+            distill_mse,
+        )
+
+    def candidate_rank(name: str) -> tuple[float | int, ...]:
+        val_acc, val_loss, mean_local_mse, inactive_ratio, distill_mse = candidate_stats[name]
+        balanced_score = (
+            val_loss
+            + args.refit_distill_weight * distill_mse
+            + args.refit_local_weight * mean_local_mse
+            + args.refit_inactive_weight * inactive_ratio
+        )
+        if args.refit_selection_mode == "task_first":
+            return (
+                -val_acc,
+                balanced_score,
+                val_loss,
+                distill_mse,
+                inactive_ratio,
+                mean_local_mse,
+                candidate_priority[name],
+            )
+        if args.refit_selection_mode == "balanced":
+            return (
+                balanced_score,
+                -val_acc,
+                val_loss,
+                distill_mse,
+                inactive_ratio,
+                mean_local_mse,
+                candidate_priority[name],
+            )
+        raise ValueError(args.refit_selection_mode)
+
+    selected_name = min(candidates_by_name, key=candidate_rank)
+    selected_ops = candidates_by_name[selected_name]
+    selected_mse = candidate_stats[selected_name][2]
+    argmax_mse = float(local_mse[torch.arange(layer.out_dim), argmax_ops].mean().item())
+    truth_mse = float(local_mse[torch.arange(layer.out_dim), truth_ops].mean().item())
+    stats: dict[str, float | int | str] = {
+        "fit_source": fit_source,
+        "fit_rows": int(x_fit.shape[0]),
+        "task_fit_rows": int(x_task_fit.shape[0]),
+        "task_validation_rows": int(x_task_val.shape[0]),
+        "selected_candidate": selected_name,
+        "selection_mode": args.refit_selection_mode,
+        "argmax_refit_mse": argmax_mse,
+        "truth_refit_mse": truth_mse,
+        "selected_refit_mse": selected_mse,
+        "selected_inactive_ratio": candidate_stats[selected_name][3],
+        "refit_mse_delta": argmax_mse - selected_mse,
+        "op_change_ratio": float((selected_ops != argmax_ops).float().mean().item()),
+        "coordinate_updates": coordinate_updates,
+        "coordinate_passes": int(args.refit_coordinate_passes),
+        "candidate_topk": int(args.refit_candidate_topk),
+    }
+    teacher_val_loss = float(F.cross_entropy(teacher_task_val_logits, y_task_val).item())
+    teacher_val_acc = float(
+        (teacher_task_val_logits.argmax(dim=-1) == y_task_val).float().mean().item()
+    )
+    stats["teacher_validation_acc"] = teacher_val_acc
+    stats["teacher_validation_loss"] = teacher_val_loss
+    for name, (
+        val_acc,
+        val_loss,
+        mean_local_mse,
+        inactive_ratio,
+        distill_mse,
+    ) in candidate_stats.items():
+        stats[f"{name}_validation_acc"] = val_acc
+        stats[f"{name}_validation_loss"] = val_loss
+        stats[f"{name}_local_mse"] = mean_local_mse
+        stats[f"{name}_inactive_ratio"] = inactive_ratio
+        stats[f"{name}_teacher_logit_mse"] = distill_mse
+
+    return FrozenHardLogicLayer(
+        layer.in_dim,
+        layer.out_dim,
+        layer.indices_0.detach().cpu(),
+        layer.indices_1.detach().cpu(),
+        selected_ops.detach().cpu(),
+    ), stats
+
+
 def argmax_hard_layer(layer: SoftLogicLayer) -> FrozenHardLogicLayer:
     return FrozenHardLogicLayer(
         layer.in_dim,
@@ -1214,14 +1713,20 @@ def train_blockwise(
     list[dict[str, float | int | str]],
     dict[str, float | int | str] | None,
 ]:
-    assert method in {"block_relaxed", "block_hard_refit"}
+    assert method in {"block_relaxed", "block_hard_refit", "block_hard_task_refit"}
     epoch_rows: list[dict[str, float | int | str]] = []
     block_diag_rows: list[dict[str, float | int | str]] = []
     frozen_or_soft_prefix: list[nn.Module] = []
     relaxed_layers: list[SoftLogicLayer] = []
     start_total = time.perf_counter()
+    completed_block_epochs = 0
 
     for block_id, spec in enumerate(arch):
+        current_block_epochs = block_epoch_budget(args, block_id, len(arch))
+        if current_block_epochs <= 0:
+            raise ValueError(
+                f"block {block_id} receives no epochs; increase --block-total-epochs or use --block-epochs"
+            )
         layer = make_soft_layer(spec)
         trained_layer, block_rows, block_time = train_one_block(
             layer,
@@ -1232,6 +1737,8 @@ def train_blockwise(
             seed,
             method,
             block_id,
+            current_block_epochs,
+            completed_block_epochs,
             start_total,
         )
         _ = block_time
@@ -1253,7 +1760,22 @@ def train_blockwise(
             }
         else:
             prefix_input = apply_layers(frozen_or_soft_prefix, dataset.x_train, args.eval_batch_size, device, mode="hard")
-            hard_layer, refit_stats = refit_truth_table_layer(trained_layer, prefix_input, args, device)
+            if method == "block_hard_task_refit":
+                hard_layer, refit_stats = refit_task_aware_layer(
+                    trained_layer,
+                    prefix_input,
+                    dataset.y_train,
+                    dataset.num_classes,
+                    args,
+                    device,
+                )
+            else:
+                hard_layer, refit_stats = refit_truth_table_layer(
+                    trained_layer,
+                    prefix_input,
+                    args,
+                    device,
+                )
             path_layers = list(frozen_or_soft_prefix) + [clone_soft_layer(trained_layer)]
             frozen_or_soft_prefix.append(hard_layer)
             hard_prefix_model = LogicNet(frozen_or_soft_prefix, dataset.num_classes, args.group_tau).to(device)
@@ -1283,7 +1805,8 @@ def train_blockwise(
                 "dataset": dataset.name,
                 "seed": seed,
                 "block": block_id,
-                "global_epoch_end": (block_id + 1) * args.block_epochs,
+                "block_epochs": current_block_epochs,
+                "global_epoch_end": completed_block_epochs + current_block_epochs,
                 "elapsed_time": time.perf_counter() - start_total,
                 "prefix_reaches_target": int(hard_block_acc >= dataset.target_acc),
                 "block_train_time": block_time,
@@ -1296,6 +1819,7 @@ def train_blockwise(
                 **refit_stats,
             }
         )
+        completed_block_epochs += current_block_epochs
 
     soft_model = LogicNet([clone_soft_layer(layer) for layer in relaxed_layers], dataset.num_classes, args.group_tau).to(device)
     if method == "block_relaxed":
@@ -1319,7 +1843,7 @@ def train_blockwise(
         "soft",
         1.0,
     )
-    epochs_to_target = args.block_epochs * len(arch) if disc_acc >= dataset.target_acc else -1
+    epochs_to_target = completed_block_epochs if disc_acc >= dataset.target_acc else -1
     time_to_target = total_train_time if disc_acc >= dataset.target_acc else -1.0
 
     hard_layers_for_stats = list(hard_model.layers)
@@ -1369,7 +1893,7 @@ def train_blockwise(
         device,
         1.0,
     )
-    if method == "block_hard_refit":
+    if method in {"block_hard_refit", "block_hard_task_refit"}:
         layer_diag_rows.extend(
             layer_gap_diagnostics(
                 method,
@@ -1447,8 +1971,8 @@ def write_summary(path: Path, rows: list[MetricsRow], args: argparse.Namespace, 
         "Metric notes:",
         "",
         "- `soft_acc`/`soft_loss` evaluate all trained relaxed blocks in soft mode.",
-        "- `discrete_acc`/`discrete_loss` evaluate the corresponding hard network: argmax gates for DLGN-style methods and refit gates for `block_hard_refit`.",
-        "- `path_*` metrics evaluate the method-native training path. For `block_hard_refit`, this means hard frozen prefixes plus the final relaxed block compared with the final refit hard network.",
+        "- `discrete_acc`/`discrete_loss` evaluate the corresponding hard network: argmax gates for DLGN-style methods and fitted gates for block-hard methods.",
+        "- `path_*` metrics evaluate the method-native training path. Hard-ST uses the deterministic hard forward; block-hard methods use hard frozen prefixes plus the final relaxed block.",
         "- `layer_diagnostics.csv` tracks relaxed-path versus hard-path representation mismatch after each layer prefix for depth-wise gap accumulation checks.",
         "- `*_inference_samples_per_sec` are optional PyTorch forward-pass throughput measurements from `--inference-bench`; they are not bit-packed Boolean inference kernels.",
         "- For block-wise methods, `epochs_to_target` is conservative: total block epochs if the final hard model reaches the dataset target, otherwise `-1`.",
@@ -1485,13 +2009,26 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--methods",
         nargs="+",
-        default=["dlgn", "dlgn_anneal", "gumbel_st", "block_relaxed", "block_hard_refit"],
+        default=[
+            "dlgn",
+            "dlgn_anneal",
+            "gumbel_st",
+            "hard_st_cage",
+            "block_relaxed",
+            "block_hard_refit",
+            "block_hard_task_refit",
+        ],
     )
     parser.add_argument("--seeds", nargs="+", type=int, default=[0])
     parser.add_argument("--width", type=int, default=64)
     parser.add_argument("--layers", type=int, default=4)
     parser.add_argument("--epochs", type=int, default=60)
     parser.add_argument("--block-epochs", type=int, default=40)
+    parser.add_argument(
+        "--block-total-epochs",
+        type=int,
+        help="Distribute this total epoch budget across blocks; overrides --block-epochs.",
+    )
     parser.add_argument("--batch-size", type=int, default=256)
     parser.add_argument("--eval-batch-size", type=int, default=2048)
     parser.add_argument("--lr", type=float, default=0.02)
@@ -1501,10 +2038,25 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--temp-end", type=float, default=0.2)
     parser.add_argument("--gumbel-temp-start", type=float, default=1.5)
     parser.add_argument("--gumbel-temp-end", type=float, default=0.3)
+    parser.add_argument("--hard-st-temp", type=float, default=1.0)
+    parser.add_argument("--cage-tau-max", type=float, default=3.0)
+    parser.add_argument("--cage-tau-min", type=float, default=0.5)
+    parser.add_argument("--cage-beta", type=float, default=0.99)
     parser.add_argument("--entropy-coef", type=float, default=1e-3)
     parser.add_argument("--exact-truth-max", type=int, default=12)
     parser.add_argument("--refit-samples", type=int, default=4096)
     parser.add_argument("--refit-seed", type=int, default=12345)
+    parser.add_argument("--refit-validation-fraction", type=float, default=0.2)
+    parser.add_argument("--refit-candidate-topk", type=int, default=8)
+    parser.add_argument("--refit-coordinate-passes", type=int, default=2)
+    parser.add_argument("--refit-local-weight", type=float, default=0.05)
+    parser.add_argument("--refit-distill-weight", type=float, default=0.25)
+    parser.add_argument("--refit-inactive-weight", type=float, default=0.01)
+    parser.add_argument(
+        "--refit-selection-mode",
+        choices=["balanced", "task_first"],
+        default="balanced",
+    )
     parser.add_argument(
         "--target-acc-override",
         type=accuracy_threshold,
@@ -1540,6 +2092,20 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
+    if not 0.0 < args.refit_validation_fraction < 1.0:
+        raise ValueError("--refit-validation-fraction must be in (0, 1)")
+    if not 1 <= args.refit_candidate_topk <= 16:
+        raise ValueError("--refit-candidate-topk must be in [1, 16]")
+    if args.refit_coordinate_passes < 0:
+        raise ValueError("--refit-coordinate-passes must be non-negative")
+    if args.refit_local_weight < 0.0:
+        raise ValueError("--refit-local-weight must be non-negative")
+    if args.refit_distill_weight < 0.0:
+        raise ValueError("--refit-distill-weight must be non-negative")
+    if args.refit_inactive_weight < 0.0:
+        raise ValueError("--refit-inactive-weight must be non-negative")
+    if args.block_total_epochs is not None and args.block_total_epochs < args.layers:
+        raise ValueError("--block-total-epochs must allocate at least one epoch to each layer")
     if args.inference_bench and args.inference_bench_repeats <= 0:
         raise ValueError("--inference-bench-repeats must be positive when --inference-bench is enabled")
     if args.inference_bench and args.inference_bench_warmup < 0:
@@ -1590,11 +2156,23 @@ def main() -> None:
             print(f"dataset={dataset.name} seed={seed} train={len(dataset.y_train)} test={len(dataset.y_test)}")
             for method in args.methods:
                 print(f"  method={method}", flush=True)
-                if method in {"dlgn", "dlgn_anneal", "gumbel_st", "gumbel_soft"}:
+                if method in {
+                    "dlgn",
+                    "dlgn_anneal",
+                    "gumbel_st",
+                    "gumbel_soft",
+                    "hard_st",
+                    "hard_st_cage",
+                    "gumbel_st_cage",
+                }:
                     row, epoch_rows, layer_diag_rows, synth_row = train_end_to_end(
                         method, dataset, arch, args, device, seed
                     )
-                elif method in {"block_relaxed", "block_hard_refit"}:
+                elif method in {
+                    "block_relaxed",
+                    "block_hard_refit",
+                    "block_hard_task_refit",
+                }:
                     row, epoch_rows, block_diag_rows, layer_diag_rows, synth_row = train_blockwise(
                         method, dataset, arch, args, device, seed
                     )

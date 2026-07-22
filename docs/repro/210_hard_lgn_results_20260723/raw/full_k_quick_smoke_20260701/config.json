@@ -1,0 +1,46 @@
+{
+  "anneal_train": false,
+  "batch_size": 256,
+  "calibration_grid_size": 101,
+  "calibration_mode": "fixed",
+  "data_dir": "/home/spco/data",
+  "datasets": [
+    "parity6",
+    "majority7",
+    "random_sparse8"
+  ],
+  "device": "cpu",
+  "download_data": false,
+  "elapsed_seconds": 2.924982671160251,
+  "epochs": 12,
+  "estimator": "sinusoidal",
+  "eval_batch_size": 2048,
+  "final_readouts": [
+    "popcount",
+    "final_threshold"
+  ],
+  "group_tau": 1.0,
+  "image_max_test": 300,
+  "image_max_train": 1000,
+  "init": "residual",
+  "init_strength": 0.98,
+  "k_values": [
+    2,
+    4,
+    8
+  ],
+  "layers": 3,
+  "lr": 0.01,
+  "out_dir": "runs/full_k_quick_smoke_20260701",
+  "quick": true,
+  "seeds": [
+    0
+  ],
+  "temp_end": 0.1,
+  "temp_eval": 1.0,
+  "temp_start": 2.0,
+  "threshold": 0.5,
+  "threshold_levels": 1,
+  "weight_decay": 0.0,
+  "width": 32
+}

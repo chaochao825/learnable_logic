@@ -1,0 +1,60 @@
+{
+  "anneal_train": false,
+  "b_values": [
+    4,
+    6
+  ],
+  "batch_size": 512,
+  "cosine_lr": true,
+  "data_dir": "/home/spco/data",
+  "datasets": [
+    "binarized_mnist"
+  ],
+  "device": "cuda",
+  "download_data": false,
+  "entropy_weight": 0.0,
+  "epochs": 80,
+  "estimator": "sinusoidal",
+  "eval_batch_size": 4096,
+  "eval_every": 0,
+  "grad_clip": 0.0,
+  "group_tau": 1.0,
+  "gumbel_temp_end": 0.3,
+  "gumbel_temp_start": 1.5,
+  "head_norm": true,
+  "head_types": [
+    "groupsum",
+    "final_linear",
+    "concat_linear",
+    "concat_mlp",
+    "input_linear"
+  ],
+  "image_max_test": 3000,
+  "image_max_train": 12000,
+  "include_input_in_concat": true,
+  "init": "residual",
+  "init_strength": 0.98,
+  "label_smoothing": 0.0,
+  "layers": 4,
+  "lr": 0.003,
+  "lr_floor": 0.05,
+  "mlp_hidden": 2048,
+  "out_dir": "runs/soft_loss_precision_mnist_heads_v1",
+  "quick": false,
+  "seeds": [
+    0
+  ],
+  "temp_end": 0.2,
+  "temp_eval": 1.0,
+  "temp_start": 2.0,
+  "threshold_levels": 1,
+  "threshold_levels_list": [
+    1,
+    3
+  ],
+  "train_forward_mode": "continuous",
+  "warmup_epochs": 0,
+  "warmup_mode": "continuous",
+  "weight_decay": 1e-05,
+  "width": 1000
+}
