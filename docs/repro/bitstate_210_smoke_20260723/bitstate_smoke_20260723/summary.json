@@ -1,0 +1,55 @@
+{
+  "acc_gap": 0.0,
+  "bit_exact_verified": true,
+  "dataset": "synthetic_patterns",
+  "depth": 5,
+  "discrete_acc": 0.015625,
+  "discrete_loss": 2.5332870483398438,
+  "epochs_to_target": "",
+  "fanout_max": 6,
+  "final_tau": 2.766700997139649,
+  "gate_count": 112,
+  "history": [
+    {
+      "discrete_acc": 0.015625,
+      "discrete_loss": 2.5332870483398438,
+      "elapsed": 0.8958904820028692,
+      "epoch": 1,
+      "tau": 2.8787261922238723,
+      "train_loss": 2.5553794503211975
+    },
+    {
+      "discrete_acc": 0.015625,
+      "discrete_loss": 2.5332870483398438,
+      "elapsed": 1.0425413318444043,
+      "epoch": 2,
+      "tau": 2.766700997139649,
+      "train_loss": 2.5553793013095856
+    }
+  ],
+  "loss_gap": 1.0626779794692993,
+  "method": "bitstate_hard_st_cage",
+  "model_config": {
+    "attention_temperature": 0.25,
+    "exclude_self": false,
+    "global_depth": 1,
+    "heads": 4,
+    "image_size": 8,
+    "in_channels": 1,
+    "local_depth": 1,
+    "num_classes": 4,
+    "patch_size": 2,
+    "qk_bits": 4,
+    "seed": 0,
+    "state_width": 32,
+    "threshold_levels": 2,
+    "topk": 2,
+    "update_fraction": 0.5,
+    "votes_per_class": 8
+  },
+  "seed": 0,
+  "soft_acc": 0.015625,
+  "soft_loss": 1.4706090688705444,
+  "train_time": 1.0426298310048878,
+  "unused_gate_ratio": 0.03571428571428571
+}

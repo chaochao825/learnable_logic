@@ -1,0 +1,175 @@
+from __future__ import annotations
+
+import unittest
+
+import torch
+
+from vit_lgn.bitstate.blocks import BinaryTopKBlock, LocalBitLogicBlock
+from vit_lgn.bitstate.encoder import ThermometerPatchEncoder
+from vit_lgn.bitstate.gates import HardSTGateLayer, TRUTH_TABLE
+from vit_lgn.bitstate.model import BitStateConfig, BitStateViT
+
+
+def small_config() -> BitStateConfig:
+    return BitStateConfig(
+        image_size=4,
+        patch_size=2,
+        in_channels=1,
+        threshold_levels=2,
+        state_width=16,
+        local_depth=1,
+        global_depth=1,
+        heads=2,
+        qk_bits=4,
+        topk=2,
+        num_classes=2,
+        votes_per_class=4,
+        update_fraction=0.5,
+        seed=7,
+    )
+
+
+def contains_float_tensor(value: object) -> bool:
+    if isinstance(value, torch.Tensor):
+        return value.is_floating_point()
+    if isinstance(value, dict):
+        return any(contains_float_tensor(item) for item in value.values())
+    if isinstance(value, (list, tuple)):
+        return any(contains_float_tensor(item) for item in value)
+    return isinstance(value, float)
+
+
+class BitStateTest(unittest.TestCase):
+    def test_all_16_gates_match_truth_table(self) -> None:
+        inputs = torch.tensor(
+            [[False, False], [False, True], [True, False], [True, True]]
+        )
+        for op_id in range(16):
+            layer = HardSTGateLayer(
+                2,
+                1,
+                torch.tensor([0]),
+                torch.tensor([1]),
+                init_ops=torch.tensor([op_id]),
+            )
+            actual = layer.forward_bits(inputs).squeeze(-1)
+            torch.testing.assert_close(actual, TRUTH_TABLE[op_id])
+
+    def test_gate_hard_st_is_bit_exact_and_differentiable(self) -> None:
+        layer = HardSTGateLayer(
+            3,
+            2,
+            torch.tensor([0, 1]),
+            torch.tensor([1, 2]),
+            init_ops=torch.tensor([6, 7]),
+            surrogate_inputs=True,
+        )
+        bits = torch.tensor([[False, True, True], [True, False, True]])
+        carrier = bits.to(torch.float32).requires_grad_()
+        hard_st = layer(carrier, mode="hard_st")
+        torch.testing.assert_close(hard_st.detach().bool(), layer.forward_bits(bits))
+        hard_st.sum().backward()
+        self.assertGreater(float(layer.logits.grad.abs().sum()), 0.0)
+        self.assertGreater(float(carrier.grad.abs().sum()), 0.0)
+
+    def test_gumbel_st_has_boolean_forward_and_soft_gradient(self) -> None:
+        torch.manual_seed(9)
+        layer = HardSTGateLayer(
+            3,
+            2,
+            torch.tensor([0, 1]),
+            torch.tensor([1, 2]),
+            init_ops=torch.tensor([6, 7]),
+            surrogate_inputs=True,
+        )
+        carrier = torch.tensor([[0.0, 1.0, 1.0]], requires_grad=True)
+        output = layer(carrier, mode="gumbel_st", tau=0.7)
+        self.assertTrue(bool(((output == 0) | (output == 1)).all()))
+        output.sum().backward()
+        self.assertGreater(float(layer.logits.grad.abs().sum()), 0.0)
+        self.assertGreater(float(carrier.grad.abs().sum()), 0.0)
+
+    def test_encoder_emits_persistent_boolean_tokens(self) -> None:
+        encoder = ThermometerPatchEncoder(
+            image_size=4,
+            patch_size=2,
+            in_channels=1,
+            threshold_levels=2,
+            state_width=8,
+        )
+        output = encoder.forward_bits(torch.arange(16, dtype=torch.uint8).reshape(1, 1, 4, 4) * 16)
+        self.assertEqual(output.dtype, torch.bool)
+        self.assertEqual(output.shape, (1, 5, 8))
+
+    def test_local_block_hard_carrier_matches_bits(self) -> None:
+        block = LocalBitLogicBlock(state_width=8, grid_size=2, update_fraction=0.5, seed=2)
+        bits = torch.randint(0, 2, (2, 5, 8), dtype=torch.bool)
+        carrier = block(bits.float(), mode="hard")
+        torch.testing.assert_close(carrier.bool(), block.forward_bits(bits))
+
+    def test_binary_topk_is_stable_and_bit_exact(self) -> None:
+        block = BinaryTopKBlock(
+            state_width=8,
+            num_tokens=4,
+            heads=2,
+            qk_bits=3,
+            topk=2,
+            seed=3,
+        )
+        tied = torch.zeros(1, 2, 4, 3, dtype=torch.bool)
+        indices = block._topk_indices(tied, tied)
+        torch.testing.assert_close(indices, torch.tensor([0, 1]).view(1, 1, 1, 2).expand_as(indices))
+
+        bits = torch.randint(0, 2, (2, 4, 8), dtype=torch.bool)
+        carrier = block(bits.float(), mode="hard")
+        bit_output, bit_indices = block.forward_bits(bits, return_indices=True)
+        torch.testing.assert_close(carrier.bool(), bit_output)
+        torch.testing.assert_close(block._last_indices, bit_indices)
+
+    def test_full_model_matches_integer_reference_at_every_boundary(self) -> None:
+        model = BitStateViT(small_config()).eval()
+        images = torch.randint(0, 256, (3, 1, 4, 4), dtype=torch.uint8)
+        model.assert_bit_exact(images)
+        logits, trace = model.forward_bits(images, return_trace=True)
+        self.assertEqual(logits.dtype, torch.int32)
+        self.assertEqual(logits.shape, (3, 2))
+        self.assertTrue(all(item.dtype == torch.bool for item in trace))
+
+    def test_backward_reaches_every_gate_family(self) -> None:
+        torch.manual_seed(123)
+        model = BitStateViT(small_config()).train()
+        labels = torch.tensor([0, 1, 0, 1])
+        loss = sum(
+            torch.nn.functional.cross_entropy(
+                model(torch.rand(4, 1, 4, 4), mode="hard_st", tau=1.0),
+                labels,
+            )
+            for _ in range(4)
+        )
+        loss.backward()
+        for name, layer in model.named_modules():
+            if isinstance(layer, HardSTGateLayer):
+                self.assertIsNotNone(layer.logits.grad, name)
+                self.assertTrue(bool(torch.isfinite(layer.logits.grad).all()), name)
+                self.assertGreater(float(layer.logits.grad.abs().sum()), 0.0, name)
+
+    def test_payload_contains_no_float_values_or_tensors(self) -> None:
+        model = BitStateViT(small_config())
+        payload = model.deployment_payload()
+        self.assertFalse(contains_float_tensor(payload))
+        self.assertEqual(payload["general_matrix_multipliers"], 0)
+        self.assertEqual(payload["persistent_state_dtype"], "bool")
+
+    def test_inactive_ratio_and_complexity_metrics_are_bounded(self) -> None:
+        model = BitStateViT(small_config()).eval()
+        batches = [torch.rand(4, 1, 4, 4), torch.rand(3, 1, 4, 4)]
+        ratio = model.inactive_gate_ratio(batches)
+        self.assertGreaterEqual(ratio, 0.0)
+        self.assertLessEqual(ratio, 1.0)
+        self.assertGreater(model.gate_count(), 0)
+        self.assertGreater(model.logic_depth(), 0)
+        self.assertGreater(model.fanout_max(), 0)
+
+
+if __name__ == "__main__":
+    unittest.main()

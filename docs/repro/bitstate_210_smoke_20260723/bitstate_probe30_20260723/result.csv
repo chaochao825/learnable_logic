@@ -1,0 +1,2 @@
+method,dataset,soft_acc,discrete_acc,acc_gap,soft_loss,discrete_loss,loss_gap,train_time,epochs_to_target,unused_gate_ratio,gate_count,depth,fanout_max
+bitstate_hard_st_cage,synthetic_patterns,0.53125,0.859375,0.328125,1.1383472681045532,0.4084933251142502,0.729853942990303,4.68709150608629,9,0.034722222222222224,144,5,7

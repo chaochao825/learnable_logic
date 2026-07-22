@@ -1,0 +1,2 @@
+method,dataset,soft_acc,discrete_acc,acc_gap,soft_loss,discrete_loss,loss_gap,train_time,epochs_to_target,unused_gate_ratio,gate_count,depth,fanout_max
+bitstate_gumbel_st,sklearn_digits,0.0390625,0.1171875,0.078125,2.3868069648742676,3.6813772916793823,1.2945703268051147,1.2157705028075725,,0.2125,160,5,8

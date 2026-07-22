@@ -1,0 +1,55 @@
+{
+  "acc_gap": 0.078125,
+  "bit_exact_verified": true,
+  "dataset": "sklearn_digits",
+  "depth": 5,
+  "discrete_acc": 0.1171875,
+  "discrete_loss": 3.6813772916793823,
+  "epochs_to_target": "",
+  "fanout_max": 8,
+  "final_tau": 1.0,
+  "gate_count": 160,
+  "history": [
+    {
+      "discrete_acc": 0.1171875,
+      "discrete_loss": 3.6813772916793823,
+      "elapsed": 1.1370853388216347,
+      "epoch": 1,
+      "tau": 1.0,
+      "train_loss": 3.1193385124206543
+    },
+    {
+      "discrete_acc": 0.1171875,
+      "discrete_loss": 3.6813772916793823,
+      "elapsed": 1.2157220949884504,
+      "epoch": 2,
+      "tau": 1.0,
+      "train_loss": 3.2148314714431763
+    }
+  ],
+  "loss_gap": 1.2945703268051147,
+  "method": "bitstate_gumbel_st",
+  "model_config": {
+    "attention_temperature": 0.25,
+    "exclude_self": false,
+    "global_depth": 1,
+    "heads": 4,
+    "image_size": 8,
+    "in_channels": 1,
+    "local_depth": 1,
+    "num_classes": 10,
+    "patch_size": 2,
+    "qk_bits": 4,
+    "seed": 0,
+    "state_width": 32,
+    "threshold_levels": 2,
+    "topk": 2,
+    "update_fraction": 0.5,
+    "votes_per_class": 8
+  },
+  "seed": 0,
+  "soft_acc": 0.0390625,
+  "soft_loss": 2.3868069648742676,
+  "train_time": 1.2157705028075725,
+  "unused_gate_ratio": 0.2125
+}
