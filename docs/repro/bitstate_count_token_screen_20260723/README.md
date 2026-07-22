@@ -42,5 +42,6 @@ as a capacity ablation.
 
 `comparison.csv` is the compact comparison table. The two `*_summary.json`
 files retain complete arguments, histories, state diagnostics, and layer-gap
-measurements. Training logs and one-row required-metric CSVs are included; no
-checkpoints or dataset files are committed.
+measurements. One-row required-metric CSVs are included; complete training logs
+remain in the remote run directory. No checkpoints or dataset files are
+committed.
