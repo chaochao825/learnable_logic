@@ -1,0 +1,57 @@
+{
+  "activation_inactive_gate_ratio": 0.049145299145299144,
+  "bit_exact_verified": true,
+  "checkpoint": "/home/wangmeiqi/learnable_logic_bitstate_20260723/remote_runs/h200_long_cifar_20260723/gumbel_w4096_seed0/checkpoint.pt",
+  "gate_confidence": 0.1868543177843094,
+  "gate_entropy": 0.9029285907745361,
+  "layer_gap_diagnostics": [
+    {
+      "elements": 272629760,
+      "flip_ratio": 0.012476616639357346,
+      "layer": 0,
+      "mae": 0.46538862815270055,
+      "name": "encoder"
+    },
+    {
+      "elements": 272629760,
+      "flip_ratio": 0.20135052020733174,
+      "layer": 1,
+      "mae": 0.4781933857844426,
+      "name": "local_1"
+    },
+    {
+      "elements": 272629760,
+      "flip_ratio": 0.32550231860234186,
+      "layer": 2,
+      "mae": 0.4882644029764029,
+      "name": "local_2"
+    },
+    {
+      "elements": 272629760,
+      "flip_ratio": 0.4533788644350492,
+      "layer": 3,
+      "mae": 0.49727592468261717,
+      "name": "global_1"
+    },
+    {
+      "elements": 272629760,
+      "flip_ratio": 0.46642880806556114,
+      "layer": 4,
+      "mae": 0.4985488744882437,
+      "name": "global_2"
+    },
+    {
+      "elements": 655360,
+      "flip_ratio": 0.42808380126953127,
+      "layer": 5,
+      "mae": 0.49893543124198914,
+      "name": "votes"
+    }
+  ],
+  "layer_gap_final_flip_ratio": 0.42808380126953127,
+  "layer_gap_max_flip_ratio": 0.46642880806556114,
+  "layer_gap_max_mae": 0.49893543124198914,
+  "source_summary": "/home/wangmeiqi/learnable_logic_bitstate_20260723/remote_runs/h200_long_cifar_20260723/gumbel_w4096_seed0/summary.json",
+  "unused_gate_definition": "mind_gap_entropy_above_initialization_2.5pct",
+  "unused_gate_ratio": 0.902911365032196
+}
