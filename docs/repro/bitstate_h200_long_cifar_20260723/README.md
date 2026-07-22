@@ -29,16 +29,42 @@ and passes the exact per-layer deployment assertion. Against the strongest
 DLGN row, progressive hardening reduces the accuracy gap by `72.38%` and the
 entropy-unused ratio by `99.85%` relative, but loses `1.69 pp` hard accuracy
 and takes `12.91%` longer. It therefore passes the gap/utilization criteria but
-does not win the accuracy or convergence-speed criteria.
+does not win the accuracy or convergence-speed criteria. The utilization claim
+in this sentence is limited to the paper's entropy definition; the structural
+audit below exposes a different form of collapse.
 
 The strongest Gumbel row has a small final gap but only `15.71%` hard accuracy.
 Progressive hardening is `10.73 pp` more accurate, has a slightly smaller
-accuracy gap, and uses far more of its gates. The paper's reported Gumbel
-advantage does not transfer to this persistent-state, hard Top-K architecture;
-this experiment is not evidence against the paper's original CIFAR model.
+accuracy gap, and has a much lower entropy-unused ratio. The paper's reported
+Gumbel advantage does not transfer to this persistent-state, hard Top-K
+architecture; this experiment is not evidence against the paper's original
+CIFAR model.
 Validation selects epoch 18 for strong DLGN (`28.46%` hard), epoch 30 for
 strong Gumbel (`16.70%`), and epoch 22 for the proposed model (`27.22%`) before
 one evaluation on the official test split.
+
+## Structural gate selection
+
+Entropy-unused measures whether a gate distribution is committed, not whether
+the selected function uses both inputs. An argmax audit of all 14,976 gates
+gives a materially different view:
+
+| method | constant | direct wire | all one-input literals | nontrivial two-input |
+| --- | ---: | ---: | ---: | ---: |
+| strong DLGN | 14.38% | 13.92% | 28.49% | 57.14% |
+| matched Gumbel-ST | 3.86% | 56.30% | 66.55% | 29.59% |
+| strong Gumbel-ST | 12.81% | **12.23%** | **24.38%** | **62.81%** |
+| progressive scale16 | **3.24%** | 83.89% | 89.28% | 7.48% |
+
+All four rows select all 16 functions somewhere, but the proposed model is
+dominated by literals: 11,773 gates (`78.61%`) select function `a` alone. This
+is consistent with its identity-biased initialization and hardening step. Such
+gates are not high-entropy unused and their outputs are not constant, yet they
+mostly act as wires rather than learned two-input logic. Consequently, the
+proposed method passes the paper-defined unused-gate criterion but does not
+pass a stronger nontrivial-computation criterion. Future training should
+penalize excessive literal retention or allocate identity highways outside the
+trainable gate count.
 
 ## Depth gap
 
@@ -61,6 +87,8 @@ accuracy gap alone.
 `long_results.csv` is the four-row machine-readable required table.
 `*_summary.json` retains every epoch and complete training arguments.
 `*_posthoc.json` retains both unused definitions and every depth boundary.
+`gate_function_metrics.json` retains the 16-function argmax histograms and
+structural collapse ratios.
 No checkpoints or dataset payloads are committed. Full matched DLGN and
 annealing runs under the low-margin AdamW protocol remain pending on the 4090s;
 multi-seed H200 runs are also pending, so this is a seed-0 ranking rather than

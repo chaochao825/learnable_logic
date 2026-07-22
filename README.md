@@ -59,7 +59,8 @@ The raw large run directories remain on the 210 server.
 - In the seed-0, width-4096 full-CIFAR persistent-state run, progressive hard
   training reaches 26.44% hard accuracy versus 28.13% for the strongest DLGN,
   while reducing accuracy gap from 2.10 to 0.58 pp and entropy-unused gates
-  from 40.24% to 0.06%. This is a gap/utilization win, not an accuracy win.
+  from 40.24% to 0.06%. This is a gap and entropy-commitment win, not an
+  accuracy win: 89.28% of its selected gates are still one-input literals.
 
 ## Repository layout
 
