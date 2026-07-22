@@ -495,6 +495,7 @@ def train(args: argparse.Namespace) -> dict[str, object]:
         encoder_identity_width=args.encoder_identity_width,
         predicate_temperature=args.predicate_temperature,
         predicate_chunk_size=args.predicate_chunk_size,
+        gate_init_strength=args.gate_init_strength,
         local_depth=args.local_depth,
         global_depth=args.global_depth,
         heads=args.heads,
@@ -876,6 +877,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--encoder-identity-width", type=int, default=0)
     parser.add_argument("--predicate-temperature", type=float, default=1.0)
     parser.add_argument("--predicate-chunk-size", type=int, default=1024)
+    parser.add_argument(
+        "--gate-init-strength",
+        type=float,
+        default=-1.0,
+        help="positive shared logit margin, or -1 for legacy per-module values",
+    )
     parser.add_argument("--local-depth", type=int, default=2)
     parser.add_argument("--global-depth", type=int, default=2)
     parser.add_argument("--heads", type=int, default=4)
@@ -928,6 +935,8 @@ def parse_args() -> argparse.Namespace:
         parser.error("predicate fanin and chunk size must be positive")
     if args.encoder_identity_width < 0 or args.predicate_temperature <= 0.0:
         parser.error("invalid predicate encoder settings")
+    if args.gate_init_strength != -1.0 and args.gate_init_strength <= 0.0:
+        parser.error("gate-init-strength must be positive or -1")
     if not 0.0 <= args.label_smoothing < 1.0:
         parser.error("label-smoothing must be in [0, 1)")
     if args.group_sum_temperature <= 0.0:

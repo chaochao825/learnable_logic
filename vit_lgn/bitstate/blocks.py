@@ -28,12 +28,15 @@ class LocalBitLogicBlock(nn.Module):
         grid_size: int,
         update_fraction: float,
         seed: int,
+        gate_init_strength: float = 1.5,
     ) -> None:
         super().__init__()
         if state_width < 2 or grid_size < 1:
             raise ValueError((state_width, grid_size))
         if not 0.0 < update_fraction <= 1.0:
             raise ValueError(update_fraction)
+        if gate_init_strength <= 0.0:
+            raise ValueError(gate_init_strength)
         self.state_width = int(state_width)
         self.grid_size = int(grid_size)
         self.num_tokens = 1 + grid_size * grid_size
@@ -64,7 +67,7 @@ class LocalBitLogicBlock(nn.Module):
             idx0,
             idx1,
             init_ops=init_ops,
-            init_strength=1.5,
+            init_strength=gate_init_strength,
             surrogate_inputs=True,
         )
         positions = torch.randperm(state_width, generator=generator)[: self.update_width]
@@ -115,6 +118,7 @@ class BinaryTopKBlock(nn.Module):
         seed: int,
         attention_temperature: float = 0.25,
         exclude_self: bool = False,
+        gate_init_strength: float = 2.0,
     ) -> None:
         super().__init__()
         if state_width % heads:
@@ -123,6 +127,8 @@ class BinaryTopKBlock(nn.Module):
             raise ValueError((topk, num_tokens, exclude_self))
         if qk_bits < 1 or attention_temperature <= 0.0:
             raise ValueError((qk_bits, attention_temperature))
+        if gate_init_strength <= 0.0:
+            raise ValueError(gate_init_strength)
         self.state_width = int(state_width)
         self.num_tokens = int(num_tokens)
         self.heads = int(heads)
@@ -143,6 +149,7 @@ class BinaryTopKBlock(nn.Module):
             q0,
             q1,
             init_ops=qk_init,
+            init_strength=gate_init_strength,
             surrogate_inputs=True,
         )
         self.key = HardSTGateLayer(
@@ -151,6 +158,7 @@ class BinaryTopKBlock(nn.Module):
             k0,
             k1,
             init_ops=qk_init,
+            init_strength=gate_init_strength,
             surrogate_inputs=True,
         )
         merge_left = torch.arange(state_width)
@@ -162,18 +170,21 @@ class BinaryTopKBlock(nn.Module):
             merge_left,
             merge_right,
             init_ops=merge_init,
+            init_strength=gate_init_strength,
             surrogate_inputs=True,
         )
         # Break the soft-LUT symmetry around the hard identity operation so
         # query/key routing receives gradient from the first optimizer step.
         with torch.no_grad():
+            noise_scale = min(0.01, gate_init_strength * 0.1)
             self.merge.logits.add_(
                 torch.randn(
                     self.merge.logits.shape,
                     generator=generator,
                     device=self.merge.logits.device,
                 )
-                * 0.01
+                .clamp(-1, 1)
+                * noise_scale
             )
 
     def _reshape_qk(self, value: Tensor) -> Tensor:

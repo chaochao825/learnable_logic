@@ -76,3 +76,6 @@ the deployment payload. Optional online distillation accepts the verified
 attention-clean CIFAR-10 checkpoint through `--teacher-source-dir`,
 `--teacher-checkpoint`, and `--teacher-alpha`. The teacher remains an explicit
 floating training aid and is never exported with the Boolean student.
+`--gate-init-strength` controls the initial selected-vs-alternative truth-table
+logit margin; small positive values preserve the same hard initial circuit but
+let gate argmax choices change much earlier than the legacy high-margin setup.

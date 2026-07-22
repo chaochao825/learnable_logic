@@ -225,6 +225,19 @@ class BitStateTest(unittest.TestCase):
         self.assertGreater(model.predicate_count(), 0)
         self.assertFalse(contains_float_tensor(model.deployment_payload()))
 
+    def test_low_margin_initialization_preserves_hard_execution(self) -> None:
+        config = small_config()
+        config = BitStateConfig(**{**config.__dict__, "gate_init_strength": 0.1})
+        model = BitStateViT(config).eval()
+        images = torch.randint(0, 256, (2, 1, 4, 4), dtype=torch.uint8)
+        model.assert_bit_exact(images)
+        self.assertTrue(
+            all(
+                float(layer.confidence().detach()) < 0.2
+                for layer in model.gate_layers()
+            )
+        )
+
     def test_anti_collapse_losses_are_finite_and_differentiable(self) -> None:
         model = BitStateViT(small_config()).train()
         _logits, trace = model(

@@ -23,6 +23,7 @@ class BitStateConfig:
     encoder_identity_width: int = 0
     predicate_temperature: float = 1.0
     predicate_chunk_size: int = 1024
+    gate_init_strength: float = -1.0
     local_depth: int = 2
     global_depth: int = 2
     heads: int = 6
@@ -58,6 +59,8 @@ class BitStateConfig:
             raise ValueError(self.encoder_kind)
         if self.encoder_identity_width < 0 or self.predicate_temperature <= 0.0:
             raise ValueError((self.encoder_identity_width, self.predicate_temperature))
+        if self.gate_init_strength != -1.0 and self.gate_init_strength <= 0.0:
+            raise ValueError(self.gate_init_strength)
         if self.state_width % self.heads:
             raise ValueError((self.state_width, self.heads))
         if self.local_depth < 0 or self.global_depth < 0:
@@ -109,12 +112,19 @@ class BitStateViT(nn.Module):
             )
         else:
             self.encoder = ThermometerPatchEncoder(**encoder_kwargs)
+        local_init_strength = (
+            config.gate_init_strength if config.gate_init_strength > 0.0 else 1.5
+        )
+        global_init_strength = (
+            config.gate_init_strength if config.gate_init_strength > 0.0 else 2.0
+        )
         self.local_blocks = nn.ModuleList(
             LocalBitLogicBlock(
                 state_width=config.state_width,
                 grid_size=config.grid_size,
                 update_fraction=config.update_fraction,
                 seed=config.seed + 1000 + block_id,
+                gate_init_strength=local_init_strength,
             )
             for block_id in range(config.local_depth)
         )
@@ -128,6 +138,7 @@ class BitStateViT(nn.Module):
                 seed=config.seed + 2000 + block_id,
                 attention_temperature=config.attention_temperature,
                 exclude_self=config.exclude_self,
+                gate_init_strength=global_init_strength,
             )
             for block_id in range(config.global_depth)
         )
@@ -144,7 +155,11 @@ class BitStateViT(nn.Module):
             head_0,
             head_1,
             init_ops=initial_ops,
-            init_strength=1.0,
+            init_strength=(
+                config.gate_init_strength
+                if config.gate_init_strength > 0.0
+                else 1.0
+            ),
             surrogate_inputs=True,
         )
 
