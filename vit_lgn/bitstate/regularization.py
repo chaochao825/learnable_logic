@@ -51,6 +51,44 @@ def entropy_unused_gate_ratio(
     return float((entropy > threshold).to(torch.float32).mean())
 
 
+@torch.no_grad()
+def selected_gate_function_metrics(
+    layers: Iterable[HardSTGateLayer],
+) -> dict[str, float | int | list[int]]:
+    """Summarize the deterministic functions selected by gate argmax.
+
+    Entropy-unused measures commitment, not whether a committed gate performs a
+    two-input operation. Literal functions are reported separately so identity
+    highways cannot be mistaken for learned Boolean computation.
+    """
+
+    operations = [layer.hard_ops().cpu() for layer in layers]
+    if not operations:
+        raise ValueError("at least one gate layer is required")
+    operations_tensor = torch.cat(operations)
+    histogram = torch.bincount(operations_tensor, minlength=16)
+    total = operations_tensor.numel()
+
+    def ratio(indices: tuple[int, ...]) -> float:
+        return float(histogram[list(indices)].sum()) / total
+
+    constant_ratio = ratio((0, 15))
+    wire_ratio = ratio((3, 5))
+    inverted_literal_ratio = ratio((10, 12))
+    literal_ratio = wire_ratio + inverted_literal_ratio
+    nontrivial_ratio = ratio((1, 2, 4, 6, 7, 8, 9, 11, 13, 14))
+    return {
+        "constant_gate_ratio": constant_ratio,
+        "wire_gate_ratio": wire_ratio,
+        "inverted_literal_gate_ratio": inverted_literal_ratio,
+        "literal_gate_ratio": literal_ratio,
+        "nontrivial_gate_ratio": nontrivial_ratio,
+        "selected_function_count": int(torch.count_nonzero(histogram)),
+        "selected_function_coverage": float(torch.count_nonzero(histogram)) / 16,
+        "selected_function_histogram": histogram.tolist(),
+    }
+
+
 def gate_entropy_target_penalty(
     layers: Iterable[HardSTGateLayer],
     target: float,

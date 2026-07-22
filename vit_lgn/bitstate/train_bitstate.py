@@ -21,6 +21,7 @@ from .regularization import (
     entropy_unused_gate_ratio,
     gate_distribution_metrics,
     gate_entropy_target_penalty,
+    selected_gate_function_metrics,
 )
 from .teacher import ATTENTION_CLEAN_PROFILE, load_attention_clean_teacher
 
@@ -38,6 +39,13 @@ RESULT_COLUMNS = (
     "epochs_to_target",
     "unused_gate_ratio",
     "activation_inactive_gate_ratio",
+    "constant_gate_ratio",
+    "wire_gate_ratio",
+    "inverted_literal_gate_ratio",
+    "literal_gate_ratio",
+    "nontrivial_gate_ratio",
+    "selected_function_count",
+    "selected_function_coverage",
     "gate_count",
     "predicate_count",
     "depth",
@@ -869,6 +877,7 @@ def train(args: argparse.Namespace) -> dict[str, object]:
         final_gate_entropy, final_gate_confidence = gate_distribution_metrics(
             model.gate_layers()
         )
+    selected_gate_metrics = selected_gate_function_metrics(model.gate_layers())
     method_name = {
         "soft": "bitstate_soft_argmax",
         "anneal": "bitstate_anneal_argmax",
@@ -928,6 +937,7 @@ def train(args: argparse.Namespace) -> dict[str, object]:
         "state_diagnostics": state_diagnostics,
         "layer_gap_diagnostics": layer_gap_diagnostics,
     }
+    row.update(selected_gate_metrics)
 
     (output_dir / "summary.json").write_text(json.dumps(row, indent=2, sort_keys=True) + "\n")
     with (output_dir / "result.csv").open("w", newline="") as handle:

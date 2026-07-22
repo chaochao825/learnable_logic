@@ -88,6 +88,12 @@ repairs older bit-state summaries by reading their best checkpoints; without
 that flag it labels their legacy ratio explicitly instead of silently mixing
 the two definitions.
 
+Committed gates can still collapse to constants or one-input literals. New
+runs and post-hoc checkpoint analysis therefore also report constant, direct
+wire, inverted-literal, all-literal, and genuinely two-input function ratios,
+plus the selected 16-function histogram. These structural metrics are kept
+separate from the paper's entropy-unused definition.
+
 The default `--gate-init-mode targeted` preserves the model's identity-biased
 Boolean state initialization. `--gate-init-mode normal
 --gate-init-normal-std 1` instead reproduces the DLGN/GLGN N(0,1) logit

@@ -19,6 +19,7 @@ from vit_lgn.bitstate.regularization import (
     collapse_regularization,
     entropy_unused_gate_ratio,
     gate_entropy_target_penalty,
+    selected_gate_function_metrics,
 )
 from vit_lgn.bitstate.train_bitstate import (
     initialize_gate_logits,
@@ -123,6 +124,25 @@ class BitStateTest(unittest.TestCase):
             layer.logits.fill_(-10.0)
             layer.logits.scatter_(1, selected, 10.0)
         self.assertEqual(entropy_unused_gate_ratio([layer]), 0.0)
+
+    def test_selected_gate_metrics_separate_literals_from_logic(self) -> None:
+        operations = torch.tensor([0, 15, 3, 5, 10, 1])
+        layer = HardSTGateLayer(
+            2,
+            operations.numel(),
+            torch.zeros(operations.numel(), dtype=torch.long),
+            torch.ones(operations.numel(), dtype=torch.long),
+            init_ops=operations,
+        )
+        metrics = selected_gate_function_metrics([layer])
+        self.assertAlmostEqual(metrics["constant_gate_ratio"], 2 / 6)
+        self.assertAlmostEqual(metrics["wire_gate_ratio"], 2 / 6)
+        self.assertAlmostEqual(metrics["inverted_literal_gate_ratio"], 1 / 6)
+        self.assertAlmostEqual(metrics["literal_gate_ratio"], 3 / 6)
+        self.assertAlmostEqual(metrics["nontrivial_gate_ratio"], 1 / 6)
+        self.assertEqual(metrics["selected_function_count"], 6)
+        self.assertAlmostEqual(metrics["selected_function_coverage"], 6 / 16)
+        self.assertEqual(metrics["selected_function_histogram"][3], 1)
 
     def test_train_validation_split_is_deterministic_and_disjoint(self) -> None:
         dataset = TensorDataset(torch.arange(20))

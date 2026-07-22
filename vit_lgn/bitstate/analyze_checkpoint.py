@@ -9,7 +9,11 @@ from pathlib import Path
 import torch
 
 from .model import BitStateConfig, BitStateViT
-from .regularization import entropy_unused_gate_ratio, gate_distribution_metrics
+from .regularization import (
+    entropy_unused_gate_ratio,
+    gate_distribution_metrics,
+    selected_gate_function_metrics,
+)
 from .train_bitstate import (
     make_loaders,
     measure_inactive,
@@ -77,6 +81,7 @@ def main() -> None:
         "layer_gap_final_flip_ratio": layer_gap[-1]["flip_ratio"],
         "layer_gap_diagnostics": layer_gap,
     }
+    result.update(selected_gate_function_metrics(model.gate_layers()))
     output = args.output or args.run_dir / "posthoc_diagnostics.json"
     output.write_text(
         json.dumps(result, indent=2, sort_keys=True) + "\n",
