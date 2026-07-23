@@ -66,10 +66,11 @@ does not translate into the best final discrete accuracy in this comparison.
 
 `anneal_normal_adam_w4096_seed0_summary.json` is the complete run summary.
 `anneal_normal_adam_w4096_seed0_gate_function_metrics.json` contains aggregate
-and named-layer 16-function histograms. A full post-hoc depth file will be
-added after the queued matched-protocol runs release a GPU; the summary already
-contains the final eight-batch depth diagnostics and exact hard-carrier versus
-integer-bit verification.
+and named-layer 16-function histograms.
+`anneal_normal_adam_w4096_seed0_posthoc_diagnostics.json` independently reloads
+the checkpoint and records the full named-layer histograms, eight-batch depth
+diagnostics, inactive ratio, and exact hard-carrier versus integer-bit
+verification.
 
 `hard_scale16_w8192_seed0_summary.json` and
 `hard_scale16_w8192_seed0_gate_function_metrics.json` contain the corresponding

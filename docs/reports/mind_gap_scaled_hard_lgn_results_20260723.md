@@ -244,12 +244,19 @@ hard model after fitting.
 
 The current prototype establishes a useful controlled ablation: per-block hard
 refitting localizes depth-wise mismatch and can improve Boolean hard accuracy.
-It does not yet establish a generally superior training method. The next
+It does not yet establish a generally superior training method. A bounded
+anti-literal screen has now tested both all-layer and role-specific global-merge
+penalties. The merge-only penalty removes the argmax bypass almost completely,
+but raises entropy-unused gates from `1.03%` to `47.72-50.11%`, peak layer
+flips from `27.38%` to about `49%`, and the accuracy gap from `1.25 pp` to
+`5.20-6.10 pp`. It is therefore not promoted to a full-CIFAR run. The next
 research step should optimize hard block selection for downstream hard
-accuracy while explicitly regularizing gate entropy, then rerun at multiple
-depths and seeds. At full CIFAR scale, the next test is a role-specific
-anti-bypass penalty on global merge gates plus paired seed validation; forcing
-all Q/K and state gates to use both inputs is not structurally justified.
+accuracy while coupling message usefulness to gate commitment, then validate
+the resulting method over paired seeds.
+
+The complete anti-literal evidence, including named-layer 16-function
+histograms, is in
+[bitstate_nontrivial_screen_20260723](../repro/bitstate_nontrivial_screen_20260723/README.md).
 
 ## References
 

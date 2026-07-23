@@ -55,5 +55,7 @@ the cross-token message.
 `matched_results.csv` is the machine-readable table. This directory retains
 the DLGN/annealing summaries and named-layer gate histograms; the source JSONs
 for Gumbel/progressive remain in the adjacent
-`bitstate_h200_long_cifar_20260723` artifact. Post-hoc depth files will be added
-after the anti-bypass screen releases the 4090s.
+`bitstate_h200_long_cifar_20260723` artifact. The two
+`*_posthoc_diagnostics.json` files independently reload the matched DLGN and
+annealing checkpoints and retain exact hard-path checks, named-layer gate
+histograms, inactive ratios, and eight-batch depth-gap measurements.
