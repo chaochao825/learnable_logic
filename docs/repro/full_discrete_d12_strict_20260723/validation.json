@@ -18,16 +18,16 @@
       "sha256": "5b72882ef3396c5a5819ca09252d220d4cef9b846594d5ec2fe1f6e01f56d688"
     },
     "comparison.csv": {
-      "bytes": 390,
-      "sha256": "7fc49c5d52b3282cc7c6e4e51a5bc05b475a29b3a4d977670314aa195e064d80"
+      "bytes": 387,
+      "sha256": "bbf6a1a856d30c58589ed27b657171cf00223cd85af6d7058af147f9d6db9aac"
     },
     "comparison.json": {
-      "bytes": 16142,
-      "sha256": "30339cb85ec21496d51662f9aae71e312d0251a7e65e5de7c36f69bf6c9dd3a9"
+      "bytes": 15611,
+      "sha256": "3907577ca1f0dec34095c4e8aef7ccd91981173c78d24202e6b048a949cc6ca3"
     },
     "freeze_evidence.py": {
-      "bytes": 5791,
-      "sha256": "399422321fe1ebe5b83c1419a6d9230f54aab827224aaffc3711dd1d5d801f11"
+      "bytes": 6171,
+      "sha256": "03bf9072ce965b263e0dfbf552ee54e7eb1b6ea8a4ec7265554fdb980ccc16aa"
     },
     "protocol.json": {
       "bytes": 568,

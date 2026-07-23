@@ -33,6 +33,20 @@ def file_sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def repository_file_bytes(path: Path) -> bytes:
+    data = path.read_bytes()
+    if path.suffix.lower() in {
+        ".csv",
+        ".exit",
+        ".json",
+        ".log",
+        ".md",
+        ".py",
+    }:
+        data = data.replace(b"\r\n", b"\n").replace(b"\r", b"\n")
+    return data
+
+
 def main() -> None:
     protocol = load_json("protocol.json")
     strict = load_json("raw/d12/strict_integer_validation5000.json")
@@ -106,9 +120,10 @@ def main() -> None:
         ):
             continue
         relative = path.relative_to(ROOT).as_posix()
+        repository_bytes = repository_file_bytes(path)
         files[relative] = {
-            "bytes": path.stat().st_size,
-            "sha256": file_sha256(path),
+            "bytes": len(repository_bytes),
+            "sha256": hashlib.sha256(repository_bytes).hexdigest(),
         }
 
     output = {
