@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import json
 import math
+import os
 import random
 import time
 from dataclasses import asdict, dataclass
@@ -16,6 +18,7 @@ from torch import Tensor
 from torch.utils.data import DataLoader, Dataset, Subset, TensorDataset
 
 from .gates import HardSTGateLayer
+from .boolean_executor import StrictBitStateExecutor
 from .model import BitStateConfig, BitStateViT
 from .regularization import (
     collapse_regularization,
@@ -26,6 +29,13 @@ from .regularization import (
     selected_gate_function_metrics,
 )
 from .teacher import ATTENTION_CLEAN_PROFILE, load_attention_clean_teacher
+from research_registry.capacity import bitstate_capacity
+from research_registry.manifest import (
+    build_run_manifest,
+    source_file_hashes,
+    write_run_manifest,
+)
+from hard_lgn_gap_proto.boolean_executor import BooleanRuntimeAudit
 
 
 RESULT_COLUMNS = (
@@ -71,7 +81,15 @@ RESULT_COLUMNS = (
     "hard_carrier_loss",
     "hard_bit_loss",
     "hard_path_loss_gap",
-    "bit_exact_verified",
+        "bit_exact_verified",
+        "message_mode",
+        "message_levels",
+        "input_patch_bits",
+        "state_storage_bits_per_token",
+        "trainable_parameters",
+        "strict_runtime_audit_operations",
+        "strict_runtime_floating_tensor_count",
+        "strict_runtime_exact_logits",
 )
 
 
@@ -606,6 +624,9 @@ def train(args: argparse.Namespace) -> dict[str, object]:
         predicate_temperature=args.predicate_temperature,
         predicate_chunk_size=args.predicate_chunk_size,
         global_token_mode=args.global_token_mode,
+        message_mode=args.message_mode,
+        message_count_thresholds=args.message_count_thresholds,
+        message_count_fraction=args.message_count_fraction,
         gate_init_strength=args.gate_init_strength,
         local_depth=args.local_depth,
         global_depth=args.global_depth,
@@ -895,6 +916,20 @@ def train(args: argparse.Namespace) -> dict[str, object]:
     )
     first_images, _ = next(iter(test_loader))
     model.assert_bit_exact(first_images.to(device))
+    strict_images = first_images[: min(8, first_images.shape[0])]
+    if strict_images.dtype != torch.uint8:
+        strict_images = (
+            strict_images.detach().clamp(0, 1).mul(255).round().to(torch.uint8)
+        )
+    deployment_payload = model.deployment_payload()
+    strict_executor = StrictBitStateExecutor(deployment_payload)
+    strict_audit = BooleanRuntimeAudit()
+    with strict_audit:
+        strict_logits = strict_executor.logits(strict_images.cpu())
+    reference_logits = model.forward_bits(strict_images.to(device)).cpu()
+    strict_exact_logits = bool(torch.equal(strict_logits, reference_logits))
+    if not strict_exact_logits:
+        raise AssertionError("strict payload executor differs from model hard path")
     activation_inactive_ratio = measure_inactive(
         model, train_loader, device, args.inactive_batches
     )
@@ -934,6 +969,9 @@ def train(args: argparse.Namespace) -> dict[str, object]:
         "hard_st_cage": "bitstate_hard_st_cage",
         "progressive_hard_st": "bitstate_progressive_hard_st",
     }[args.method]
+    if args.message_mode != "majority":
+        method_name += "_count_message"
+    capacity = bitstate_capacity(config, model)
     row: dict[str, object] = {
         "method": method_name,
         "dataset": args.dataset,
@@ -982,6 +1020,16 @@ def train(args: argparse.Namespace) -> dict[str, object]:
         "selection_split": "validation" if args.validation_size > 0 else "test",
         "restored_best": bool(args.restore_best),
         "bit_exact_verified": True,
+        "message_mode": args.message_mode,
+        "message_levels": capacity["message_levels"],
+        "input_patch_bits": capacity["input_patch_bits"],
+        "state_storage_bits_per_token": capacity[
+            "state_storage_bits_per_token"
+        ],
+        "trainable_parameters": capacity["trainable_parameters"],
+        "strict_runtime_audit_operations": strict_audit.operations,
+        "strict_runtime_floating_tensor_count": 0,
+        "strict_runtime_exact_logits": strict_exact_logits,
         "history": history,
         "model_config": asdict(config),
         "training_args": vars(args),
@@ -1001,6 +1049,83 @@ def train(args: argparse.Namespace) -> dict[str, object]:
             {"model": model.state_dict(), "config": asdict(config), "result": row},
             output_dir / "checkpoint.pt",
         )
+    deployment_path = output_dir / "deployment_payload.pt"
+    torch.save(deployment_payload, deployment_path)
+    reloaded_payload = torch.load(
+        deployment_path,
+        map_location="cpu",
+        weights_only=False,
+    )
+    StrictBitStateExecutor(reloaded_payload)
+    deployment_sha256 = hashlib.sha256(deployment_path.read_bytes()).hexdigest()
+    registry_root = Path(__file__).resolve().parents[2] / "research_registry"
+    if args.protocol_id:
+        protocol_registry = json.loads(
+            (registry_root / "protocols.json").read_text(encoding="utf-8")
+        )["protocols"]
+        if args.protocol_id not in protocol_registry:
+            raise ValueError(f"unregistered protocol: {args.protocol_id}")
+        protocol = protocol_registry[args.protocol_id]
+        protocol_id = args.protocol_id
+    else:
+        protocol_id = "ad_hoc_unregistered"
+        protocol = {
+            "dataset": args.dataset,
+            "model_config": asdict(config),
+            "training_args": vars(args),
+        }
+    source_paths = [
+        Path(__file__),
+        Path(__file__).with_name("blocks.py"),
+        Path(__file__).with_name("boolean_executor.py"),
+        Path(__file__).with_name("encoder.py"),
+        Path(__file__).with_name("gates.py"),
+        Path(__file__).with_name("model.py"),
+        Path(__file__).with_name("regularization.py"),
+        Path(__file__).with_name("teacher.py"),
+        registry_root / "capacity.py",
+        registry_root / "manifest.py",
+    ]
+    method_id = args.registry_method_id or method_name
+    manifest = build_run_manifest(
+        method_id=method_id,
+        protocol_id=protocol_id,
+        protocol=protocol,
+        seed=args.seed,
+        source={
+            "commit": os.environ.get("SOURCE_COMMIT", "working-tree"),
+            "files_sha256": source_file_hashes(
+                source_paths,
+                base=Path(__file__).resolve().parents[2],
+            ),
+        },
+        capacity=capacity,
+        training=vars(args),
+        result=row,
+        runtime_audit={
+            "compliance": "operator_audited_bool_int",
+            "operations": strict_audit.operations,
+            "floating_tensor_count": 0,
+            "exact_logits": strict_exact_logits,
+            "samples": strict_images.shape[0],
+        },
+    )
+    manifest["artifacts"] = {
+        "deployment_payload": {
+            "path": deployment_path.name,
+            "sha256": deployment_sha256,
+            "contains_real_values": False,
+            "accepted_input_dtypes": ["uint8"],
+            "persistent_state_dtype": "bool",
+            "classifier_output_dtype": "int32",
+        },
+        "training_checkpoint": {
+            "path": "checkpoint.pt" if args.save_checkpoint else None,
+            "contains_training_only_real_shadows": bool(args.save_checkpoint),
+            "deployment_artifact": False,
+        },
+    }
+    write_run_manifest(output_dir / "run_manifest.json", manifest)
     print(json.dumps({key: row[key] for key in RESULT_COLUMNS}, indent=2))
     return row
 
@@ -1024,6 +1149,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--download", action="store_true")
     parser.add_argument("--augment", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--output-dir", default="runs/bitstate")
+    parser.add_argument("--registry-method-id", default="")
+    parser.add_argument("--protocol-id", default="")
     parser.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--epochs", type=int, default=20)
@@ -1095,6 +1222,17 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--update-fraction", type=float, default=0.5)
     parser.add_argument("--attention-temperature", type=float, default=0.25)
     parser.add_argument("--exclude-self", action="store_true")
+    parser.add_argument(
+        "--message-mode",
+        choices=("majority", "count_threshold_hybrid"),
+        default="majority",
+    )
+    parser.add_argument(
+        "--message-count-thresholds",
+        default="1,3,5,7",
+        help="comma-separated integer Top-K count thresholds",
+    )
+    parser.add_argument("--message-count-fraction", type=float, default=0.25)
     parser.add_argument("--tau", type=float, default=1.0)
     parser.add_argument("--tau-start", type=float, default=3.0)
     parser.add_argument("--tau-end", type=float, default=0.25)
@@ -1140,10 +1278,28 @@ def parse_args() -> argparse.Namespace:
         default=True,
     )
     args = parser.parse_args()
+    try:
+        args.message_count_thresholds = tuple(
+            int(value.strip())
+            for value in args.message_count_thresholds.split(",")
+            if value.strip()
+        )
+    except ValueError as error:
+        parser.error(f"invalid message-count-thresholds: {error}")
     if args.epochs < 1 or args.batch_size < 1 or args.inactive_batches < 1:
         parser.error("epochs, batch-size, and inactive-batches must be positive")
     if not 0.0 <= args.target_accuracy <= 1.0:
         parser.error("target-accuracy must be in [0, 1]")
+    if not 0.0 < args.message_count_fraction <= 1.0:
+        parser.error("message-count-fraction must be in (0, 1]")
+    if args.message_mode != "majority" and (
+        not args.message_count_thresholds
+        or tuple(sorted(set(args.message_count_thresholds)))
+        != args.message_count_thresholds
+        or args.message_count_thresholds[0] < 1
+        or args.message_count_thresholds[-1] > args.topk
+    ):
+        parser.error("count thresholds must be unique, increasing, and within [1, topk]")
     if args.warmup_epochs < 0 or args.soft_warmup_epochs < 0:
         parser.error("warmup epochs must be non-negative")
     if args.hardening_logit_scale <= 0.0:

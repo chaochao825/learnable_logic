@@ -1,0 +1,74 @@
+name: Registered method experiment
+description: Pre-register one controlled learnable-logic method comparison
+title: "[experiment] "
+body:
+  - type: input
+    id: method
+    attributes:
+      label: Method ID
+      description: Must match or be added to research_registry/methods.csv.
+    validations:
+      required: true
+  - type: input
+    id: baseline
+    attributes:
+      label: Matched baseline ID
+    validations:
+      required: true
+  - type: textarea
+    id: prior_evidence
+    attributes:
+      label: Prior branch evidence
+      description: List related branches/results and explain why this does not repeat a closed experiment.
+    validations:
+      required: true
+  - type: textarea
+    id: variable
+    attributes:
+      label: Declared independent variable
+      description: Everything else in the paired protocol must remain fixed.
+    validations:
+      required: true
+  - type: textarea
+    id: architecture
+    attributes:
+      label: Architecture and earliest bottleneck
+      description: Include input bits, preserved bits, state width/cardinality, tokens, depth, and readout.
+    validations:
+      required: true
+  - type: textarea
+    id: training
+    attributes:
+      label: Training protocol
+      description: Include split, seeds, budget, optimizer, schedule, hardening, selection metric, and target.
+    validations:
+      required: true
+  - type: textarea
+    id: deployment
+    attributes:
+      label: No-real deployment contract
+      description: Define input/state/output dtypes, standalone payload, exact-logit oracle, and operator audit.
+    validations:
+      required: true
+  - type: textarea
+    id: capacity
+    attributes:
+      label: Capacity and cost measurements
+      description: Include trainable parameters, payload bits, gates, full depth definition, fanout, fixed work, memory, and optional synthesis.
+    validations:
+      required: true
+  - type: checkboxes
+    id: preregistration
+    attributes:
+      label: Pre-run gates
+      options:
+        - label: The protocol is immutable and registered before training.
+          required: true
+        - label: At least three paired seeds are budgeted for any promotion claim.
+          required: true
+        - label: Test metrics cannot select the method or checkpoint.
+          required: true
+        - label: A standalone Boolean/integer payload and SHA-256 will be produced.
+          required: true
+        - label: Failure will be retained as negative evidence rather than silently retuned.
+          required: true

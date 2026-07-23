@@ -1,0 +1,134 @@
+{
+  "batches": 8,
+  "blocks": [
+    {
+      "block": 0,
+      "count_entropy_bits": 3.1226289961145217,
+      "count_histogram": [
+        46478815,
+        29944147,
+        25621878,
+        24371673,
+        24060516,
+        24292106,
+        25399003,
+        29175770,
+        43285852
+      ],
+      "count_output_width_per_head": 0,
+      "count_source_channels_per_head": 0,
+      "message_change_vs_majority": 0.0,
+      "message_mode": "majority",
+      "non_extreme_count_ratio": 0.6707451636974628,
+      "observed_count_levels": 9,
+      "threshold_active_ratios": []
+    },
+    {
+      "block": 1,
+      "count_entropy_bits": 3.144993385321719,
+      "count_histogram": [
+        42170690,
+        30115565,
+        27202819,
+        26031612,
+        25690385,
+        25888447,
+        26869668,
+        29307930,
+        39352644
+      ],
+      "count_output_width_per_head": 0,
+      "count_source_channels_per_head": 0,
+      "message_change_vs_majority": 0.0,
+      "message_mode": "majority",
+      "non_extreme_count_ratio": 0.7009741929861215,
+      "observed_count_levels": 9,
+      "threshold_active_ratios": []
+    }
+  ],
+  "capacity": {
+    "bits_per_state_value": 1,
+    "count_threshold_outputs_per_sample": 0,
+    "deployed_depth_lower_bound_excluding_topk": 31,
+    "fanout_max": 228,
+    "fixed_xnor_per_sample": 4326400,
+    "gate_count": 14976,
+    "hard_payload_tensor_bits": 36612384,
+    "input_patch_bits": 192,
+    "logic_depth": 9,
+    "message_levels": 2,
+    "notes": [
+      "message_mode=majority"
+    ],
+    "qk_bits": 64,
+    "state_storage_bits_per_token": 4096,
+    "state_width": 4096,
+    "tokens": 65,
+    "topk": 8,
+    "trainable_parameters": 247424,
+    "value_count_inputs_per_sample": 4259840
+  },
+  "merge_gate_usage": {
+    "aggregate": {
+      "both": 134,
+      "both_ratio": 0.016357421875,
+      "gate_count": 8192,
+      "identity_message": 257,
+      "identity_message_ratio": 0.0313720703125,
+      "identity_state": 7650,
+      "identity_state_ratio": 0.933837890625,
+      "message_only": 381,
+      "message_only_ratio": 0.0465087890625,
+      "neither": 3,
+      "neither_ratio": 0.0003662109375,
+      "state_only": 7674,
+      "state_only_ratio": 0.936767578125,
+      "uses_message": 515,
+      "uses_message_ratio": 0.0628662109375,
+      "uses_state": 7808,
+      "uses_state_ratio": 0.953125
+    },
+    "blocks": [
+      {
+        "block": 0,
+        "both": 49,
+        "both_ratio": 0.011962890625,
+        "gate_count": 4096,
+        "identity_message": 122,
+        "identity_message_ratio": 0.02978515625,
+        "identity_state": 3833,
+        "identity_state_ratio": 0.935791015625,
+        "message_only": 189,
+        "message_only_ratio": 0.046142578125,
+        "neither": 1,
+        "neither_ratio": 0.000244140625,
+        "state_only": 3857,
+        "state_only_ratio": 0.941650390625,
+        "uses_message": 238,
+        "uses_message_ratio": 0.05810546875,
+        "uses_state": 3906,
+        "uses_state_ratio": 0.95361328125
+      },
+      {
+        "block": 1,
+        "both": 85,
+        "both_ratio": 0.020751953125,
+        "gate_count": 4096,
+        "identity_message": 135,
+        "identity_message_ratio": 0.032958984375,
+        "identity_state": 3817,
+        "identity_state_ratio": 0.931884765625,
+        "message_only": 192,
+        "message_only_ratio": 0.046875,
+        "neither": 2,
+        "neither_ratio": 0.00048828125,
+        "state_only": 3817,
+        "state_only_ratio": 0.931884765625,
+        "uses_message": 277,
+        "uses_message_ratio": 0.067626953125,
+        "uses_state": 3902,
+        "uses_state_ratio": 0.95263671875
+      }
+    ]
+  }
+}

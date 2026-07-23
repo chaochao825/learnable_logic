@@ -1,0 +1,49 @@
+{
+  "args": {
+    "activation_bits": 8,
+    "batch_size": 128,
+    "checkpoint_every": 5000,
+    "data_root": "/home/spco/sow_linear/ViT-LGN_attention_clean_20260629/data/cifar-10",
+    "depth": 6,
+    "dim": 192,
+    "eval_batch_size": 256,
+    "eval_every": 5000,
+    "group_lut_groups": 0,
+    "heads": 6,
+    "learned_gap": false,
+    "learning_rate": 0.0003,
+    "local_layers": 0,
+    "logic_expert_count": 1,
+    "logic_expert_width": 0,
+    "min_learning_rate": 1e-05,
+    "mlp_ratio": 4.0,
+    "out_dir": "/home/spco/sow_linear/learnable_logic_full_discrete_enhancements_20260713/runs/fd_control_seed42",
+    "qk_lanes": 7,
+    "seed": 42,
+    "state_control": "none",
+    "state_expert_width": 0,
+    "steps": 50000,
+    "topk": 8,
+    "valid_size": 5000,
+    "warmup_steps": 2000,
+    "weight_decay": 0.05,
+    "weight_magnitude_bits": 7
+  },
+  "cuda": "12.4",
+  "dataset_archive_sha256": "6d958be074577803d12ecdefd02955f39262c83c16fe9348329d7fe0b5c001ce",
+  "sha256": "b862d2dcc6d74f10187e233c4c76003be0c01ef0526cbb3411da7a4488a15960",
+  "sources": {
+    "enhanced_model.py": "a5f2fe5c9be65bfa401d2640801fae49a637b82e3b0d81f03fbd38e89942d8ff",
+    "enhancements_expert.py": "759946fb079d575fceedf003e5ec9305006be0ab589b1a65389b4dd023c3bd7e",
+    "enhancements_lut.py": "467963c701c1d206a7214eaa51a0a6c38b459ccbbd7adb8a2bd05a2260bf70a4",
+    "enhancements_spatial.py": "97f771a649ed950c1575703edaf305b1df6571d5383835c8cf63f393a16ef006",
+    "model.py": "6e27abe3d0a50a156052bc7caf930e0f6045c92e252c8232569cc9ac5efc2629",
+    "shiftadd.py": "4aad6b05ddae19b9cdfc3c5be7e192bd4c0bf64a6a68893b46b326767abb468c",
+    "train_cifar.py": "20b7d7dd82b7239a1dc71483ed12a926ee7f765ba1916330ec9dc83b6c259567"
+  },
+  "split": {
+    "seed": 20260711,
+    "valid_size": 5000
+  },
+  "torch": "2.6.0+cu124"
+}

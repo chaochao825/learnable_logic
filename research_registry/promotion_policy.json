@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "primary_metric": "hard_acc",
+  "required_runtime_compliance": "operator_audited_bool_int",
+  "minimum_seeds": 3,
+  "minimum_seed_wins": 2,
+  "minimum_mean_hard_acc_delta": 0.002,
+  "maximum_single_seed_hard_acc_regression": 0.02,
+  "maximum_mean_acc_gap_increase": 0.01,
+  "maximum_late_validation_drop": 0.02,
+  "require_matched_protocol": true,
+  "require_validation_selection": true,
+  "require_finite_curve": true,
+  "require_capacity_report": true,
+  "require_runtime_audit_operations": true,
+  "require_float_tensor_count_zero": true,
+  "require_source_ref": true,
+  "require_protocol_hash": true,
+  "require_deployment_payload_hash": true,
+  "required_artifacts": [
+    "per_seed_results",
+    "per_epoch_curve",
+    "capacity_metrics",
+    "runtime_audit",
+    "standalone_no_real_deployment_payload",
+    "environment",
+    "source_manifest"
+  ]
+}

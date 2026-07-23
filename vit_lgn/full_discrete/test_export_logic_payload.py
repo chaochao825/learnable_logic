@@ -386,7 +386,7 @@ class LogicPayloadExportTest(unittest.TestCase):
             global_lut_branch_shift=2,
         ).eval()
         payload = export_logic_payload(model)
-        self.assertEqual(payload["schema"]["version"], 5)
+        self.assertEqual(payload["schema"]["version"], SCHEMA_VERSION)
         self.assertEqual(len(payload["attention"]), 1)
         self.assertEqual(len(payload["global_mixers"]), 1)
         mixer = payload["global_mixers"][0]

@@ -1,0 +1,18 @@
+{
+  "accuracy": 0.753,
+  "checkpoint_step": 50000,
+  "correct": 3765,
+  "count": 5000,
+  "elapsed_seconds": 1038.1952972388826,
+  "images_per_second": 4.816049555702745,
+  "input_dtype": "torch.uint8",
+  "linear_backend": "int_matmul",
+  "logit_code_dtype": "torch.int64",
+  "logit_exponent_dtype": "torch.int32",
+  "model_type": "EnhancedFullDiscreteViT",
+  "runtime_audit_operations": 14319802,
+  "runtime_floating_tensor_count": 0,
+  "schema_version": 6,
+  "split": "validation",
+  "training_or_export_float_state_is_not_runtime": true
+}

@@ -15,8 +15,9 @@ distinction prevents a deployment export from silently changing accuracy.
 Per-output power-of-two scales are stored as signed integer exponents, never
 as floating tensors.
 
-This is an inference payload, not a bit-packed file format.  Tensor packing and
-an RTL/C++ executor can be layered on top without reopening a checkpoint.
+This is an inference payload, not a bit-packed file format. The package's
+strict integer transaction executor consumes it directly; packed C++/RTL
+implementations can use the same ABI without reopening a checkpoint.
 """
 
 from __future__ import annotations
@@ -53,7 +54,7 @@ from .shiftadd import ShiftAddLinear, _power_of_two_scale
 
 
 SCHEMA_NAME = "learnable-logic-full-discrete-inference"
-SCHEMA_VERSION = 5
+SCHEMA_VERSION = 6
 SCHEMA_TOP_LEVEL_KEYS = (
     "schema",
     "source",
@@ -469,6 +470,10 @@ def _model_topology(model: FullDiscreteViT) -> dict[str, object]:
     global_mixer_mode = str(enhancement_config.get("global_mixer", "attention"))
     return {
         "model_type": type(model).__name__,
+        "input_encoding": "uint8_numerator_over_constant_denominator",
+        "input_numerator": 1,
+        "input_denominator": 255,
+        "patch_feature_order": "channel_then_patch_row_then_patch_column",
         "patch_size": model.patch_embed.patch_size,
         "input_channels": patch_features // patch_area,
         "patch_tokens": model.patch_embed.num_patches,
@@ -704,7 +709,7 @@ def export_logic_payload(
         raise TypeError("model must be FullDiscreteViT or EnhancedFullDiscreteViT")
     if model.activation_bits != 8:
         raise ValueError(
-            "schema v5 defines an A8-by-U4 product ROM; activation_bits must be 8"
+            "schema v6 defines an A8-by-U4 product ROM; activation_bits must be 8"
         )
     if requantize_magnitude_bits is not None and not (
         1 <= requantize_magnitude_bits <= 8
@@ -859,8 +864,15 @@ def export_logic_payload(
             "rms_reciprocal_sqrt_runtime": "integer_rom_lookup_if_present",
             "general_learned_multipliers": 0,
             "payload_contains_floating_inference_state": False,
-            "pytorch_reference_uses_float_carrier": True,
-            "standalone_packed_executor_included": False,
+            "training_reference_uses_float_carrier": True,
+            "standalone_integer_executor_included": True,
+            "integer_executor": (
+                "vit_lgn.full_discrete.integer_executor.StrictIntegerExecutor"
+            ),
+            "runtime_tensor_domain": "boolean_and_signed_or_unsigned_integer_only",
+            "runtime_input_dtype": "torch.uint8",
+            "runtime_output_dtype": "torch.int64_codes_and_torch.int32_exponents",
+            "runtime_contains_real_values": False,
         },
     }
     if tuple(payload) != SCHEMA_TOP_LEVEL_KEYS:
@@ -891,8 +903,10 @@ def validate_logic_payload(payload: Mapping[str, object]) -> None:
     topology = require_keys(
         payload["topology"],
         (
-            "patch_tokens", "sequence_tokens", "embedding_dim", "depth",
-            "activation_bits", "global_mixer_mode", "block_order",
+            "input_encoding", "input_numerator", "input_denominator",
+            "patch_feature_order", "patch_tokens", "sequence_tokens",
+            "embedding_dim", "depth", "activation_bits", "global_mixer_mode",
+            "block_order",
         ),
         "topology",
     )
@@ -902,7 +916,13 @@ def validate_logic_payload(payload: Mapping[str, object]) -> None:
     topology_depth = int(topology["depth"])
     global_mixer_mode = str(topology["global_mixer_mode"])
     if (
-        topology_patch_tokens < 1
+        topology["input_encoding"]
+        != "uint8_numerator_over_constant_denominator"
+        or int(topology["input_numerator"]) != 1
+        or int(topology["input_denominator"]) != 255
+        or topology["patch_feature_order"]
+        != "channel_then_patch_row_then_patch_column"
+        or topology_patch_tokens < 1
         or topology_sequence_tokens != topology_patch_tokens + 1
         or topology_dim < 1
         or topology_depth < 1
@@ -913,7 +933,7 @@ def validate_logic_payload(payload: Mapping[str, object]) -> None:
         or topology["block_order"]
         != [f"blocks.{index}" for index in range(topology_depth)]
     ):
-        raise ValueError("topology dimensions/order do not match schema v5")
+        raise ValueError("topology dimensions/order do not match schema v6")
     parameters = require_keys(payload["parameters"], ("cls_token", "position"), "parameters")
     for parameter_name in ("cls_token", "position"):
         require_keys(
@@ -1396,15 +1416,25 @@ def validate_logic_payload(payload: Mapping[str, object]) -> None:
         payload["arithmetic_contract"],
         (
             "a8_by_u4_product_rom", "payload_contains_floating_inference_state",
-            "pytorch_reference_uses_float_carrier",
-            "standalone_packed_executor_included",
+            "training_reference_uses_float_carrier",
+            "standalone_integer_executor_included", "integer_executor",
+            "runtime_tensor_domain", "runtime_input_dtype", "runtime_output_dtype",
+            "runtime_contains_real_values",
         ),
         "arithmetic_contract",
     )
     if (
         bool(arithmetic["payload_contains_floating_inference_state"])
-        or not bool(arithmetic["pytorch_reference_uses_float_carrier"])
-        or bool(arithmetic["standalone_packed_executor_included"])
+        or not bool(arithmetic["training_reference_uses_float_carrier"])
+        or not bool(arithmetic["standalone_integer_executor_included"])
+        or arithmetic["integer_executor"]
+        != "vit_lgn.full_discrete.integer_executor.StrictIntegerExecutor"
+        or arithmetic["runtime_tensor_domain"]
+        != "boolean_and_signed_or_unsigned_integer_only"
+        or arithmetic["runtime_input_dtype"] != "torch.uint8"
+        or arithmetic["runtime_output_dtype"]
+        != "torch.int64_codes_and_torch.int32_exponents"
+        or bool(arithmetic["runtime_contains_real_values"])
     ):
         raise ValueError("reference/payload execution-boundary declaration mismatch")
     product_rom = require_keys(

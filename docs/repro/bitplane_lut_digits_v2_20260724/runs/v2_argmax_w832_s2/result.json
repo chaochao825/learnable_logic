@@ -1,0 +1,435 @@
+{
+  "acc_gap": 0.0037036984055131006,
+  "block_results": [
+    {
+      "best_epoch": 21,
+      "block": 0,
+      "block_train_seconds": 9.014773267001146,
+      "changed_truth_ratio": 0.0,
+      "changed_wiring_ratio": 0.0,
+      "epochs_to_90pct_best": 6,
+      "post_refit_acc_gap": 0.0,
+      "post_refit_hard_acc": 0.8814814814814815,
+      "post_refit_hard_loss": 0.9622487386067708,
+      "post_refit_loss_gap": 0.0,
+      "post_refit_soft_acc": 0.8814814814814815,
+      "post_refit_soft_loss": 0.9622487386067708,
+      "pre_refit_acc_gap": 0.007407407407407418,
+      "pre_refit_hard_acc": 0.8814814814814815,
+      "pre_refit_hard_loss": 0.9622487386067708,
+      "pre_refit_loss_gap": 0.09356158221209498,
+      "pre_refit_soft_acc": 0.8740740740740741,
+      "pre_refit_soft_loss": 1.0558103208188658,
+      "refit_address_coverage": 0.0,
+      "refit_bit_error": 0.3128480613231659,
+      "state_diagnostics": {
+        "a8_symbol_entropy_mean": 3.793272820337174,
+        "a8_symbol_unique_mean": 45.08653846153846,
+        "bit_entropy_mean": 0.551977276802063,
+        "bit_entropy_min": 2.497332388884388e-06,
+        "inactive_bit_ratio": 0.30288460850715637,
+        "input_output_bit_flip_ratio": 0.1493055522441864,
+        "joint_unique_state_ratio": 1.0,
+        "joint_unique_states": 270,
+        "per_plane_active_ratio": [
+          0.9615384340286255,
+          0.9230769276618958,
+          0.8942307829856873,
+          0.8653846383094788,
+          0.7788461446762085,
+          0.38461539149284363,
+          0.38461539149284363,
+          0.38461539149284363
+        ],
+        "per_plane_entropy": [
+          0.7345973253250122,
+          0.7075124382972717,
+          0.7235316634178162,
+          0.7015310525894165,
+          0.5324267745018005,
+          0.3426509499549866,
+          0.3322354555130005,
+          0.34133264422416687
+        ]
+      },
+      "vote_state_diagnostics": {
+        "a8_symbol_entropy_mean": 6.051094913482666,
+        "a8_symbol_unique_mean": 96.8,
+        "bit_entropy_mean": 0.8728259801864624,
+        "bit_entropy_min": 0.367304265499115,
+        "inactive_bit_ratio": 0.0,
+        "input_output_bit_flip_ratio": 0.3881944417953491,
+        "joint_unique_state_ratio": 1.0,
+        "joint_unique_states": 270,
+        "per_plane_active_ratio": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "per_plane_entropy": [
+          0.8660160303115845,
+          0.8373174667358398,
+          0.8880361318588257,
+          0.8948470950126648,
+          0.8542340397834778,
+          0.8908885717391968,
+          0.8638081550598145,
+          0.8874610066413879
+        ]
+      }
+    },
+    {
+      "best_epoch": 22,
+      "block": 1,
+      "block_train_seconds": 8.804174807999516,
+      "changed_truth_ratio": 0.0,
+      "changed_wiring_ratio": 0.0,
+      "epochs_to_90pct_best": 1,
+      "post_refit_acc_gap": 0.0,
+      "post_refit_hard_acc": 0.9111111111111111,
+      "post_refit_hard_loss": 0.6624419035734954,
+      "post_refit_loss_gap": 0.0,
+      "post_refit_soft_acc": 0.9111111111111111,
+      "post_refit_soft_loss": 0.6624419035734954,
+      "pre_refit_acc_gap": 0.0037037037037037646,
+      "pre_refit_hard_acc": 0.9111111111111111,
+      "pre_refit_hard_loss": 0.6624419035734954,
+      "pre_refit_loss_gap": 0.043926606354889985,
+      "pre_refit_soft_acc": 0.9148148148148149,
+      "pre_refit_soft_loss": 0.7063685099283854,
+      "refit_address_coverage": 0.0,
+      "refit_bit_error": 0.24839897453784943,
+      "state_diagnostics": {
+        "a8_symbol_entropy_mean": 3.687742131941307,
+        "a8_symbol_unique_mean": 39.49038461538461,
+        "bit_entropy_mean": 0.544249415397644,
+        "bit_entropy_min": 2.497332388884388e-06,
+        "inactive_bit_ratio": 0.30288460850715637,
+        "input_output_bit_flip_ratio": 0.07391826808452606,
+        "joint_unique_state_ratio": 1.0,
+        "joint_unique_states": 270,
+        "per_plane_active_ratio": [
+          0.9615384340286255,
+          0.9230769276618958,
+          0.8942307829856873,
+          0.8653846383094788,
+          0.7788461446762085,
+          0.38461539149284363,
+          0.38461539149284363,
+          0.38461539149284363
+        ],
+        "per_plane_entropy": [
+          0.7222800850868225,
+          0.7190144062042236,
+          0.7132037281990051,
+          0.6922461986541748,
+          0.5304359793663025,
+          0.3252774477005005,
+          0.3192511796951294,
+          0.3322863280773163
+        ]
+      },
+      "vote_state_diagnostics": {
+        "a8_symbol_entropy_mean": 5.776715123653412,
+        "a8_symbol_unique_mean": 82.25,
+        "bit_entropy_mean": 0.8527334332466125,
+        "bit_entropy_min": 0.48062726855278015,
+        "inactive_bit_ratio": 0.0,
+        "input_output_bit_flip_ratio": 0.19218750298023224,
+        "joint_unique_state_ratio": 1.0,
+        "joint_unique_states": 270,
+        "per_plane_active_ratio": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "per_plane_entropy": [
+          0.8339910507202148,
+          0.8672224879264832,
+          0.8611835241317749,
+          0.8707063794136047,
+          0.8490578532218933,
+          0.8457173109054565,
+          0.8300490379333496,
+          0.863940417766571
+        ]
+      }
+    }
+  ],
+  "dataset": "sklearn_digits",
+  "epochs_to_target": 7,
+  "final_carrier_test": {
+    "acc_gap": 0.0,
+    "hard_acc": 0.8888888888888888,
+    "hard_loss": 0.6937156394675926,
+    "loss_gap": 0.0,
+    "soft_acc": 0.8888888888888888,
+    "soft_loss": 0.6937156394675926
+  },
+  "final_carrier_validation": {
+    "acc_gap": 0.0,
+    "hard_acc": 0.9111111111111111,
+    "hard_loss": 0.6624419035734954,
+    "loss_gap": 0.0,
+    "soft_acc": 0.9111111111111111,
+    "soft_loss": 0.6624419035734954
+  },
+  "hard_acc": 0.9111111164093018,
+  "hard_loss": 0.6624418497085571,
+  "hard_payload_bytes": 28021,
+  "hard_payload_sha256": "c5e3029126c238cc432b69a2926cc92b39b00051691d9fa7413c6b85f85dc30f",
+  "loss_gap": 0.04392666021982827,
+  "method_id": "bitplane_lut_argmax",
+  "refit_mode": "argmax",
+  "run_manifest_sha256": "ee60a5cb4140b646378a730ca9d25e64b7b5eab0e99ec748a20339e51ae4d748",
+  "seed": 2,
+  "soft_acc": 0.9148148148148149,
+  "soft_loss": 0.7063685099283854,
+  "state_bits": 832,
+  "state_trace_diagnostics": [
+    {
+      "a8_symbol_entropy_mean": 2.384923203311001,
+      "a8_symbol_unique_mean": 12.740384615384615,
+      "bit_entropy_mean": 0.35226935148239136,
+      "bit_entropy_min": 2.497332388884388e-06,
+      "inactive_bit_ratio": 0.4975961446762085,
+      "joint_unique_state_ratio": 1.0,
+      "joint_unique_states": 270,
+      "per_plane_active_ratio": [
+        0.9230769276618958,
+        0.8653846383094788,
+        0.8269230723381042,
+        0.7788461446762085,
+        0.625,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "per_plane_entropy": [
+        0.6527310013771057,
+        0.6271029114723206,
+        0.6225230693817139,
+        0.5829123854637146,
+        0.33287736773490906,
+        2.4973326162580634e-06,
+        2.4973326162580634e-06,
+        2.4973326162580634e-06
+      ],
+      "state_index": 0,
+      "vote_state": {
+        "a8_symbol_entropy_mean": 2.389385909214616,
+        "a8_symbol_unique_mean": 12.7,
+        "bit_entropy_mean": 0.3535851240158081,
+        "bit_entropy_min": 2.497332388884388e-06,
+        "inactive_bit_ratio": 0.5062500238418579,
+        "joint_unique_state_ratio": 1.0,
+        "joint_unique_states": 270,
+        "per_plane_active_ratio": [
+          0.8999999761581421,
+          0.8500000238418579,
+          0.824999988079071,
+          0.7749999761581421,
+          0.6000000238418579,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "per_plane_entropy": [
+          0.6531634330749512,
+          0.6282525658607483,
+          0.6254140138626099,
+          0.5864381790161133,
+          0.33540552854537964,
+          2.497332388884388e-06,
+          2.497332388884388e-06,
+          2.497332388884388e-06
+        ]
+      }
+    },
+    {
+      "a8_symbol_entropy_mean": 3.793272820337174,
+      "a8_symbol_unique_mean": 45.08653846153846,
+      "bit_entropy_mean": 0.551977276802063,
+      "bit_entropy_min": 2.497332388884388e-06,
+      "inactive_bit_ratio": 0.30288460850715637,
+      "input_output_bit_flip_ratio": 0.1493055522441864,
+      "joint_unique_state_ratio": 1.0,
+      "joint_unique_states": 270,
+      "per_plane_active_ratio": [
+        0.9615384340286255,
+        0.9230769276618958,
+        0.8942307829856873,
+        0.8653846383094788,
+        0.7788461446762085,
+        0.38461539149284363,
+        0.38461539149284363,
+        0.38461539149284363
+      ],
+      "per_plane_entropy": [
+        0.7345973253250122,
+        0.7075124382972717,
+        0.7235316634178162,
+        0.7015310525894165,
+        0.5324267745018005,
+        0.3426509499549866,
+        0.3322354555130005,
+        0.34133264422416687
+      ],
+      "state_index": 1,
+      "vote_state": {
+        "a8_symbol_entropy_mean": 6.051094913482666,
+        "a8_symbol_unique_mean": 96.8,
+        "bit_entropy_mean": 0.8728259801864624,
+        "bit_entropy_min": 0.367304265499115,
+        "inactive_bit_ratio": 0.0,
+        "input_output_bit_flip_ratio": 0.3881944417953491,
+        "joint_unique_state_ratio": 1.0,
+        "joint_unique_states": 270,
+        "per_plane_active_ratio": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "per_plane_entropy": [
+          0.8660160303115845,
+          0.8373174667358398,
+          0.8880361318588257,
+          0.8948470950126648,
+          0.8542340397834778,
+          0.8908885717391968,
+          0.8638081550598145,
+          0.8874610066413879
+        ]
+      }
+    },
+    {
+      "a8_symbol_entropy_mean": 3.687742131941307,
+      "a8_symbol_unique_mean": 39.49038461538461,
+      "bit_entropy_mean": 0.544249415397644,
+      "bit_entropy_min": 2.497332388884388e-06,
+      "inactive_bit_ratio": 0.30288460850715637,
+      "input_output_bit_flip_ratio": 0.07391826808452606,
+      "joint_unique_state_ratio": 1.0,
+      "joint_unique_states": 270,
+      "per_plane_active_ratio": [
+        0.9615384340286255,
+        0.9230769276618958,
+        0.8942307829856873,
+        0.8653846383094788,
+        0.7788461446762085,
+        0.38461539149284363,
+        0.38461539149284363,
+        0.38461539149284363
+      ],
+      "per_plane_entropy": [
+        0.7222800850868225,
+        0.7190144062042236,
+        0.7132037281990051,
+        0.6922461986541748,
+        0.5304359793663025,
+        0.3252774477005005,
+        0.3192511796951294,
+        0.3322863280773163
+      ],
+      "state_index": 2,
+      "vote_state": {
+        "a8_symbol_entropy_mean": 5.776715123653412,
+        "a8_symbol_unique_mean": 82.25,
+        "bit_entropy_mean": 0.8527334332466125,
+        "bit_entropy_min": 0.48062726855278015,
+        "inactive_bit_ratio": 0.0,
+        "input_output_bit_flip_ratio": 0.19218750298023224,
+        "joint_unique_state_ratio": 1.0,
+        "joint_unique_states": 270,
+        "per_plane_active_ratio": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "per_plane_entropy": [
+          0.8339910507202148,
+          0.8672224879264832,
+          0.8611835241317749,
+          0.8707063794136047,
+          0.8490578532218933,
+          0.8457173109054565,
+          0.8300490379333496,
+          0.863940417766571
+        ]
+      }
+    }
+  ],
+  "strict_runtime": {
+    "audit_operations": 224,
+    "compliance": "operator_audited_bool_int",
+    "exact_carrier_logit_match": true,
+    "float_tensor_count": 0,
+    "test_rows": 270,
+    "validation_rows": 270
+  },
+  "structure": {
+    "fanout_max": 11,
+    "gate_count": 640,
+    "layers": [
+      {
+        "constant_gate_ratio": 0.0,
+        "fanout_max": 11,
+        "gate_count": 320,
+        "literal_gate_ratio": 0.0625,
+        "logical_payload_bits": 17920,
+        "nontrivial_gate_ratio": 0.9375,
+        "reverse_layer_index": 1,
+        "selected_source_ratio": 0.640625
+      },
+      {
+        "constant_gate_ratio": 0.0,
+        "fanout_max": 9,
+        "gate_count": 320,
+        "literal_gate_ratio": 0.07187499850988388,
+        "logical_payload_bits": 17920,
+        "nontrivial_gate_ratio": 0.9281250238418579,
+        "reverse_layer_index": 0,
+        "selected_source_ratio": 0.6959134340286255
+      }
+    ],
+    "learned_dense_integer_matrix_count": 0,
+    "learned_logic_depth": 2,
+    "learned_numeric_weight_count": 0,
+    "learned_payload_bits": 35840,
+    "learned_vote_bits": 320,
+    "preserved_input_bits": 512,
+    "state_bits": 832,
+    "state_symbols": 104,
+    "total_logical_payload_bits": 44608,
+    "unused_gate_ratio": 0.0140625
+  },
+  "test_acc_gap": 6.622738357719982e-09,
+  "test_hard_acc": 0.8888888955116272,
+  "test_hard_loss": 0.6937156915664673,
+  "test_soft_acc": 0.8888888888888888,
+  "train_time_s": 18.982158528000582,
+  "training_health": {
+    "finite_gradients": true,
+    "late_validation_drop": 0.0
+  }
+}

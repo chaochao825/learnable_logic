@@ -1,0 +1,145 @@
+{
+  "batches": 8,
+  "blocks": [
+    {
+      "block": 0,
+      "count_entropy_bits": 3.129645036849612,
+      "count_histogram": [
+        45699836,
+        30756783,
+        26421223,
+        25032704,
+        24561088,
+        24565777,
+        25389149,
+        28698708,
+        41504492
+      ],
+      "count_output_width_per_head": 128,
+      "count_source_channels_per_head": 32,
+      "message_change_vs_majority": 0.12359636746920072,
+      "message_mode": "count_threshold_hybrid",
+      "non_extreme_count_ratio": 0.6801364311805138,
+      "observed_count_levels": 9,
+      "threshold_active_ratios": [
+        0.8278491680438702,
+        0.6160516005295974,
+        0.4343776996319111,
+        0.2540141179011418
+      ]
+    },
+    {
+      "block": 1,
+      "count_entropy_bits": 3.128621683841999,
+      "count_histogram": [
+        45045212,
+        31678917,
+        26260521,
+        24304259,
+        23728421,
+        24036727,
+        25633443,
+        30320273,
+        41621987
+      ],
+      "count_output_width_per_head": 128,
+      "count_source_channels_per_head": 32,
+      "message_change_vs_majority": 0.1231886680309589,
+      "message_mode": "count_threshold_hybrid",
+      "non_extreme_count_ratio": 0.6821066086108868,
+      "observed_count_levels": 9,
+      "threshold_active_ratios": [
+        0.8152478144719051,
+        0.605841299203726,
+        0.43730157705453726,
+        0.26489357581505407
+      ]
+    }
+  ],
+  "capacity": {
+    "bits_per_state_value": 1,
+    "count_threshold_outputs_per_sample": 133120,
+    "deployed_depth_lower_bound_excluding_topk": 31,
+    "fanout_max": 219,
+    "fixed_xnor_per_sample": 4326400,
+    "gate_count": 14976,
+    "hard_payload_tensor_bits": 36614432,
+    "input_patch_bits": 192,
+    "logic_depth": 9,
+    "message_levels": 5,
+    "notes": [
+      "message_mode=count_threshold_hybrid",
+      "count_thresholds=(1, 3, 5, 7)"
+    ],
+    "qk_bits": 64,
+    "state_storage_bits_per_token": 4096,
+    "state_width": 4096,
+    "tokens": 65,
+    "topk": 8,
+    "trainable_parameters": 247424,
+    "value_count_inputs_per_sample": 4259840
+  },
+  "merge_gate_usage": {
+    "aggregate": {
+      "both": 146,
+      "both_ratio": 0.017822265625,
+      "gate_count": 8192,
+      "identity_message": 262,
+      "identity_message_ratio": 0.031982421875,
+      "identity_state": 7612,
+      "identity_state_ratio": 0.92919921875,
+      "message_only": 407,
+      "message_only_ratio": 0.0496826171875,
+      "neither": 1,
+      "neither_ratio": 0.0001220703125,
+      "state_only": 7638,
+      "state_only_ratio": 0.932373046875,
+      "uses_message": 553,
+      "uses_message_ratio": 0.0675048828125,
+      "uses_state": 7784,
+      "uses_state_ratio": 0.9501953125
+    },
+    "blocks": [
+      {
+        "block": 0,
+        "both": 40,
+        "both_ratio": 0.009765625,
+        "gate_count": 4096,
+        "identity_message": 118,
+        "identity_message_ratio": 0.02880859375,
+        "identity_state": 3831,
+        "identity_state_ratio": 0.935302734375,
+        "message_only": 200,
+        "message_only_ratio": 0.048828125,
+        "neither": 0,
+        "neither_ratio": 0.0,
+        "state_only": 3856,
+        "state_only_ratio": 0.94140625,
+        "uses_message": 240,
+        "uses_message_ratio": 0.05859375,
+        "uses_state": 3896,
+        "uses_state_ratio": 0.951171875
+      },
+      {
+        "block": 1,
+        "both": 106,
+        "both_ratio": 0.02587890625,
+        "gate_count": 4096,
+        "identity_message": 144,
+        "identity_message_ratio": 0.03515625,
+        "identity_state": 3781,
+        "identity_state_ratio": 0.923095703125,
+        "message_only": 207,
+        "message_only_ratio": 0.050537109375,
+        "neither": 1,
+        "neither_ratio": 0.000244140625,
+        "state_only": 3782,
+        "state_only_ratio": 0.92333984375,
+        "uses_message": 313,
+        "uses_message_ratio": 0.076416015625,
+        "uses_state": 3888,
+        "uses_state_ratio": 0.94921875
+      }
+    ]
+  }
+}

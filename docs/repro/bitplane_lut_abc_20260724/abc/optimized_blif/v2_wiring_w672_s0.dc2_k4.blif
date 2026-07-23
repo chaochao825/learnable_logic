@@ -1,0 +1,1113 @@
+# Benchmark "bitplane_lut" written by ABC on Fri Jul 24 01:59:46 2026
+.model bitplane_lut
+.inputs x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 \
+ x19 x20 x21 x22 x23 x24 x25 x26 x27 x28 x29 x30 x31 x32 x33 x34 x35 x36 \
+ x37 x38 x39 x40 x41 x42 x43 x44 x45 x46 x47 x48 x49 x50 x51 x52 x53 x54 \
+ x55 x56 x57 x58 x59 x60 x61 x62 x63 x64 x65 x66 x67 x68 x69 x70 x71 x72 \
+ x73 x74 x75 x76 x77 x78 x79 x80 x81 x82 x83 x84 x85 x86 x87 x88 x89 x90 \
+ x91 x92 x93 x94 x95 x96 x97 x98 x99 x100 x101 x102 x103 x104 x105 x106 \
+ x107 x108 x109 x110 x111 x112 x113 x114 x115 x116 x117 x118 x119 x120 x121 \
+ x122 x123 x124 x125 x126 x127 x128 x129 x130 x131 x132 x133 x134 x135 x136 \
+ x137 x138 x139 x140 x141 x142 x143 x144 x145 x146 x147 x148 x149 x150 x151 \
+ x152 x153 x154 x155 x156 x157 x158 x159 x160 x161 x162 x163 x164 x165 x166 \
+ x167 x168 x169 x170 x171 x172 x173 x174 x175 x176 x177 x178 x179 x180 x181 \
+ x182 x183 x184 x185 x186 x187 x188 x189 x190 x191 x192 x193 x194 x195 x196 \
+ x197 x198 x199 x200 x201 x202 x203 x204 x205 x206 x207 x208 x209 x210 x211 \
+ x212 x213 x214 x215 x216 x217 x218 x219 x220 x221 x222 x223 x224 x225 x226 \
+ x227 x228 x229 x230 x231 x232 x233 x234 x235 x236 x237 x238 x239 x240 x241 \
+ x242 x243 x244 x245 x246 x247 x248 x249 x250 x251 x252 x253 x254 x255 x256 \
+ x257 x258 x259 x260 x261 x262 x263 x264 x265 x266 x267 x268 x269 x270 x271 \
+ x272 x273 x274 x275 x276 x277 x278 x279 x280 x281 x282 x283 x284 x285 x286 \
+ x287 x288 x289 x290 x291 x292 x293 x294 x295 x296 x297 x298 x299 x300 x301 \
+ x302 x303 x304 x305 x306 x307 x308 x309 x310 x311 x312 x313 x314 x315 x316 \
+ x317 x318 x319 x320 x321 x322 x323 x324 x325 x326 x327 x328 x329 x330 x331 \
+ x332 x333 x334 x335 x336 x337 x338 x339 x340 x341 x342 x343 x344 x345 x346 \
+ x347 x348 x349 x350 x351 x352 x353 x354 x355 x356 x357 x358 x359 x360 x361 \
+ x362 x363 x364 x365 x366 x367 x368 x369 x370 x371 x372 x373 x374 x375 x376 \
+ x377 x378 x379 x380 x381 x382 x383 x384 x385 x386 x387 x388 x389 x390 x391 \
+ x392 x393 x394 x395 x396 x397 x398 x399 x400 x401 x402 x403 x404 x405 x406 \
+ x407 x408 x409 x410 x411 x412 x413 x414 x415 x416 x417 x418 x419 x420 x421 \
+ x422 x423 x424 x425 x426 x427 x428 x429 x430 x431 x432 x433 x434 x435 x436 \
+ x437 x438 x439 x440 x441 x442 x443 x444 x445 x446 x447 x448 x449 x450 x451 \
+ x452 x453 x454 x455 x456 x457 x458 x459 x460 x461 x462 x463 x464 x465 x466 \
+ x467 x468 x469 x470 x471 x472 x473 x474 x475 x476 x477 x478 x479 x480 x481 \
+ x482 x483 x484 x485 x486 x487 x488 x489 x490 x491 x492 x493 x494 x495 x496 \
+ x497 x498 x499 x500 x501 x502 x503 x504 x505 x506 x507 x508 x509 x510 x511
+.outputs b1_l0_g0 b1_l0_g1 b1_l0_g2 b1_l0_g3 b1_l0_g4 b1_l0_g5 b1_l0_g6 \
+ b1_l0_g7 b1_l0_g8 b1_l0_g9 b1_l0_g10 b1_l0_g11 b1_l0_g12 b1_l0_g13 \
+ b1_l0_g14 b1_l0_g15 b1_l0_g16 b1_l0_g17 b1_l0_g18 b1_l0_g19 b1_l0_g20 \
+ b1_l0_g21 b1_l0_g22 b1_l0_g23 b1_l0_g24 b1_l0_g25 b1_l0_g26 b1_l0_g27 \
+ b1_l0_g28 b1_l0_g29 b1_l0_g30 b1_l0_g31 b1_l0_g32 b1_l0_g33 b1_l0_g34 \
+ b1_l0_g35 b1_l0_g36 b1_l0_g37 b1_l0_g38 b1_l0_g39 b1_l0_g40 b1_l0_g41 \
+ b1_l0_g42 b1_l0_g43 b1_l0_g44 b1_l0_g45 b1_l0_g46 b1_l0_g47 b1_l0_g48 \
+ b1_l0_g49 b1_l0_g50 b1_l0_g51 b1_l0_g52 b1_l0_g53 b1_l0_g54 b1_l0_g55 \
+ b1_l0_g56 b1_l0_g57 b1_l0_g58 b1_l0_g59 b1_l0_g60 b1_l0_g61 b1_l0_g62 \
+ b1_l0_g63 b1_l0_g64 b1_l0_g65 b1_l0_g66 b1_l0_g67 b1_l0_g68 b1_l0_g69 \
+ b1_l0_g70 b1_l0_g71 b1_l0_g72 b1_l0_g73 b1_l0_g74 b1_l0_g75 b1_l0_g76 \
+ b1_l0_g77 b1_l0_g78 b1_l0_g79 b1_l0_g80 b1_l0_g81 b1_l0_g82 b1_l0_g83 \
+ b1_l0_g84 b1_l0_g85 b1_l0_g86 b1_l0_g87 b1_l0_g88 b1_l0_g89 b1_l0_g90 \
+ b1_l0_g91 b1_l0_g92 b1_l0_g93 b1_l0_g94 b1_l0_g95 b1_l0_g96 b1_l0_g97 \
+ b1_l0_g98 b1_l0_g99 b1_l0_g100 b1_l0_g101 b1_l0_g102 b1_l0_g103 b1_l0_g104 \
+ b1_l0_g105 b1_l0_g106 b1_l0_g107 b1_l0_g108 b1_l0_g109 b1_l0_g110 \
+ b1_l0_g111 b1_l0_g112 b1_l0_g113 b1_l0_g114 b1_l0_g115 b1_l0_g116 \
+ b1_l0_g117 b1_l0_g118 b1_l0_g119 b1_l0_g120 b1_l0_g121 b1_l0_g122 \
+ b1_l0_g123 b1_l0_g124 b1_l0_g125 b1_l0_g126 b1_l0_g127 b1_l0_g128 \
+ b1_l0_g129 b1_l0_g130 b1_l0_g131 b1_l0_g132 b1_l0_g133 b1_l0_g134 \
+ b1_l0_g135 b1_l0_g136 b1_l0_g137 b1_l0_g138 b1_l0_g139 b1_l0_g140 \
+ b1_l0_g141 b1_l0_g142 b1_l0_g143 b1_l0_g144 b1_l0_g145 b1_l0_g146 \
+ b1_l0_g147 b1_l0_g148 b1_l0_g149 b1_l0_g150 b1_l0_g151 b1_l0_g152 \
+ b1_l0_g153 b1_l0_g154 b1_l0_g155 b1_l0_g156 b1_l0_g157 b1_l0_g158 \
+ b1_l0_g159
+.names new_n676 new_n675 b1_l0_g0
+01 1
+.names x185 x348 x275 new_n675
+001 1
+.names x3 x211 x339 x320 new_n676
+-000 1
+1-01 1
+10-- 1
+.names x89 b1_l0_g4 x72 new_n678 b1_l0_g1
+-100 1
+0-00 1
+.names x267 x304 x467 x31 new_n678
+---1 0
+000- 0
+.names x83 x467 x500 b1_l0_g4
+000 1
+.names new_n682 b1_l0_g4 new_n681 x200 b1_l0_g2
+--00 1
+-00- 1
+1--0 1
+.names x498 x116 x500 new_n681
+-10 1
+0-0 1
+.names x467 x83 x163 new_n682
+-11 1
+1-1 1
+.names x148 x241 x440 new_n676 b1_l0_g3
+-111 1
+0001 1
+.names x172 x499 x27 x63 b1_l0_g5
+--11 1
+00-0 1
+.names x410 new_n686 x356 x120 b1_l0_g6
+-000 1
+0011 1
+.names x107 x419 x456 x6 new_n686
+---1 0
+000- 0
+.names new_n681 new_n688 b1_l0_g7
+11 1
+.names x203 x432 x487 x36 new_n688
+0001 1
+.names x271 new_n691 new_n690 x107 b1_l0_g8
+-1-1 1
+-10- 1
+0-11 1
+.names x83 x120 x305 x467 new_n690
+0000 1
+.names x40 x441 x242 x8 new_n691
+-011 1
+1000 1
+.names x505 x497 x489 new_n693 b1_l0_g9
+-000 1
+-110 1
+0--0 1
+1011 1
+.names x227 x209 x172 new_n693
+-00 1
+0-0 1
+.names new_n695 new_n696 x41 new_n675 b1_l0_g10
+-001 1
+0-11 1
+00-- 1
+.names x435 x163 x363 x15 new_n695
+-100 1
+1-00 1
+.names x266 x339 x138 x490 new_n696
+-000 1
+0-01 1
+00-- 1
+.names x331 new_n698 new_n690 b1_l0_g11
+-01 1
+0-1 1
+.names x8 x9 x44 new_n698
+000 1
+.names new_n695 new_n700 b1_l0_g12
+11 1
+.names x38 x39 x371 new_n700
+000 1
+.names x340 x447 x302 new_n702 b1_l0_g13
+--10 1
+-1-0 1
+0--0 1
+001- 1
+.names x9 x491 x346 x13 new_n702
+--10 1
+00-0 1
+.names new_n704 x488 x331 new_n705 b1_l0_g14
+-011 1
+0-1- 1
+00-1 1
+.names x90 x382 x435 x164 new_n704
+---0 0
+001- 0
+.names x427 x156 x84 new_n705
+-10 1
+0-0 1
+.names x145 x308 x471 new_n698 b1_l0_g15
+---1 0
+111- 0
+.names x419 x184 x504 new_n708 b1_l0_g16
+-001 1
+-111 1
+0-11 1
+.names x18 x19 x228 new_n708
+000 1
+.names new_n711 new_n712 new_n713 new_n710 b1_l0_g17
+---1 1
+000- 1
+.names x120 x49 x20 new_n710
+-10 1
+1-0 1
+.names x36 x146 x417 x107 new_n711
+-001 1
+-111 1
+0--1 1
+.names x72 x100 x171 x243 new_n712
+0000 1
+.names x16 x92 x17 x224 new_n713
+-1-0 1
+-11- 1
+0-00 1
+.names new_n717 x51 x506 new_n715 b1_l0_g18
+0001 1
+.names new_n716 x243 x306 new_n715
+000 1
+.names x328 x330 x347 new_n716
+000 1
+.names x76 x108 x169 x171 new_n717
+0000 1
+.names x410 new_n720 x210 new_n719 b1_l0_g19
+-0-1 0
+-00- 0
+1-01 0
+.names x22 x224 x499 new_n719
+000 1
+.names x291 x107 x272 x491 new_n720
+-1-1 1
+-11- 1
+0-01 1
+.names new_n696 new_n723 new_n719 new_n722 b1_l0_g20
+-011 1
+0-11 1
+00-0 1
+.names x428 x18 x228 new_n722
+-00 1
+0-0 1
+.names x328 x330 x474 x185 new_n723
+-001 1
+0-01 1
+00-- 1
+.names new_n722 new_n710 new_n708 new_n713 b1_l0_g21
+-001 1
+-111 1
+0--1 1
+.names x254 x327 x364 new_n726 b1_l0_g22
+--01 1
+11-1 1
+.names x360 x139 x306 x50 new_n726
+-100 1
+0-00 1
+.names x202 x275 x511 new_n722 b1_l0_g23
+--10 1
+00-0 1
+.names new_n729 new_n730 new_n708 new_n731 b1_l0_g24
+--10 1
+01-0 1
+.names x42 x115 x404 x170 new_n729
+-000 1
+0-00 1
+00-0 1
+1110 1
+.names x402 x28 x148 x27 new_n730
+-1-1 0
+-10- 0
+0-01 0
+.names x433 x108 x95 x179 new_n731
+-1-0 1
+-11- 1
+1-00 1
+.names x171 new_n710 new_n729 new_n693 b1_l0_g25
+-110 1
+0-11 1
+01-1 1
+.names new_n686 x491 new_n734 new_n729 b1_l0_g26
+-111 1
+0-01 1
+.names x434 new_n735 new_n734
+01 1
+.names x508 x307 x107 new_n735
+-10 1
+0-0 1
+.names new_n737 new_n730 x50 x340 b1_l0_g27
+-1-1 0
+-10- 0
+0-01 0
+.names x226 x300 x228 new_n737
+-01 1
+1-1 1
+10- 1
+.names new_n729 x106 new_n678 b1_l0_g30 b1_l0_g28
+--01 1
+-10- 1
+0--1 1
+.names x246 x25 x193 x339 b1_l0_g30
+---1 1
+001- 1
+.names new_n741 x382 x182 x236 b1_l0_g29
+-101 1
+-110 1
+0-01 1
+01-- 1
+1011 1
+.names x301 x303 x11 x356 new_n741
+---0 0
+001- 0
+.names x491 new_n743 new_n678 b1_l0_g31
+-00 1
+0-0 1
+.names x25 x27 x139 x179 new_n743
+-110 1
+0-10 1
+01-0 1
+.names new_n691 x336 new_n675 x499 b1_l0_g32
+--01 1
+-10- 1
+0--1 1
+.names x491 x35 x345 new_n746 b1_l0_g33
+-001 1
+1-01 1
+.names x67 x210 x35 x36 new_n746
+--00 0
+01-- 0
+.names x305 x304 new_n700 b1_l0_g34
+-11 1
+1-1 1
+.names x243 x148 x19 new_n749 b1_l0_g35
+--11 1
+01-1 1
+.names x54 x253 new_n704 new_n750 new_n749
+--00 1
+11-0 1
+.names x297 x148 x243 new_n750
+-01 1
+1-1 1
+.names new_n700 new_n752 b1_l0_g36
+00 1
+.names x178 x176 x139 x32 new_n752
+-101 1
+-110 1
+0011 1
+1--0 1
+.names new_n702 new_n755 new_n754 new_n756 b1_l0_g37
+-011 1
+1-11 1
+10-1 1
+.names x297 x147 x496 x243 new_n754
+-00- 1
+0-00 1
+0111 1
+10-0 1
+.names x32 x34 x16 x35 new_n755
+-0-0 1
+-101 1
+1-01 1
+1-10 1
+.names x139 x156 x434 x488 new_n756
+0000 1
+.names b1_l0_g30 new_n758 new_n716 new_n752 b1_l0_g38
+-001 1
+1-11 1
+10-- 1
+.names x185 x348 x20 x204 new_n758
+-1-1 1
+-10- 1
+1-00 1
+.names new_n755 new_n758 b1_l0_g39
+00 1
+.names x148 x219 x202 x291 b1_l0_g40
+-010 1
+1-10 1
+10-0 1
+.names new_n763 new_n762 new_n704 b1_l0_g41
+-11 1
+0-1 1
+.names x464 x371 x83 x137 new_n762
+-0-1 1
+-00- 1
+0-00 1
+.names x84 x48 x47 x178 new_n763
+--01 0
+00-- 0
+.names new_n767 new_n765 new_n768 b1_l0_g42
+011 1
+.names x371 x42 new_n766 new_n765
+-11 1
+0-1 1
+.names x261 x243 x381 x36 new_n766
+--01 0
+01-- 0
+.names x371 x243 x261 x42 new_n767
+--01 1
+01-1 1
+.names x82 x267 x40 x304 new_n768
+-0-0 1
+-00- 1
+1-11 1
+.names new_n770 x147 x474 new_n763 b1_l0_g43
+-011 1
+1-01 1
+10-- 1
+.names x139 x476 x74 x241 new_n770
+--10 1
+01-0 1
+.names new_n768 new_n700 b1_l0_g44
+01 1
+.names new_n763 new_n773 new_n774 x171 b1_l0_g45
+-000 1
+1-00 1
+10-0 1
+.names x44 x212 x115 x266 new_n773
+0000 1
+0011 1
+.names x43 x186 x440 x75 new_n774
+--10 1
+-1-0 1
+0--0 1
+001- 1
+.names x331 x47 new_n776 b1_l0_g46
+-10 1
+0-0 1
+.names x42 x104 x163 x46 new_n776
+---1 0
+000- 0
+.names new_n741 new_n698 new_n779 new_n778 b1_l0_g47
+--01 1
+-00- 1
+0--1 1
+.names x274 x43 x202 new_n778
+-10 1
+1-0 1
+.names x73 x91 new_n779
+00 1
+.names new_n782 new_n781 new_n783 b1_l0_g48
+011 1
+.names x226 x243 x297 x371 new_n781
+-000 1
+-110 1
+0--0 1
+.names x466 x154 x100 new_n782
+-01 1
+0-1 1
+.names x404 x276 x51 x440 new_n783
+-000 1
+1-00 1
+.names new_n785 new_n781 new_n786 x290 b1_l0_g49
+-0-0 1
+-00- 1
+0-01 1
+.names x107 x33 x48 x306 new_n785
+-100 1
+0-00 1
+.names x291 x217 x236 x345 new_n786
+-100 1
+1-00 1
+.names new_n786 new_n789 new_n788 x275 b1_l0_g50
+-0-1 1
+-00- 1
+0-01 1
+.names x98 x0 x480 x243 new_n788
+-0-0 1
+-101 1
+0-10 1
+.names x282 x427 x83 x137 new_n789
+-111 0
+0-11 0
+01-- 0
+.names x6 x151 x205 new_n782 b1_l0_g51
+---0 0
+111- 0
+.names x80 x97 new_n792 new_n726 b1_l0_g52
+--11 1
+01-1 1
+.names x48 x49 x50 x51 new_n792
+0000 1
+1111 1
+.names new_n783 new_n786 b1_l0_g53
+11 1
+.names new_n783 new_n795 new_n781 x266 b1_l0_g54
+-0-0 0
+-00- 0
+1-00 0
+.names x401 x330 x17 x48 new_n795
+-100 1
+0-00 1
+.names x34 x253 x179 new_n792 b1_l0_g55
+--00 1
+01-0 1
+.names x19 x73 new_n712 b1_l0_g56
+001 1
+.names new_n802 new_n800 new_n801 new_n799 b1_l0_g57
+-101 1
+0-00 1
+.names x73 x36 x202 x61 new_n799
+-010 1
+-100 1
+1--0 1
+.names x56 x36 x163 x60 new_n800
+---1 0
+000- 0
+.names x483 x156 x57 new_n801
+-10 1
+1-0 1
+.names x142 x235 x307 x343 new_n802
+-000 1
+-101 1
+1-01 1
+.names new_n752 new_n805 new_n804 x370 b1_l0_g58
+-1-0 1
+-11- 1
+1-01 1
+.names x1 x114 x242 x481 new_n804
+-000 0
+-111 0
+1--- 0
+.names x10 x304 x267 x412 new_n805
+0000 1
+0011 1
+.names x104 x178 x49 x306 b1_l0_g59
+-000 0
+0-11 0
+00-- 0
+.names x283 new_n808 new_n800 x320 b1_l0_g60
+-101 1
+0-00 1
+.names x297 x112 x62 new_n808
+-10 1
+1-0 1
+.names new_n813 new_n812 new_n810 b1_l0_g61
+-01 1
+1-1 1
+.names new_n811 new_n763 new_n799 new_n810
+-10 1
+1-0 1
+.names x262 x370 x83 x43 new_n811
+-0-0 1
+-00- 1
+1-01 1
+.names x31 x135 x209 new_n763 new_n812
+--01 1
+01-1 1
+.names x209 x31 x462 x135 new_n813
+-101 1
+1-01 1
+.names new_n695 new_n808 new_n781 new_n815 b1_l0_g62
+-011 1
+1-1- 1
+11-1 1
+.names x218 x89 x292 x364 new_n815
+-000 1
+0-00 1
+.names x154 x9 x80 new_n817 b1_l0_g63
+-111 1
+0-01 1
+.names x383 x346 x154 x208 new_n817
+--01 0
+01-- 0
+.names x77 new_n820 new_n819 b1_l0_g64
+-01 1
+1-1 1
+.names x301 x30 x48 x356 new_n819
+---0 0
+001- 0
+.names x162 x271 x434 x143 new_n820
+-011 1
+0-1- 1
+01-1 1
+.names x170 x43 new_n822 new_n825 b1_l0_g65
+-100 1
+0-00 1
+.names new_n823 x44 new_n824 new_n822
+001 1
+.names x475 x91 x100 new_n823
+-01 1
+0-1 1
+.names x91 x475 x170 x43 new_n824
+--01 0
+00-- 0
+.names x75 x83 x84 new_n825
+000 1
+.names new_n754 new_n820 new_n800 new_n827 b1_l0_g66
+--01 1
+11-1 1
+.names x119 x173 x171 x70 new_n827
+---1 0
+001- 0
+.names x411 new_n829 x483 b1_l0_g67
+-10 1
+1-0 1
+.names x56 x347 x145 x401 new_n829
+-011 0
+0-11 0
+00-- 0
+.names x177 new_n827 new_n737 b1_l0_g68
+-01 1
+1-1 1
+.names x235 new_n754 new_n819 x344 b1_l0_g69
+-000 1
+1-00 1
+.names new_n833 x292 b1_l0_g70
+00 1
+.names x171 x225 x82 x94 new_n833
+-011 0
+1-11 0
+10-- 0
+.names x331 x166 x350 new_n741 b1_l0_g71
+--11 1
+-1-1 1
+0--1 1
+011- 1
+.names x352 x116 x62 new_n836 b1_l0_g72
+---0 0
+011- 0
+.names x75 x395 x505 x305 new_n836
+---1 0
+000- 0
+.names new_n838 new_n717 new_n839 new_n774 b1_l0_g73
+-000 1
+-101 1
+1-01 1
+10-0 1
+.names x100 x112 x242 x260 new_n838
+--01 1
+-0-1 1
+000- 1
+1--1 1
+.names x74 x75 x344 x108 new_n839
+-010 1
+-111 1
+0-10 1
+00-0 1
+.names x465 x320 new_n841 b1_l0_g74
+-11 1
+0-1 1
+.names x19 x108 x492 new_n841
+000 1
+.names x324 x413 x487 new_n717 b1_l0_g75
+---0 0
+111- 0
+.names x276 x274 new_n717 b1_l0_g76
+-11 1
+1-1 1
+.names x427 new_n845 b1_l0_g77
+01 1
+.names x500 x77 x220 x173 new_n845
+-100 1
+0-00 1
+.names new_n827 new_n847 x331 x40 b1_l0_g78
+-001 1
+0-00 1
+00-1 1
+.names x104 x483 x212 x67 new_n847
+-100 0
+0011 0
+1-00 0
+.names new_n839 new_n774 new_n841 new_n849 b1_l0_g79
+-010 1
+-100 1
+0--0 1
+.names new_n841 new_n774 new_n850 new_n851 new_n849
+-000 1
+0-00 1
+.names x433 x360 new_n850
+01 1
+.names x360 x75 x73 x433 new_n851
+-0-1 1
+-01- 1
+0-01 1
+.names new_n705 new_n712 new_n853 x227 b1_l0_g80
+-010 1
+0-10 1
+00-0 1
+.names x435 x83 new_n853
+01 1
+.names new_n857 new_n811 new_n855 new_n825 b1_l0_g81
+--11 1
+-11- 1
+0--1 1
+.names new_n705 new_n856 new_n855
+11 1
+.names x200 x328 x491 x220 new_n856
+-001 1
+1-01 1
+10-1 1
+100- 1
+.names x262 x43 x370 new_n857
+-01 1
+0-1 1
+.names x198 x88 x378 new_n859 b1_l0_g82
+---0 0
+011- 0
+.names x459 x75 x74 x240 new_n859
+--10 1
+01-0 1
+.names x36 b1_l0_g59 new_n811 x53 b1_l0_g83
+-011 0
+-110 0
+0-1- 0
+01-0 0
+.names new_n705 b1_l0_g97 new_n853 x348 b1_l0_g84
+-001 1
+1-01 1
+10-- 1
+.names x71 x107 x108 x489 b1_l0_g97
+--10 1
+-1-0 1
+1001 1
+.names new_n825 new_n864 b1_l0_g85
+00 1
+.names x175 x177 x340 x85 new_n864
+---1 0
+000- 0
+.names new_n859 new_n827 b1_l0_g86
+01 1
+.names new_n867 new_n868 x428 b1_l0_g87
+000 1
+.names x91 x236 x36 new_n867
+001 1
+.names x91 x236 x51 x36 new_n868
+--00 1
+01-0 1
+.names new_n870 x376 new_n871 x339 b1_l0_g88
+-011 1
+1-10 1
+10-1 1
+.names x112 x355 x155 x114 new_n870
+-1-0 1
+-10- 1
+0-01 1
+1011 1
+.names x110 x93 x203 x403 new_n871
+---0 0
+001- 0
+.names x16 new_n874 new_n873 b1_l0_g89
+-11 1
+1-1 1
+.names x338 x159 x284 x356 new_n873
+-100 1
+0-00 1
+.names x147 x152 x74 x157 new_n874
+---1 0
+000- 0
+.names new_n876 x363 new_n833 x291 b1_l0_g90
+--00 1
+11-0 1
+.names x136 x468 x504 x212 new_n876
+--10 1
+-1-0 1
+011- 1
+1--0 1
+.names x129 x156 x239 x75 b1_l0_g91
+-1-0 1
+-11- 1
+1-01 1
+.names x313 x114 new_n876 b1_l0_g92
+-01 1
+1-1 1
+.names new_n731 new_n847 x172 new_n880 b1_l0_g93
+-001 1
+1--1 1
+100- 1
+.names x18 x476 x95 x240 new_n880
+-001 0
+-010 0
+0-01 0
+00-- 0
+.names x48 x428 x465 new_n825 b1_l0_g94
+0001 1
+.names x231 new_n883 new_n833 x156 b1_l0_g95
+-110 1
+0001 1
+.names x363 x163 x52 x182 new_n883
+-000 1
+1-01 1
+.names new_n885 x107 new_n838 b1_l0_g96
+001 1
+.names x234 x103 x288 x235 new_n885
+-001 1
+1-01 1
+.names x276 new_n888 new_n887 b1_l0_g98
+-01 1
+0-1 1
+.names x283 x355 x210 x338 new_n887
+--00 0
+00-- 0
+.names x100 x103 x105 new_n888
+000 1
+.names x278 x224 x170 new_n890 b1_l0_g99
+---1 1
+011- 1
+.names x49 x51 x340 x107 new_n890
+-001 1
+-100 1
+1-01 1
+.names x226 new_n892 new_n893 b1_l0_g100
+-11 1
+0-1 1
+.names x27 x26 x28 x335 new_n892
+--11 1
+11-1 1
+.names x103 x234 x235 x288 new_n893
+-110 1
+0-10 1
+01-0 1
+.names new_n896 x339 new_n895 new_n838 b1_l0_g101
+-001 1
+0-00 1
+.names x155 x156 new_n895
+00 1
+.names x420 x96 x19 x97 new_n896
+-000 0
+1-10 0
+1101 0
+.names x403 x75 x476 x331 b1_l0_g102
+-000 0
+-011 0
+0-01 0
+.names new_n702 x18 new_n887 new_n899 b1_l0_g103
+--00 1
+01-0 1
+.names new_n887 new_n702 new_n900 new_n901 new_n899
+-100 1
+1-00 1
+.names x170 x43 x496 new_n900
+-11 1
+1-1 1
+.names x170 x151 x43 new_n901
+-11 1
+1-1 1
+.names x111 x473 x57 new_n903 b1_l0_g104
+---0 0
+001- 0
+.names x107 x108 x500 new_n903
+000 1
+.names x47 x121 x339 x212 b1_l0_g105
+-001 1
+-111 1
+1-11 1
+.names x243 x443 new_n859 new_n906 b1_l0_g106
+-111 1
+0-01 1
+.names x106 x107 x108 x177 new_n906
+0000 1
+.names new_n908 x211 x339 new_n903 b1_l0_g108
+-000 0
+-111 0
+0--1 0
+.names x147 x107 x292 x274 new_n908
+-101 1
+-110 1
+1-01 1
+11-- 1
+.names b1_l0_g105 new_n903 new_n910 new_n911 b1_l0_g109
+-0-0 1
+-00- 1
+0-00 1
+.names x106 x96 x105 x355 new_n910
+-0-1 1
+-00- 1
+0-01 1
+.names x368 x240 x257 x104 new_n911
+-000 1
+0-11 1
+00-- 1
+.names new_n903 b1_l0_g105 new_n913 new_n906 b1_l0_g110
+-000 1
+-101 1
+0-00 1
+.names x106 x104 x110 x242 new_n913
+-000 1
+0-00 1
+.names new_n906 new_n802 x74 x220 b1_l0_g111
+-101 1
+0-01 1
+.names new_n916 new_n917 x369 new_n773 b1_l0_g112
+-001 1
+1-01 1
+10-1 1
+.names x437 x203 x491 x201 new_n916
+-1-1 0
+-10- 0
+0-01 0
+.names x84 x100 x168 x242 new_n917
+0000 1
+.names new_n919 new_n920 x26 new_n921 b1_l0_g113
+-001 1
+0--1 1
+001- 1
+.names x283 x356 x211 x132 new_n919
+--10 1
+11-0 1
+.names x120 x105 x361 x433 new_n920
+---1 0
+001- 0
+.names x146 x72 x148 x404 new_n921
+-011 1
+-101 1
+0--1 1
+0-0- 1
+.names x354 x300 x464 new_n923 b1_l0_g114
+--00 1
+01-0 1
+.names x346 x491 x307 new_n924 new_n923
+--01 1
+01-1 1
+.names x464 x300 x491 x146 new_n924
+--01 0
+01-- 0
+.names new_n916 new_n926 new_n927 x50 b1_l0_g115
+-111 1
+0-11 1
+01-1 1
+011- 1
+.names x114 x177 x448 x115 new_n926
+-000 1
+-011 1
+0-01 1
+00-- 1
+.names x170 x81 x426 x117 new_n927
+--10 1
+00-0 1
+.names b1_l0_g102 new_n917 b1_l0_g116
+01 1
+.names new_n773 x326 x490 new_n927 b1_l0_g117
+--00 1
+01-0 1
+.names new_n773 new_n870 new_n908 b1_l0_g118
+-11 1
+1-1 1
+11- 1
+.names new_n756 new_n926 x59 x404 b1_l0_g119
+-000 1
+-011 1
+0-11 1
+00-- 1
+.names x98 new_n933 x226 new_n871 b1_l0_g120
+-1-1 1
+-10- 1
+1-01 1
+.names x120 x289 x343 x307 new_n933
+0001 1
+.names new_n704 new_n935 x46 x156 b1_l0_g121
+-001 1
+1-00 1
+10-- 1
+.names x368 x369 x126 x148 new_n935
+--01 0
+00-- 0
+.names new_n937 x274 x276 b1_l0_g122
+000 1
+.names new_n938 x412 x304 new_n937
+-01 1
+1-1 1
+10- 1
+.names x155 x154 x156 x18 new_n938
+-010 1
+-100 1
+1--0 1
+.names new_n883 new_n903 new_n888 new_n935 b1_l0_g123
+--01 1
+-0-1 1
+0--1 1
+001- 1
+.names x202 new_n941 new_n888 new_n698 b1_l0_g124
+-011 1
+1-01 1
+.names x108 x100 x124 new_n941
+-10 1
+1-0 1
+.names new_n802 new_n943 new_n731 new_n795 b1_l0_g125
+-0-0 1
+-00- 1
+1-00 1
+.names x248 x265 x337 x138 new_n943
+--10 1
+-0-0 1
+001- 1
+1--0 1
+.names b1_l0_g102 x243 new_n717 b1_l0_g126
+001 1
+.names new_n770 x481 new_n802 x427 b1_l0_g127
+--00 1
+00-0 1
+.names new_n919 new_n947 x412 new_n887 b1_l0_g128
+--01 1
+11-1 1
+.names x99 x96 x131 new_n947
+-10 1
+1-0 1
+.names new_n921 x267 b1_l0_g129
+00 1
+.names new_n950 new_n735 x434 x242 b1_l0_g130
+--11 1
+-00- 1
+0--1 1
+.names x156 x376 x504 x233 new_n950
+0001 1
+.names x345 x3 x74 new_n947 b1_l0_g131
+--00 1
+01-0 1
+.names new_n919 x156 new_n953 b1_l0_g132
+001 1
+.names x147 x146 x148 x149 new_n953
+-000 1
+0-00 1
+.names new_n731 new_n856 new_n921 new_n950 b1_l0_g133
+-011 1
+1-1- 1
+10-1 1
+.names x28 x100 x26 new_n734 b1_l0_g134
+-011 1
+0-01 1
+.names x242 new_n770 new_n921 x338 b1_l0_g135
+-101 1
+0-00 1
+.names new_n773 new_n737 x178 new_n958 b1_l0_g136
+-001 1
+0-01 1
+.names x18 x20 x113 x139 new_n958
+0000 1
+.names x1 x381 x490 new_n960 b1_l0_g137
+---0 0
+001- 0
+.names x424 x497 x148 x369 new_n960
+0000 1
+0011 1
+.names x347 x56 x275 new_n737 b1_l0_g138
+-011 1
+1-01 1
+.names x258 x295 x186 new_n963 b1_l0_g139
+---0 0
+001- 0
+.names x267 x339 x356 new_n963
+000 1
+.names new_n917 new_n908 x242 new_n965 b1_l0_g140
+-011 1
+-101 1
+0--1 1
+0-1- 1
+.names x178 x148 x48 x116 new_n965
+-1-1 1
+-10- 1
+1-00 1
+.names new_n943 new_n958 new_n960 new_n967 b1_l0_g141
+--10 1
+-1-0 1
+1--0 1
+111- 1
+.names x217 x72 x141 new_n967
+-10 1
+1-0 1
+.names new_n969 x104 x284 new_n737 b1_l0_g142
+--01 1
+00-1 1
+.names x52 x72 x136 x419 new_n969
+-0-0 1
+-00- 1
+1-01 1
+.names new_n770 x87 x232 new_n963 b1_l0_g143
+-011 1
+-101 1
+1--1 1
+1-1- 1
+.names x91 new_n788 x108 new_n933 b1_l0_g144
+-000 1
+0111 1
+1-01 1
+.names x219 new_n716 new_n953 b1_l0_g145
+-10 1
+1-0 1
+.names new_n716 x169 x459 new_n974 b1_l0_g146
+-001 1
+-111 1
+0-11 1
+.names x148 x146 x18 x176 new_n974
+-100 1
+1-00 1
+.names x407 x444 x425 new_n756 b1_l0_g147
+---0 0
+001- 0
+.names new_n977 new_n978 new_n788 b1_l0_g148
+001 1
+.names x345 x272 x18 x104 new_n977
+-000 1
+0-00 1
+.names x104 x18 x272 x345 new_n978
+-000 1
+0-00 1
+.names x412 x86 new_n716 b1_l0_g149
+-11 1
+0-1 1
+.names new_n981 b1_l0_g30 new_n965 new_n737 b1_l0_g150
+--10 1
+01-0 1
+.names x74 x145 x147 x150 new_n981
+-010 1
+-100 1
+1--0 1
+.names x19 new_n953 new_n756 new_n983 b1_l0_g151
+--01 1
+01-- 1
+.names x408 x152 x146 x151 new_n983
+-001 1
+0-11 1
+00-- 1
+.names new_n700 new_n908 x440 new_n933 b1_l0_g152
+-011 1
+1-10 1
+10-0 1
+.names new_n874 x351 x496 new_n986 b1_l0_g153
+---0 0
+111- 0
+.names x467 x155 x412 x156 new_n986
+-000 1
+1-00 1
+.names x276 x274 new_n938 b1_l0_g154
+-11 1
+1-1 1
+.names new_n743 x156 new_n763 x19 b1_l0_g155
+-011 1
+1-10 1
+10-1 1
+.names x276 x403 x475 x35 b1_l0_g156
+-110 1
+1-10 1
+11-1 1
+.names new_n873 new_n829 x433 new_n895 b1_l0_g157
+-101 1
+0-01 1
+.names new_n992 new_n871 new_n895 x346 b1_l0_g158
+-011 1
+-101 1
+1-00 1
+11-- 1
+.names x245 x226 x354 x299 new_n992
+--10 1
+01-0 1
+.names x240 x277 new_n802 new_n873 b1_l0_g159
+---0 0
+001- 0
+.names b1_l0_g97 b1_l0_g107
+1 1
+.end

@@ -1,0 +1,43 @@
+{
+  "accuracy": 0.83,
+  "checkpoint_step": 50000,
+  "cifar_source_sha256": {
+    "batches.meta": "f962466ef690d46b226450fb9aadc74ba4bc64a76aa526b5827fe4bc5c7125cb",
+    "data_batch_1": "54636561a3ce25bd3e19253c6b0d8538147b0ae398331ac4a2d86c6d987368cd",
+    "data_batch_2": "766b2cef9fbc745cf056b3152224f7cf77163b330ea9a15f9392beb8b89bc5a8",
+    "data_batch_3": "0f00d98ebfb30b3ec0ad19f9756dc2630b89003e10525f5e148445e82aa6a1f9",
+    "data_batch_4": "3f7bb240661948b8f4d53e36ec720d8306f5668bd0071dcb4e6c947f78e9682b",
+    "data_batch_5": "d91802434d8376bbaeeadf58a737e3a1b12ac839077e931237e0dcd43adcb154"
+  },
+  "correct": 83,
+  "count": 100,
+  "elapsed_seconds": 36.5419551609084,
+  "executor_source_sha256": {
+    "evaluate_integer_checkpoint.py": "6205625d2b6c743f6dbd19e41d87674edd939b72ed8a1afd883b9a479007fc59",
+    "export_logic_payload.py": "5f05c9c4a8a75564e9dbba8014e6197b613c5c782b3150ee71beef4e4e18436f",
+    "integer_executor.py": "d5d42ff6377b6fb70dddb3f43c84d3fff11152e9db62f9a53238b983f1c0f6db",
+    "logic_backend.py": "d467aa228c05cc10b9450c392f0ddec0394465d159d67a167f886bcdfcf9ff9a"
+  },
+  "images_per_second": 2.7365804473149073,
+  "input_dtype": "torch.uint8",
+  "linear_backend": "int_matmul",
+  "logit_code_dtype": "torch.int64",
+  "logit_exponent_dtype": "torch.int32",
+  "model_type": "EnhancedFullDiscreteViT",
+  "payload_contains_real_values": false,
+  "payload_tensor_element_inventory": {
+    "int16": 7136012,
+    "int32": 16130,
+    "int64": 84,
+    "uint8": 70890620
+  },
+  "runtime_audit_operations": 166786,
+  "runtime_floating_tensor_count": 0,
+  "schema_version": 6,
+  "source_artifact_bytes": 85381242,
+  "source_artifact_kind": "payload",
+  "source_artifact_sha256": "51ccd7bbfab9877c9cefdc070d836620be0fbc2b985fb517c7a7ada16f28a60a",
+  "split": "validation",
+  "training_or_export_float_state_is_not_runtime": true,
+  "validation_order_seed": 20260711
+}

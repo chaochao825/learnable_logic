@@ -1,0 +1,195 @@
+{
+  "deployment_contract": {
+    "activation_bits": 8,
+    "all_learned_matrix_weights": "signed bit-plane sums times power-of-two scales",
+    "attention": "threshold bits + XNOR/popcount + hard Top-K + fixed {8,4,2,1} score-gap",
+    "block_contracts": [
+      {
+        "ffn": {
+          "type": "DiscreteGatedFFN"
+        },
+        "gap": {
+          "mapping": "fixed score-gap",
+          "weights": [
+            1,
+            2,
+            4,
+            8
+          ]
+        }
+      },
+      {
+        "ffn": {
+          "type": "DiscreteGatedFFN"
+        },
+        "gap": {
+          "mapping": "fixed score-gap",
+          "weights": [
+            1,
+            2,
+            4,
+            8
+          ]
+        }
+      },
+      {
+        "ffn": {
+          "type": "DiscreteGatedFFN"
+        },
+        "gap": {
+          "mapping": "fixed score-gap",
+          "weights": [
+            1,
+            2,
+            4,
+            8
+          ]
+        }
+      },
+      {
+        "ffn": {
+          "type": "DiscreteGatedFFN"
+        },
+        "gap": {
+          "mapping": "fixed score-gap",
+          "weights": [
+            1,
+            2,
+            4,
+            8
+          ]
+        }
+      },
+      {
+        "ffn": {
+          "type": "DiscreteGatedFFN"
+        },
+        "gap": {
+          "mapping": "fixed score-gap",
+          "weights": [
+            1,
+            2,
+            4,
+            8
+          ]
+        }
+      },
+      {
+        "ffn": {
+          "type": "DiscreteGatedFFN"
+        },
+        "gap": {
+          "mapping": "fixed score-gap",
+          "weights": [
+            1,
+            2,
+            4,
+            8
+          ]
+        }
+      }
+    ],
+    "classifier_output_bits": 16,
+    "enhancements": {
+      "effective_state_expert_width": 0,
+      "gap_max": 63,
+      "group_lut_groups": 0,
+      "learned_gap": false,
+      "local_branch_shift": 2,
+      "local_layers": 0,
+      "logic_expert_count": 1,
+      "logic_expert_width": 0,
+      "state_control": "none",
+      "state_expert_width": 0
+    },
+    "ffn": "binary gate/MUX + shift-add bit-plane projections",
+    "general_matrix_multipliers": 0,
+    "linear_layer_count": 32,
+    "local_branch_contracts": {},
+    "normalization": "integer sum-of-squares + Q0.15 reciprocal-sqrt LUT",
+    "weight_magnitude_bit_values": [
+      1,
+      2,
+      4,
+      8,
+      16,
+      32,
+      64
+    ]
+  },
+  "elapsed_seconds": 6239.248612227035,
+  "final_validation_accuracy": 0.753,
+  "history": [
+    {
+      "next_learning_rate": 0.00029721386565846836,
+      "step": 5000,
+      "train_loss": 1.4937938451766968,
+      "validation_accuracy": 0.5774
+    },
+    {
+      "next_learning_rate": 0.0002805736835487436,
+      "step": 10000,
+      "train_loss": 1.3269095420837402,
+      "validation_accuracy": 0.6414
+    },
+    {
+      "next_learning_rate": 0.00025060514318951,
+      "step": 15000,
+      "train_loss": 1.119051218032837,
+      "validation_accuracy": 0.6836
+    },
+    {
+      "next_learning_rate": 0.000210489097692938,
+      "step": 20000,
+      "train_loss": 1.0054714679718018,
+      "validation_accuracy": 0.6978
+    },
+    {
+      "next_learning_rate": 0.00016448345373837076,
+      "step": 25000,
+      "train_loss": 1.0860326290130615,
+      "validation_accuracy": 0.7276
+    },
+    {
+      "next_learning_rate": 0.00011747123846013447,
+      "step": 30000,
+      "train_loss": 0.8349175453186035,
+      "validation_accuracy": 0.7388
+    },
+    {
+      "next_learning_rate": 7.444231621215771e-05,
+      "step": 35000,
+      "train_loss": 0.8076854348182678,
+      "validation_accuracy": 0.7516
+    },
+    {
+      "next_learning_rate": 3.996376565777091e-05,
+      "step": 40000,
+      "train_loss": 0.6730947494506836,
+      "validation_accuracy": 0.7534
+    },
+    {
+      "next_learning_rate": 1.7695131223209693e-05,
+      "step": 45000,
+      "train_loss": 0.6196615695953369,
+      "validation_accuracy": 0.7484
+    },
+    {
+      "next_learning_rate": 1e-05,
+      "step": 50000,
+      "train_loss": 0.6040567755699158,
+      "validation_accuracy": 0.753
+    }
+  ],
+  "parameters": 3562752,
+  "protocol_sha256": "b862d2dcc6d74f10187e233c4c76003be0c01ef0526cbb3411da7a4488a15960",
+  "source_sha256": {
+    "enhanced_model.py": "a5f2fe5c9be65bfa401d2640801fae49a637b82e3b0d81f03fbd38e89942d8ff",
+    "enhancements_expert.py": "759946fb079d575fceedf003e5ec9305006be0ab589b1a65389b4dd023c3bd7e",
+    "enhancements_lut.py": "467963c701c1d206a7214eaa51a0a6c38b459ccbbd7adb8a2bd05a2260bf70a4",
+    "enhancements_spatial.py": "97f771a649ed950c1575703edaf305b1df6571d5383835c8cf63f393a16ef006",
+    "model.py": "6e27abe3d0a50a156052bc7caf930e0f6045c92e252c8232569cc9ac5efc2629",
+    "shiftadd.py": "4aad6b05ddae19b9cdfc3c5be7e192bd4c0bf64a6a68893b46b326767abb468c",
+    "train_cifar.py": "20b7d7dd82b7239a1dc71483ed12a926ee7f765ba1916330ec9dc83b6c259567"
+  }
+}

@@ -1,0 +1,4028 @@
+{
+  "deployment_contract": {
+    "activation_bits": 8,
+    "all_learned_matrix_weights": "signed bit-plane sums times power-of-two scales",
+    "attention": "threshold bits + XNOR/popcount + hard Top-K + fixed {8,4,2,1} score-gap",
+    "block_contracts": [
+      {
+        "ffn": {
+          "type": "DiscreteGatedFFN"
+        },
+        "gap": {
+          "mapping": "fixed score-gap",
+          "weights": [
+            1,
+            2,
+            4,
+            8
+          ]
+        },
+        "global_mixer": {
+          "gap": {
+            "mapping": "fixed score-gap",
+            "weights": [
+              1,
+              2,
+              4,
+              8
+            ]
+          },
+          "operator": "xnor_popcount_hard_topk"
+        }
+      },
+      {
+        "ffn": {
+          "type": "DiscreteGatedFFN"
+        },
+        "gap": {
+          "mapping": "fixed score-gap",
+          "weights": [
+            1,
+            2,
+            4,
+            8
+          ]
+        },
+        "global_mixer": {
+          "gap": {
+            "mapping": "fixed score-gap",
+            "weights": [
+              1,
+              2,
+              4,
+              8
+            ]
+          },
+          "operator": "xnor_popcount_hard_topk"
+        }
+      },
+      {
+        "ffn": {
+          "type": "DiscreteGatedFFN"
+        },
+        "gap": {
+          "mapping": "fixed score-gap",
+          "weights": [
+            1,
+            2,
+            4,
+            8
+          ]
+        },
+        "global_mixer": {
+          "gap": {
+            "mapping": "fixed score-gap",
+            "weights": [
+              1,
+              2,
+              4,
+              8
+            ]
+          },
+          "operator": "xnor_popcount_hard_topk"
+        }
+      },
+      {
+        "ffn": {
+          "type": "DiscreteGatedFFN"
+        },
+        "gap": {
+          "mapping": "fixed score-gap",
+          "weights": [
+            1,
+            2,
+            4,
+            8
+          ]
+        },
+        "global_mixer": {
+          "gap": {
+            "mapping": "fixed score-gap",
+            "weights": [
+              1,
+              2,
+              4,
+              8
+            ]
+          },
+          "operator": "xnor_popcount_hard_topk"
+        }
+      },
+      {
+        "ffn": {
+          "type": "DiscreteGatedFFN"
+        },
+        "gap": {
+          "mapping": "fixed score-gap",
+          "weights": [
+            1,
+            2,
+            4,
+            8
+          ]
+        },
+        "global_mixer": {
+          "gap": {
+            "mapping": "fixed score-gap",
+            "weights": [
+              1,
+              2,
+              4,
+              8
+            ]
+          },
+          "operator": "xnor_popcount_hard_topk"
+        }
+      },
+      {
+        "ffn": {
+          "type": "DiscreteGatedFFN"
+        },
+        "gap": {
+          "mapping": "fixed score-gap",
+          "weights": [
+            1,
+            2,
+            4,
+            8
+          ]
+        },
+        "global_mixer": {
+          "gap": {
+            "mapping": "fixed score-gap",
+            "weights": [
+              1,
+              2,
+              4,
+              8
+            ]
+          },
+          "operator": "xnor_popcount_hard_topk"
+        }
+      },
+      {
+        "ffn": {
+          "type": "DiscreteGatedFFN"
+        },
+        "gap": {
+          "mapping": "fixed score-gap",
+          "weights": [
+            1,
+            2,
+            4,
+            8
+          ]
+        },
+        "global_mixer": {
+          "gap": {
+            "mapping": "fixed score-gap",
+            "weights": [
+              1,
+              2,
+              4,
+              8
+            ]
+          },
+          "operator": "xnor_popcount_hard_topk"
+        }
+      },
+      {
+        "ffn": {
+          "type": "DiscreteGatedFFN"
+        },
+        "gap": {
+          "mapping": "fixed score-gap",
+          "weights": [
+            1,
+            2,
+            4,
+            8
+          ]
+        },
+        "global_mixer": {
+          "gap": {
+            "mapping": "fixed score-gap",
+            "weights": [
+              1,
+              2,
+              4,
+              8
+            ]
+          },
+          "operator": "xnor_popcount_hard_topk"
+        }
+      },
+      {
+        "ffn": {
+          "type": "DiscreteGatedFFN"
+        },
+        "gap": {
+          "mapping": "fixed score-gap",
+          "weights": [
+            1,
+            2,
+            4,
+            8
+          ]
+        },
+        "global_mixer": {
+          "gap": {
+            "mapping": "fixed score-gap",
+            "weights": [
+              1,
+              2,
+              4,
+              8
+            ]
+          },
+          "operator": "xnor_popcount_hard_topk"
+        }
+      },
+      {
+        "ffn": {
+          "type": "DiscreteGatedFFN"
+        },
+        "gap": {
+          "mapping": "fixed score-gap",
+          "weights": [
+            1,
+            2,
+            4,
+            8
+          ]
+        },
+        "global_mixer": {
+          "gap": {
+            "mapping": "fixed score-gap",
+            "weights": [
+              1,
+              2,
+              4,
+              8
+            ]
+          },
+          "operator": "xnor_popcount_hard_topk"
+        }
+      },
+      {
+        "ffn": {
+          "type": "DiscreteGatedFFN"
+        },
+        "gap": {
+          "mapping": "fixed score-gap",
+          "weights": [
+            1,
+            2,
+            4,
+            8
+          ]
+        },
+        "global_mixer": {
+          "gap": {
+            "mapping": "fixed score-gap",
+            "weights": [
+              1,
+              2,
+              4,
+              8
+            ]
+          },
+          "operator": "xnor_popcount_hard_topk"
+        }
+      },
+      {
+        "ffn": {
+          "type": "DiscreteGatedFFN"
+        },
+        "gap": {
+          "mapping": "fixed score-gap",
+          "weights": [
+            1,
+            2,
+            4,
+            8
+          ]
+        },
+        "global_mixer": {
+          "gap": {
+            "mapping": "fixed score-gap",
+            "weights": [
+              1,
+              2,
+              4,
+              8
+            ]
+          },
+          "operator": "xnor_popcount_hard_topk"
+        }
+      }
+    ],
+    "classifier_output_bits": 16,
+    "enhancements": {
+      "effective_state_expert_width": 0,
+      "gap_max": 63,
+      "global_mixer": "attention",
+      "group_lut_groups": 0,
+      "hadamard_branch_shift": 2,
+      "hadamard_group_size": 32,
+      "hybrid_attention_period": 3,
+      "learned_gap": false,
+      "local_branch_shift": 2,
+      "local_layers": 0,
+      "local_operator": "depthwise_shiftadd",
+      "logic_expert_count": 1,
+      "logic_expert_width": 0,
+      "state_control": "none",
+      "state_expert_width": 0
+    },
+    "ffn": "binary gate/MUX + shift-add bit-plane projections",
+    "general_matrix_multipliers": 0,
+    "global_mixer": "content-dependent hard attention",
+    "inference_backend": "fake_quant",
+    "linear_layer_count": 62,
+    "local_branch_contracts": {},
+    "logic_lut_scope": "CPU bit-exact W-magnitude nibble LUT and packed-XNOR transaction reference; power-of-two requantization still uses a float carrier",
+    "normalization": {
+      "block": {
+        "kind": "rms_lut",
+        "normalizer": "unsigned Q0.15 reciprocal-square-root ROM",
+        "runtime_code_product": true,
+        "statistics": "rounded integer mean square"
+      },
+      "final": {
+        "kind": "rms_lut",
+        "normalizer": "unsigned Q0.15 reciprocal-square-root ROM",
+        "runtime_code_product": true,
+        "statistics": "rounded integer mean square"
+      }
+    },
+    "weight_magnitude_bit_values": [
+      1,
+      2,
+      4,
+      8,
+      16,
+      32,
+      64
+    ]
+  },
+  "elapsed_seconds": 20086.88402735116,
+  "final_validation_accuracy": 0.708,
+  "history": [
+    {
+      "gradient_clip_coefficient": 0.37045285755048846,
+      "logic_tree_gradient_l2_after_clip": 0.0,
+      "next_learning_rate": 0.00029721386565846836,
+      "normalization_statistics": {
+        "blocks.0.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            98538,
+            202782,
+            23680,
+            0
+          ],
+          "saturated_code_count": 381204
+        },
+        "blocks.0.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            126,
+            167728,
+            157146,
+            0
+          ],
+          "saturated_code_count": 1061737
+        },
+        "blocks.1.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            11,
+            127237,
+            197752,
+            0
+          ],
+          "saturated_code_count": 1742771
+        },
+        "blocks.1.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            110,
+            250539,
+            74351,
+            0
+          ],
+          "saturated_code_count": 718603
+        },
+        "blocks.10.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            4591,
+            320337,
+            72
+          ],
+          "saturated_code_count": 8734382
+        },
+        "blocks.10.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            3408,
+            321442,
+            150
+          ],
+          "saturated_code_count": 9972662
+        },
+        "blocks.11.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            3153,
+            321669,
+            178
+          ],
+          "saturated_code_count": 10167239
+        },
+        "blocks.11.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            2537,
+            322159,
+            304
+          ],
+          "saturated_code_count": 11437652
+        },
+        "blocks.2.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            57,
+            155790,
+            169153,
+            0
+          ],
+          "saturated_code_count": 1289753
+        },
+        "blocks.2.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            15,
+            230903,
+            94082,
+            0
+          ],
+          "saturated_code_count": 1167924
+        },
+        "blocks.3.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            50,
+            212570,
+            112380,
+            0
+          ],
+          "saturated_code_count": 1543352
+        },
+        "blocks.3.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            97,
+            169098,
+            155805,
+            0
+          ],
+          "saturated_code_count": 1771375
+        },
+        "blocks.4.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            14,
+            130355,
+            194631,
+            0
+          ],
+          "saturated_code_count": 2368782
+        },
+        "blocks.4.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            85238,
+            239762,
+            0
+          ],
+          "saturated_code_count": 3122935
+        },
+        "blocks.5.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            70515,
+            254485,
+            0
+          ],
+          "saturated_code_count": 3479424
+        },
+        "blocks.5.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            44400,
+            280600,
+            0
+          ],
+          "saturated_code_count": 4372825
+        },
+        "blocks.6.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            37299,
+            287701,
+            0
+          ],
+          "saturated_code_count": 4614974
+        },
+        "blocks.6.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            26944,
+            298055,
+            1
+          ],
+          "saturated_code_count": 5213825
+        },
+        "blocks.7.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            23272,
+            301727,
+            1
+          ],
+          "saturated_code_count": 5396505
+        },
+        "blocks.7.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            15032,
+            309964,
+            4
+          ],
+          "saturated_code_count": 6370641
+        },
+        "blocks.8.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            13375,
+            311619,
+            6
+          ],
+          "saturated_code_count": 6452364
+        },
+        "blocks.8.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            8177,
+            316803,
+            20
+          ],
+          "saturated_code_count": 7549270
+        },
+        "blocks.9.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            7360,
+            317612,
+            28
+          ],
+          "saturated_code_count": 7567589
+        },
+        "blocks.9.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            5048,
+            319901,
+            51
+          ],
+          "saturated_code_count": 8564298
+        },
+        "norm": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            2084,
+            322472,
+            444
+          ],
+          "saturated_code_count": 12709243
+        }
+      },
+      "peak_allocated_gib": 11.614731311798096,
+      "step": 5000,
+      "train_loss": 1.3796446323394775,
+      "training_interval_seconds": 1982.1114659952,
+      "training_seconds_per_step": 0.39642229319904,
+      "unclipped_global_gradient_l2": 2.6993978023529053,
+      "validation_accuracy": 0.5952
+    },
+    {
+      "gradient_clip_coefficient": 0.3593825314848669,
+      "logic_tree_gradient_l2_after_clip": 0.0,
+      "next_learning_rate": 0.0002805736835487436,
+      "normalization_statistics": {
+        "blocks.0.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            23367,
+            261910,
+            39723,
+            0
+          ],
+          "saturated_code_count": 576257
+        },
+        "blocks.0.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            207,
+            114315,
+            210478,
+            0
+          ],
+          "saturated_code_count": 855244
+        },
+        "blocks.1.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            43,
+            166564,
+            158393,
+            0
+          ],
+          "saturated_code_count": 1357319
+        },
+        "blocks.1.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            469,
+            196229,
+            128302,
+            0
+          ],
+          "saturated_code_count": 907773
+        },
+        "blocks.10.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            1,
+            145401,
+            179592,
+            6
+          ],
+          "saturated_code_count": 4179468
+        },
+        "blocks.10.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            1,
+            142582,
+            182407,
+            10
+          ],
+          "saturated_code_count": 3986492
+        },
+        "blocks.11.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            1,
+            139380,
+            185581,
+            38
+          ],
+          "saturated_code_count": 4447493
+        },
+        "blocks.11.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            1,
+            135593,
+            189348,
+            58
+          ],
+          "saturated_code_count": 4279319
+        },
+        "blocks.2.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            595,
+            184352,
+            140053,
+            0
+          ],
+          "saturated_code_count": 877626
+        },
+        "blocks.2.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            1495,
+            185917,
+            137588,
+            0
+          ],
+          "saturated_code_count": 1263706
+        },
+        "blocks.3.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            237,
+            197025,
+            127738,
+            0
+          ],
+          "saturated_code_count": 1772188
+        },
+        "blocks.3.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            36,
+            208370,
+            116594,
+            0
+          ],
+          "saturated_code_count": 1952838
+        },
+        "blocks.4.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            26,
+            202688,
+            122286,
+            0
+          ],
+          "saturated_code_count": 2142806
+        },
+        "blocks.4.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            6,
+            193039,
+            131955,
+            0
+          ],
+          "saturated_code_count": 2597221
+        },
+        "blocks.5.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            6,
+            187641,
+            137353,
+            0
+          ],
+          "saturated_code_count": 2676525
+        },
+        "blocks.5.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            3,
+            181377,
+            143620,
+            0
+          ],
+          "saturated_code_count": 2999561
+        },
+        "blocks.6.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            3,
+            176966,
+            148031,
+            0
+          ],
+          "saturated_code_count": 3067606
+        },
+        "blocks.6.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            2,
+            173220,
+            151778,
+            0
+          ],
+          "saturated_code_count": 3214768
+        },
+        "blocks.7.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            2,
+            168047,
+            156951,
+            0
+          ],
+          "saturated_code_count": 3410230
+        },
+        "blocks.7.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            1,
+            163974,
+            161025,
+            0
+          ],
+          "saturated_code_count": 3512941
+        },
+        "blocks.8.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            1,
+            160544,
+            164454,
+            1
+          ],
+          "saturated_code_count": 3530773
+        },
+        "blocks.8.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            1,
+            154754,
+            170244,
+            1
+          ],
+          "saturated_code_count": 3896557
+        },
+        "blocks.9.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            1,
+            150867,
+            174129,
+            3
+          ],
+          "saturated_code_count": 4036113
+        },
+        "blocks.9.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            1,
+            148181,
+            176814,
+            4
+          ],
+          "saturated_code_count": 3892327
+        },
+        "norm": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            1,
+            126189,
+            198764,
+            46
+          ],
+          "saturated_code_count": 5417070
+        }
+      },
+      "peak_allocated_gib": 11.614731311798096,
+      "step": 10000,
+      "train_loss": 1.1929174661636353,
+      "training_interval_seconds": 1979.5207555778325,
+      "training_seconds_per_step": 0.3959041511155665,
+      "unclipped_global_gradient_l2": 2.7825493812561035,
+      "validation_accuracy": 0.6506
+    },
+    {
+      "gradient_clip_coefficient": 0.30127217152662894,
+      "logic_tree_gradient_l2_after_clip": 0.0,
+      "next_learning_rate": 0.00025060514318951,
+      "normalization_statistics": {
+        "blocks.0.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            19631,
+            261860,
+            43509,
+            0
+          ],
+          "saturated_code_count": 591617
+        },
+        "blocks.0.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            40,
+            257811,
+            67149,
+            0
+          ],
+          "saturated_code_count": 625389
+        },
+        "blocks.1.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            136,
+            184660,
+            140204,
+            0
+          ],
+          "saturated_code_count": 1045949
+        },
+        "blocks.1.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            442,
+            182650,
+            141908,
+            0
+          ],
+          "saturated_code_count": 1004920
+        },
+        "blocks.10.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            1495,
+            167711,
+            155792,
+            2
+          ],
+          "saturated_code_count": 3291946
+        },
+        "blocks.10.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            1473,
+            167225,
+            156300,
+            2
+          ],
+          "saturated_code_count": 2902339
+        },
+        "blocks.11.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            1466,
+            163901,
+            159631,
+            2
+          ],
+          "saturated_code_count": 3461609
+        },
+        "blocks.11.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            1436,
+            162701,
+            160862,
+            1
+          ],
+          "saturated_code_count": 3096984
+        },
+        "blocks.2.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            1484,
+            196009,
+            127507,
+            0
+          ],
+          "saturated_code_count": 1162580
+        },
+        "blocks.2.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            2238,
+            278691,
+            44071,
+            0
+          ],
+          "saturated_code_count": 631764
+        },
+        "blocks.3.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            2921,
+            252159,
+            69920,
+            0
+          ],
+          "saturated_code_count": 1032384
+        },
+        "blocks.3.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            4201,
+            237801,
+            82998,
+            0
+          ],
+          "saturated_code_count": 1614042
+        },
+        "blocks.4.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            3601,
+            224432,
+            96967,
+            0
+          ],
+          "saturated_code_count": 1746483
+        },
+        "blocks.4.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            2684,
+            215322,
+            106994,
+            0
+          ],
+          "saturated_code_count": 2173945
+        },
+        "blocks.5.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            2596,
+            204771,
+            117633,
+            0
+          ],
+          "saturated_code_count": 2313938
+        },
+        "blocks.5.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            2130,
+            200340,
+            122530,
+            0
+          ],
+          "saturated_code_count": 2545278
+        },
+        "blocks.6.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            2024,
+            192426,
+            130550,
+            0
+          ],
+          "saturated_code_count": 2670398
+        },
+        "blocks.6.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            1811,
+            190598,
+            132591,
+            0
+          ],
+          "saturated_code_count": 2691258
+        },
+        "blocks.7.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            1753,
+            181084,
+            142163,
+            0
+          ],
+          "saturated_code_count": 3008336
+        },
+        "blocks.7.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            1652,
+            180317,
+            143031,
+            0
+          ],
+          "saturated_code_count": 2814069
+        },
+        "blocks.8.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            1643,
+            175628,
+            147729,
+            0
+          ],
+          "saturated_code_count": 2967601
+        },
+        "blocks.8.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            1525,
+            173663,
+            149812,
+            0
+          ],
+          "saturated_code_count": 3039625
+        },
+        "blocks.9.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            1508,
+            170090,
+            153401,
+            1
+          ],
+          "saturated_code_count": 3292999
+        },
+        "blocks.9.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            1498,
+            169645,
+            153855,
+            2
+          ],
+          "saturated_code_count": 2986285
+        },
+        "norm": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            1386,
+            153671,
+            169942,
+            1
+          ],
+          "saturated_code_count": 4153481
+        }
+      },
+      "peak_allocated_gib": 11.614731311798096,
+      "step": 15000,
+      "train_loss": 1.1626791954040527,
+      "training_interval_seconds": 1981.3039026497863,
+      "training_seconds_per_step": 0.3962607805299573,
+      "unclipped_global_gradient_l2": 3.3192567825317383,
+      "validation_accuracy": 0.668
+    },
+    {
+      "gradient_clip_coefficient": 0.37785561903572734,
+      "logic_tree_gradient_l2_after_clip": 0.0,
+      "next_learning_rate": 0.000210489097692938,
+      "normalization_statistics": {
+        "blocks.0.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            14464,
+            261593,
+            48943,
+            0
+          ],
+          "saturated_code_count": 612599
+        },
+        "blocks.0.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            126,
+            295399,
+            29475,
+            0
+          ],
+          "saturated_code_count": 286920
+        },
+        "blocks.1.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            80,
+            186454,
+            138466,
+            0
+          ],
+          "saturated_code_count": 999862
+        },
+        "blocks.1.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            486,
+            184090,
+            140424,
+            0
+          ],
+          "saturated_code_count": 957315
+        },
+        "blocks.10.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            1275,
+            189298,
+            134424,
+            3
+          ],
+          "saturated_code_count": 3264861
+        },
+        "blocks.10.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            1235,
+            188888,
+            134874,
+            3
+          ],
+          "saturated_code_count": 2949416
+        },
+        "blocks.11.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            1256,
+            185148,
+            138593,
+            3
+          ],
+          "saturated_code_count": 3482744
+        },
+        "blocks.11.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            1238,
+            184152,
+            139605,
+            5
+          ],
+          "saturated_code_count": 3032220
+        },
+        "blocks.2.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            2390,
+            193704,
+            128906,
+            0
+          ],
+          "saturated_code_count": 1172397
+        },
+        "blocks.2.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            5388,
+            278703,
+            40909,
+            0
+          ],
+          "saturated_code_count": 586403
+        },
+        "blocks.3.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            5857,
+            262867,
+            56276,
+            0
+          ],
+          "saturated_code_count": 944673
+        },
+        "blocks.3.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            4556,
+            254612,
+            65832,
+            0
+          ],
+          "saturated_code_count": 1563119
+        },
+        "blocks.4.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            3825,
+            239864,
+            81311,
+            0
+          ],
+          "saturated_code_count": 1715608
+        },
+        "blocks.4.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            2504,
+            232917,
+            89579,
+            0
+          ],
+          "saturated_code_count": 2213307
+        },
+        "blocks.5.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            2328,
+            221296,
+            101376,
+            0
+          ],
+          "saturated_code_count": 2361903
+        },
+        "blocks.5.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            1948,
+            217533,
+            105518,
+            1
+          ],
+          "saturated_code_count": 2533290
+        },
+        "blocks.6.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            1841,
+            209639,
+            113520,
+            0
+          ],
+          "saturated_code_count": 2679908
+        },
+        "blocks.6.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            1592,
+            208500,
+            114908,
+            0
+          ],
+          "saturated_code_count": 2715097
+        },
+        "blocks.7.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            1503,
+            200278,
+            123218,
+            1
+          ],
+          "saturated_code_count": 3023659
+        },
+        "blocks.7.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            1418,
+            200671,
+            122908,
+            3
+          ],
+          "saturated_code_count": 2721347
+        },
+        "blocks.8.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            1411,
+            195970,
+            127615,
+            4
+          ],
+          "saturated_code_count": 2969687
+        },
+        "blocks.8.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            1318,
+            195361,
+            128318,
+            3
+          ],
+          "saturated_code_count": 2852697
+        },
+        "blocks.9.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            1309,
+            191583,
+            132105,
+            3
+          ],
+          "saturated_code_count": 3102658
+        },
+        "blocks.9.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            1272,
+            191758,
+            131967,
+            3
+          ],
+          "saturated_code_count": 2869843
+        },
+        "norm": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            1158,
+            177260,
+            146577,
+            5
+          ],
+          "saturated_code_count": 4061885
+        }
+      },
+      "peak_allocated_gib": 11.614731311798096,
+      "step": 20000,
+      "train_loss": 1.04762864112854,
+      "training_interval_seconds": 1991.7202906631865,
+      "training_seconds_per_step": 0.3983440581326373,
+      "unclipped_global_gradient_l2": 2.646512508392334,
+      "validation_accuracy": 0.6888
+    },
+    {
+      "gradient_clip_coefficient": 0.2173069689644714,
+      "logic_tree_gradient_l2_after_clip": 0.0,
+      "next_learning_rate": 0.00016448345373837076,
+      "normalization_statistics": {
+        "blocks.0.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            14855,
+            259241,
+            50904,
+            0
+          ],
+          "saturated_code_count": 609819
+        },
+        "blocks.0.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            195,
+            294700,
+            30105,
+            0
+          ],
+          "saturated_code_count": 283350
+        },
+        "blocks.1.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            105,
+            184679,
+            140216,
+            0
+          ],
+          "saturated_code_count": 986721
+        },
+        "blocks.1.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            317,
+            186875,
+            137808,
+            0
+          ],
+          "saturated_code_count": 939140
+        },
+        "blocks.10.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            1154,
+            198921,
+            124910,
+            15
+          ],
+          "saturated_code_count": 2973388
+        },
+        "blocks.10.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            1151,
+            198740,
+            125105,
+            4
+          ],
+          "saturated_code_count": 2594197
+        },
+        "blocks.11.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            1152,
+            195044,
+            128800,
+            4
+          ],
+          "saturated_code_count": 3048342
+        },
+        "blocks.11.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            1142,
+            193795,
+            130061,
+            2
+          ],
+          "saturated_code_count": 2695055
+        },
+        "blocks.2.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            2318,
+            194603,
+            128079,
+            0
+          ],
+          "saturated_code_count": 1197439
+        },
+        "blocks.2.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            4321,
+            288399,
+            32280,
+            0
+          ],
+          "saturated_code_count": 489354
+        },
+        "blocks.3.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            4371,
+            264688,
+            55941,
+            0
+          ],
+          "saturated_code_count": 897952
+        },
+        "blocks.3.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            2781,
+            257658,
+            64561,
+            0
+          ],
+          "saturated_code_count": 1491637
+        },
+        "blocks.4.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            2333,
+            244376,
+            78291,
+            0
+          ],
+          "saturated_code_count": 1543493
+        },
+        "blocks.4.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            1824,
+            240882,
+            82294,
+            0
+          ],
+          "saturated_code_count": 1942525
+        },
+        "blocks.5.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            1700,
+            230905,
+            92395,
+            0
+          ],
+          "saturated_code_count": 1989949
+        },
+        "blocks.5.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            1536,
+            229624,
+            93839,
+            1
+          ],
+          "saturated_code_count": 2172408
+        },
+        "blocks.6.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            1454,
+            222030,
+            101516,
+            0
+          ],
+          "saturated_code_count": 2314671
+        },
+        "blocks.6.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            1385,
+            221888,
+            101725,
+            2
+          ],
+          "saturated_code_count": 2326113
+        },
+        "blocks.7.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            1327,
+            213040,
+            110630,
+            3
+          ],
+          "saturated_code_count": 2620723
+        },
+        "blocks.7.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            1275,
+            212734,
+            110987,
+            4
+          ],
+          "saturated_code_count": 2559849
+        },
+        "blocks.8.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            1262,
+            206776,
+            116954,
+            8
+          ],
+          "saturated_code_count": 2660258
+        },
+        "blocks.8.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            1218,
+            206568,
+            117205,
+            9
+          ],
+          "saturated_code_count": 2591949
+        },
+        "blocks.9.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            1176,
+            202201,
+            121608,
+            15
+          ],
+          "saturated_code_count": 2883533
+        },
+        "blocks.9.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            1165,
+            202471,
+            121351,
+            13
+          ],
+          "saturated_code_count": 2604215
+        },
+        "norm": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            1126,
+            190916,
+            132955,
+            3
+          ],
+          "saturated_code_count": 3294649
+        }
+      },
+      "peak_allocated_gib": 11.614731311798096,
+      "step": 25000,
+      "train_loss": 1.236778974533081,
+      "training_interval_seconds": 2003.39145409083,
+      "training_seconds_per_step": 0.40067829081816597,
+      "unclipped_global_gradient_l2": 4.6017842292785645,
+      "validation_accuracy": 0.6878
+    },
+    {
+      "gradient_clip_coefficient": 0.2963167433479254,
+      "logic_tree_gradient_l2_after_clip": 0.0,
+      "next_learning_rate": 0.00011747123846013447,
+      "normalization_statistics": {
+        "blocks.0.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            14823,
+            256846,
+            53331,
+            0
+          ],
+          "saturated_code_count": 599620
+        },
+        "blocks.0.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            176,
+            285746,
+            39078,
+            0
+          ],
+          "saturated_code_count": 382674
+        },
+        "blocks.1.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            149,
+            191722,
+            133129,
+            0
+          ],
+          "saturated_code_count": 937650
+        },
+        "blocks.1.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            282,
+            207704,
+            117014,
+            0
+          ],
+          "saturated_code_count": 789111
+        },
+        "blocks.10.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            414,
+            215416,
+            109163,
+            7
+          ],
+          "saturated_code_count": 2361589
+        },
+        "blocks.10.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            447,
+            215677,
+            108875,
+            1
+          ],
+          "saturated_code_count": 1967381
+        },
+        "blocks.11.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            490,
+            211246,
+            113264,
+            0
+          ],
+          "saturated_code_count": 2542113
+        },
+        "blocks.11.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            524,
+            210891,
+            113585,
+            0
+          ],
+          "saturated_code_count": 1983900
+        },
+        "blocks.2.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            2570,
+            186138,
+            136292,
+            0
+          ],
+          "saturated_code_count": 1243639
+        },
+        "blocks.2.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            4724,
+            265640,
+            54636,
+            0
+          ],
+          "saturated_code_count": 668739
+        },
+        "blocks.3.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            2208,
+            264052,
+            58740,
+            0
+          ],
+          "saturated_code_count": 915652
+        },
+        "blocks.3.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            949,
+            267149,
+            56902,
+            0
+          ],
+          "saturated_code_count": 1283246
+        },
+        "blocks.4.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            782,
+            255378,
+            68840,
+            0
+          ],
+          "saturated_code_count": 1395394
+        },
+        "blocks.4.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            550,
+            252239,
+            72211,
+            0
+          ],
+          "saturated_code_count": 1696652
+        },
+        "blocks.5.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            503,
+            244010,
+            80487,
+            0
+          ],
+          "saturated_code_count": 1740168
+        },
+        "blocks.5.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            462,
+            242574,
+            81962,
+            2
+          ],
+          "saturated_code_count": 1850345
+        },
+        "blocks.6.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            430,
+            236133,
+            88436,
+            1
+          ],
+          "saturated_code_count": 1942573
+        },
+        "blocks.6.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            408,
+            236098,
+            88493,
+            1
+          ],
+          "saturated_code_count": 1885641
+        },
+        "blocks.7.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            376,
+            228373,
+            96246,
+            5
+          ],
+          "saturated_code_count": 2179931
+        },
+        "blocks.7.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            387,
+            228928,
+            95677,
+            8
+          ],
+          "saturated_code_count": 1997926
+        },
+        "blocks.8.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            376,
+            223506,
+            101103,
+            15
+          ],
+          "saturated_code_count": 2200904
+        },
+        "blocks.8.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            393,
+            223857,
+            100737,
+            13
+          ],
+          "saturated_code_count": 2093228
+        },
+        "blocks.9.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            379,
+            219138,
+            105464,
+            19
+          ],
+          "saturated_code_count": 2378425
+        },
+        "blocks.9.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            419,
+            219769,
+            104802,
+            10
+          ],
+          "saturated_code_count": 1968690
+        },
+        "norm": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            629,
+            208503,
+            115867,
+            1
+          ],
+          "saturated_code_count": 2651010
+        }
+      },
+      "peak_allocated_gib": 11.614731311798096,
+      "step": 30000,
+      "train_loss": 1.0322376489639282,
+      "training_interval_seconds": 2004.0656402660534,
+      "training_seconds_per_step": 0.4008131280532107,
+      "unclipped_global_gradient_l2": 3.3747661113739014,
+      "validation_accuracy": 0.701
+    },
+    {
+      "gradient_clip_coefficient": 0.23900788449814045,
+      "logic_tree_gradient_l2_after_clip": 0.0,
+      "next_learning_rate": 7.444231621215771e-05,
+      "normalization_statistics": {
+        "blocks.0.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            12034,
+            257971,
+            54995,
+            0
+          ],
+          "saturated_code_count": 631552
+        },
+        "blocks.0.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            159,
+            278960,
+            45881,
+            0
+          ],
+          "saturated_code_count": 460812
+        },
+        "blocks.1.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            132,
+            192201,
+            132667,
+            0
+          ],
+          "saturated_code_count": 938638
+        },
+        "blocks.1.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            182,
+            227693,
+            97125,
+            0
+          ],
+          "saturated_code_count": 701438
+        },
+        "blocks.10.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            1405,
+            215375,
+            108219,
+            1
+          ],
+          "saturated_code_count": 2010842
+        },
+        "blocks.10.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            1787,
+            215539,
+            107673,
+            1
+          ],
+          "saturated_code_count": 1520452
+        },
+        "blocks.11.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            2088,
+            210457,
+            112452,
+            3
+          ],
+          "saturated_code_count": 2269504
+        },
+        "blocks.11.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            2441,
+            209588,
+            112970,
+            1
+          ],
+          "saturated_code_count": 1793351
+        },
+        "blocks.2.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            815,
+            192783,
+            131402,
+            0
+          ],
+          "saturated_code_count": 1099169
+        },
+        "blocks.2.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            8213,
+            225702,
+            91085,
+            0
+          ],
+          "saturated_code_count": 951408
+        },
+        "blocks.3.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            2602,
+            242914,
+            79484,
+            0
+          ],
+          "saturated_code_count": 1076806
+        },
+        "blocks.3.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            1853,
+            257959,
+            65188,
+            0
+          ],
+          "saturated_code_count": 1232826
+        },
+        "blocks.4.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            1533,
+            249728,
+            73739,
+            0
+          ],
+          "saturated_code_count": 1292995
+        },
+        "blocks.4.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            785,
+            247758,
+            76457,
+            0
+          ],
+          "saturated_code_count": 1525756
+        },
+        "blocks.5.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            722,
+            240427,
+            83851,
+            0
+          ],
+          "saturated_code_count": 1586591
+        },
+        "blocks.5.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            650,
+            238544,
+            85805,
+            1
+          ],
+          "saturated_code_count": 1721821
+        },
+        "blocks.6.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            589,
+            231342,
+            93069,
+            0
+          ],
+          "saturated_code_count": 1822190
+        },
+        "blocks.6.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            659,
+            232465,
+            91875,
+            1
+          ],
+          "saturated_code_count": 1640803
+        },
+        "blocks.7.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            630,
+            226472,
+            97897,
+            1
+          ],
+          "saturated_code_count": 1983271
+        },
+        "blocks.7.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            691,
+            227100,
+            97208,
+            1
+          ],
+          "saturated_code_count": 1805337
+        },
+        "blocks.8.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            724,
+            222836,
+            101438,
+            2
+          ],
+          "saturated_code_count": 2048254
+        },
+        "blocks.8.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            926,
+            223206,
+            100864,
+            4
+          ],
+          "saturated_code_count": 1861815
+        },
+        "blocks.9.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            943,
+            220131,
+            103922,
+            4
+          ],
+          "saturated_code_count": 2072786
+        },
+        "blocks.9.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            1238,
+            220968,
+            102791,
+            3
+          ],
+          "saturated_code_count": 1621195
+        },
+        "norm": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            3383,
+            207968,
+            113649,
+            0
+          ],
+          "saturated_code_count": 2387350
+        }
+      },
+      "peak_allocated_gib": 11.614731311798096,
+      "step": 35000,
+      "train_loss": 1.0918562412261963,
+      "training_interval_seconds": 2011.5599848306738,
+      "training_seconds_per_step": 0.40231199696613473,
+      "unclipped_global_gradient_l2": 4.183961391448975,
+      "validation_accuracy": 0.7084
+    },
+    {
+      "gradient_clip_coefficient": 0.2661199620614178,
+      "logic_tree_gradient_l2_after_clip": 0.0,
+      "next_learning_rate": 3.996376565777091e-05,
+      "normalization_statistics": {
+        "blocks.0.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            8335,
+            255229,
+            61436,
+            0
+          ],
+          "saturated_code_count": 660793
+        },
+        "blocks.0.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            112,
+            261800,
+            63088,
+            0
+          ],
+          "saturated_code_count": 583118
+        },
+        "blocks.1.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            171,
+            190319,
+            134510,
+            0
+          ],
+          "saturated_code_count": 952110
+        },
+        "blocks.1.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            144,
+            232114,
+            92742,
+            0
+          ],
+          "saturated_code_count": 683918
+        },
+        "blocks.10.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            2811,
+            185488,
+            136699,
+            2
+          ],
+          "saturated_code_count": 2335584
+        },
+        "blocks.10.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            3358,
+            186830,
+            134811,
+            1
+          ],
+          "saturated_code_count": 1599901
+        },
+        "blocks.11.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            3532,
+            178713,
+            142750,
+            5
+          ],
+          "saturated_code_count": 2740075
+        },
+        "blocks.11.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            3719,
+            178417,
+            142859,
+            5
+          ],
+          "saturated_code_count": 2063502
+        },
+        "blocks.2.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            733,
+            211115,
+            113152,
+            0
+          ],
+          "saturated_code_count": 885876
+        },
+        "blocks.2.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            8773,
+            209599,
+            106628,
+            0
+          ],
+          "saturated_code_count": 1068651
+        },
+        "blocks.3.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            3569,
+            218873,
+            102558,
+            0
+          ],
+          "saturated_code_count": 1272969
+        },
+        "blocks.3.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            3230,
+            222293,
+            99477,
+            0
+          ],
+          "saturated_code_count": 1606410
+        },
+        "blocks.4.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            2501,
+            215103,
+            107396,
+            0
+          ],
+          "saturated_code_count": 1608971
+        },
+        "blocks.4.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            1629,
+            214411,
+            108960,
+            0
+          ],
+          "saturated_code_count": 1815226
+        },
+        "blocks.5.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            1506,
+            207791,
+            115703,
+            0
+          ],
+          "saturated_code_count": 1885032
+        },
+        "blocks.5.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            1333,
+            206745,
+            116922,
+            0
+          ],
+          "saturated_code_count": 2011424
+        },
+        "blocks.6.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            1272,
+            200562,
+            123166,
+            0
+          ],
+          "saturated_code_count": 2081269
+        },
+        "blocks.6.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            1456,
+            202524,
+            121020,
+            0
+          ],
+          "saturated_code_count": 1758379
+        },
+        "blocks.7.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            1411,
+            196117,
+            127472,
+            0
+          ],
+          "saturated_code_count": 2255614
+        },
+        "blocks.7.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            1669,
+            197587,
+            125744,
+            0
+          ],
+          "saturated_code_count": 1908123
+        },
+        "blocks.8.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            1790,
+            192601,
+            130609,
+            0
+          ],
+          "saturated_code_count": 2255060
+        },
+        "blocks.8.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            2077,
+            193645,
+            129278,
+            0
+          ],
+          "saturated_code_count": 1952645
+        },
+        "blocks.9.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            2134,
+            190153,
+            132713,
+            0
+          ],
+          "saturated_code_count": 2292921
+        },
+        "blocks.9.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            2585,
+            191420,
+            130995,
+            0
+          ],
+          "saturated_code_count": 1788534
+        },
+        "norm": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            3909,
+            178864,
+            142224,
+            3
+          ],
+          "saturated_code_count": 2778403
+        }
+      },
+      "peak_allocated_gib": 11.614731311798096,
+      "step": 40000,
+      "train_loss": 0.7993265390396118,
+      "training_interval_seconds": 2011.9174920567311,
+      "training_seconds_per_step": 0.40238349841134624,
+      "unclipped_global_gradient_l2": 3.7577028274536133,
+      "validation_accuracy": 0.7114
+    },
+    {
+      "gradient_clip_coefficient": 0.2135761854911363,
+      "logic_tree_gradient_l2_after_clip": 0.0,
+      "next_learning_rate": 1.7695131223209693e-05,
+      "normalization_statistics": {
+        "blocks.0.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            6460,
+            251474,
+            67066,
+            0
+          ],
+          "saturated_code_count": 676744
+        },
+        "blocks.0.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            87,
+            241527,
+            83386,
+            0
+          ],
+          "saturated_code_count": 701427
+        },
+        "blocks.1.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            195,
+            195330,
+            129475,
+            0
+          ],
+          "saturated_code_count": 928889
+        },
+        "blocks.1.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            138,
+            239624,
+            85238,
+            0
+          ],
+          "saturated_code_count": 700017
+        },
+        "blocks.10.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            2824,
+            172541,
+            149635,
+            0
+          ],
+          "saturated_code_count": 2369126
+        },
+        "blocks.10.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            3142,
+            174510,
+            147348,
+            0
+          ],
+          "saturated_code_count": 1620891
+        },
+        "blocks.11.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            3179,
+            166284,
+            155534,
+            3
+          ],
+          "saturated_code_count": 2829800
+        },
+        "blocks.11.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            3161,
+            165448,
+            156387,
+            4
+          ],
+          "saturated_code_count": 2222476
+        },
+        "blocks.2.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            450,
+            219316,
+            105234,
+            0
+          ],
+          "saturated_code_count": 829259
+        },
+        "blocks.2.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            8179,
+            206555,
+            110266,
+            0
+          ],
+          "saturated_code_count": 1068489
+        },
+        "blocks.3.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            3846,
+            202415,
+            118739,
+            0
+          ],
+          "saturated_code_count": 1376407
+        },
+        "blocks.3.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            4020,
+            201653,
+            119327,
+            0
+          ],
+          "saturated_code_count": 1781655
+        },
+        "blocks.4.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            3156,
+            194847,
+            126997,
+            0
+          ],
+          "saturated_code_count": 1717052
+        },
+        "blocks.4.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            2196,
+            194105,
+            128699,
+            0
+          ],
+          "saturated_code_count": 1991955
+        },
+        "blocks.5.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            2016,
+            188170,
+            134814,
+            0
+          ],
+          "saturated_code_count": 2009521
+        },
+        "blocks.5.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            1871,
+            187997,
+            135132,
+            0
+          ],
+          "saturated_code_count": 2119329
+        },
+        "blocks.6.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            1801,
+            183022,
+            140177,
+            0
+          ],
+          "saturated_code_count": 2169544
+        },
+        "blocks.6.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            2021,
+            186304,
+            136675,
+            0
+          ],
+          "saturated_code_count": 1738816
+        },
+        "blocks.7.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            1889,
+            180263,
+            142848,
+            0
+          ],
+          "saturated_code_count": 2278198
+        },
+        "blocks.7.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            2095,
+            181998,
+            140907,
+            0
+          ],
+          "saturated_code_count": 1963434
+        },
+        "blocks.8.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            2151,
+            177129,
+            145720,
+            0
+          ],
+          "saturated_code_count": 2298009
+        },
+        "blocks.8.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            2452,
+            178873,
+            143675,
+            0
+          ],
+          "saturated_code_count": 2012555
+        },
+        "blocks.9.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            2380,
+            175440,
+            147180,
+            0
+          ],
+          "saturated_code_count": 2318011
+        },
+        "blocks.9.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            2714,
+            177815,
+            144471,
+            0
+          ],
+          "saturated_code_count": 1799323
+        },
+        "norm": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            2904,
+            165345,
+            156747,
+            4
+          ],
+          "saturated_code_count": 2984639
+        }
+      },
+      "peak_allocated_gib": 11.614731311798096,
+      "step": 45000,
+      "train_loss": 0.7229669094085693,
+      "training_interval_seconds": 2012.7860920019448,
+      "training_seconds_per_step": 0.40255721840038894,
+      "unclipped_global_gradient_l2": 4.682168960571289,
+      "validation_accuracy": 0.7102
+    },
+    {
+      "gradient_clip_coefficient": 0.2678848699670257,
+      "logic_tree_gradient_l2_after_clip": 0.0,
+      "next_learning_rate": 1e-05,
+      "normalization_statistics": {
+        "blocks.0.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            5653,
+            251957,
+            67390,
+            0
+          ],
+          "saturated_code_count": 674515
+        },
+        "blocks.0.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            92,
+            240697,
+            84211,
+            0
+          ],
+          "saturated_code_count": 708112
+        },
+        "blocks.1.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            207,
+            194380,
+            130413,
+            0
+          ],
+          "saturated_code_count": 929135
+        },
+        "blocks.1.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            140,
+            241009,
+            83851,
+            0
+          ],
+          "saturated_code_count": 708099
+        },
+        "blocks.10.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            2809,
+            165544,
+            156645,
+            2
+          ],
+          "saturated_code_count": 2446150
+        },
+        "blocks.10.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            3065,
+            167715,
+            154218,
+            2
+          ],
+          "saturated_code_count": 1669480
+        },
+        "blocks.11.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            2905,
+            157437,
+            164641,
+            17
+          ],
+          "saturated_code_count": 3025104
+        },
+        "blocks.11.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            2811,
+            156537,
+            165636,
+            16
+          ],
+          "saturated_code_count": 2366274
+        },
+        "blocks.2.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            436,
+            222544,
+            102020,
+            0
+          ],
+          "saturated_code_count": 807500
+        },
+        "blocks.2.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            6682,
+            209058,
+            109260,
+            0
+          ],
+          "saturated_code_count": 1044096
+        },
+        "blocks.3.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            3867,
+            200540,
+            120593,
+            0
+          ],
+          "saturated_code_count": 1359945
+        },
+        "blocks.3.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            4169,
+            197496,
+            123335,
+            0
+          ],
+          "saturated_code_count": 1787807
+        },
+        "blocks.4.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            3298,
+            189653,
+            132049,
+            0
+          ],
+          "saturated_code_count": 1713196
+        },
+        "blocks.4.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            2388,
+            188862,
+            133750,
+            0
+          ],
+          "saturated_code_count": 1950568
+        },
+        "blocks.5.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            2218,
+            182714,
+            140068,
+            0
+          ],
+          "saturated_code_count": 1964506
+        },
+        "blocks.5.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            2042,
+            182272,
+            140686,
+            0
+          ],
+          "saturated_code_count": 2086064
+        },
+        "blocks.6.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            1982,
+            177419,
+            145599,
+            0
+          ],
+          "saturated_code_count": 2153389
+        },
+        "blocks.6.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            2201,
+            181011,
+            141788,
+            0
+          ],
+          "saturated_code_count": 1699494
+        },
+        "blocks.7.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            2034,
+            174517,
+            148449,
+            0
+          ],
+          "saturated_code_count": 2232363
+        },
+        "blocks.7.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            2166,
+            176070,
+            146762,
+            2
+          ],
+          "saturated_code_count": 1939423
+        },
+        "blocks.8.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            2209,
+            170575,
+            152213,
+            3
+          ],
+          "saturated_code_count": 2281118
+        },
+        "blocks.8.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            2420,
+            172195,
+            150382,
+            3
+          ],
+          "saturated_code_count": 2010713
+        },
+        "blocks.9.norm1": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            2422,
+            168259,
+            154317,
+            2
+          ],
+          "saturated_code_count": 2351083
+        },
+        "blocks.9.norm2": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            2722,
+            170900,
+            151376,
+            2
+          ],
+          "saturated_code_count": 1796196
+        },
+        "norm": {
+          "code_count": 124800000,
+          "nearest_rms_shift_histogram": [
+            0,
+            0,
+            0,
+            0,
+            2323,
+            155211,
+            167462,
+            4
+          ],
+          "saturated_code_count": 3152312
+        }
+      },
+      "peak_allocated_gib": 11.614731311798096,
+      "step": 50000,
+      "train_loss": 0.6754242181777954,
+      "training_interval_seconds": 2012.5641239178367,
+      "training_seconds_per_step": 0.4025128247835673,
+      "unclipped_global_gradient_l2": 3.7329459190368652,
+      "validation_accuracy": 0.708
+    }
+  ],
+  "parameters": 28359168,
+  "protocol_sha256": "74116dda720e5299a729718a2c0f4eeaddfb579d2bb32b9fb57b93aeb9ea23c9",
+  "source_sha256": {
+    "__init__.py": "efa4661d5fff2269d6bd7666c11f8321d0989b66ebf53302ab2344a4935e0ff4",
+    "enhanced_model.py": "df0a0f98497d8ad4ddad5fcfe785ca564fcd2187ae7629c74307bc8c19184647",
+    "enhancements_expert.py": "bb5bdf59ff2601dc499df511f22f22673b4c9e5cebbf332c9cdc9b3f3cad8885",
+    "enhancements_hadamard.py": "75a324549fb0429bc71f1c1fd639e499ee76adacddfc9be395973ab5af3ba904",
+    "enhancements_logic_tree.py": "cf828073c5279ed58be7da730c02d708f4643279f67706bf82718d039b2c2dcf",
+    "enhancements_lut.py": "21bf594009bb2608679c97339b14d7bac8bc3d79aa6d4167eddfe20ab0a41e9b",
+    "enhancements_spatial.py": "ff07894866109e388d5ce22371d43a7cb716d40d8bbf9eca5c27eb5a45967cc4",
+    "logic_backend.py": "b06b2cae779fbf4734687a79ae3ff168a4c24448ebf432b784c4355bb0b3f7df",
+    "model.py": "a3e501c74fdbb67719900a4ff26ee27b0aa1819a7378b39f70969cb37d566e6e",
+    "shiftadd.py": "d44638f5f1e978ce9df9a57643dd786ff672753dae551939d38c329c4a4d2c4a",
+    "train_cifar.py": "c12b045c480ce7453058905908553065a69f41a37f9dddd6fa03028b44a0c4ca"
+  }
+}

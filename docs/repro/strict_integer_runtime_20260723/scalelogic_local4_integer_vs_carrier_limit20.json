@@ -1,0 +1,12 @@
+{
+  "checkpoint_step": 50000,
+  "count": 20,
+  "exact_logit_rows": 20,
+  "float_reference_is_offline_verification_only": true,
+  "integer_correct": 16,
+  "maximum_absolute_logit_difference": 0,
+  "prediction_mismatches": 0,
+  "reference_correct": 16,
+  "strict_runtime_audit_operations": 146980,
+  "strict_runtime_floating_tensor_count": 0
+}

@@ -1,0 +1,145 @@
+{
+  "batches": 8,
+  "blocks": [
+    {
+      "block": 0,
+      "count_entropy_bits": 3.1539419729177904,
+      "count_histogram": [
+        39573128,
+        30733786,
+        27677050,
+        26784686,
+        26476576,
+        26622534,
+        27393463,
+        30010768,
+        37357769
+      ],
+      "count_output_width_per_head": 128,
+      "count_source_channels_per_head": 32,
+      "message_change_vs_majority": 0.12297825079697829,
+      "message_mode": "count_threshold_hybrid",
+      "non_extreme_count_ratio": 0.7178191515115592,
+      "observed_count_levels": 9,
+      "threshold_active_ratios": [
+        0.8542262737567609,
+        0.6417564392089844,
+        0.4488387474646935,
+        0.25177113459660455
+      ]
+    },
+    {
+      "block": 1,
+      "count_entropy_bits": 3.1458576172393475,
+      "count_histogram": [
+        41683411,
+        29972050,
+        27154964,
+        26118223,
+        25805122,
+        26020898,
+        26953444,
+        29369596,
+        39552052
+      ],
+      "count_output_width_per_head": 128,
+      "count_source_channels_per_head": 32,
+      "message_change_vs_majority": 0.12292976379394531,
+      "message_mode": "count_threshold_hybrid",
+      "non_extreme_count_ratio": 0.7020300975212684,
+      "observed_count_levels": 9,
+      "threshold_active_ratios": [
+        0.8461877089280349,
+        0.6438714247483474,
+        0.46020572368915263,
+        0.2695644672100361
+      ]
+    }
+  ],
+  "capacity": {
+    "bits_per_state_value": 1,
+    "count_threshold_outputs_per_sample": 133120,
+    "deployed_depth_lower_bound_excluding_topk": 31,
+    "fanout_max": 232,
+    "fixed_xnor_per_sample": 4326400,
+    "gate_count": 14976,
+    "hard_payload_tensor_bits": 36614432,
+    "input_patch_bits": 192,
+    "logic_depth": 9,
+    "message_levels": 5,
+    "notes": [
+      "message_mode=count_threshold_hybrid",
+      "count_thresholds=(1, 3, 5, 7)"
+    ],
+    "qk_bits": 64,
+    "state_storage_bits_per_token": 4096,
+    "state_width": 4096,
+    "tokens": 65,
+    "topk": 8,
+    "trainable_parameters": 247424,
+    "value_count_inputs_per_sample": 4259840
+  },
+  "merge_gate_usage": {
+    "aggregate": {
+      "both": 166,
+      "both_ratio": 0.020263671875,
+      "gate_count": 8192,
+      "identity_message": 253,
+      "identity_message_ratio": 0.0308837890625,
+      "identity_state": 7604,
+      "identity_state_ratio": 0.92822265625,
+      "message_only": 393,
+      "message_only_ratio": 0.0479736328125,
+      "neither": 3,
+      "neither_ratio": 0.0003662109375,
+      "state_only": 7630,
+      "state_only_ratio": 0.931396484375,
+      "uses_message": 559,
+      "uses_message_ratio": 0.0682373046875,
+      "uses_state": 7796,
+      "uses_state_ratio": 0.95166015625
+    },
+    "blocks": [
+      {
+        "block": 0,
+        "both": 56,
+        "both_ratio": 0.013671875,
+        "gate_count": 4096,
+        "identity_message": 112,
+        "identity_message_ratio": 0.02734375,
+        "identity_state": 3827,
+        "identity_state_ratio": 0.934326171875,
+        "message_only": 187,
+        "message_only_ratio": 0.045654296875,
+        "neither": 1,
+        "neither_ratio": 0.000244140625,
+        "state_only": 3852,
+        "state_only_ratio": 0.9404296875,
+        "uses_message": 243,
+        "uses_message_ratio": 0.059326171875,
+        "uses_state": 3908,
+        "uses_state_ratio": 0.9541015625
+      },
+      {
+        "block": 1,
+        "both": 110,
+        "both_ratio": 0.02685546875,
+        "gate_count": 4096,
+        "identity_message": 141,
+        "identity_message_ratio": 0.034423828125,
+        "identity_state": 3777,
+        "identity_state_ratio": 0.922119140625,
+        "message_only": 206,
+        "message_only_ratio": 0.05029296875,
+        "neither": 2,
+        "neither_ratio": 0.00048828125,
+        "state_only": 3778,
+        "state_only_ratio": 0.92236328125,
+        "uses_message": 316,
+        "uses_message_ratio": 0.0771484375,
+        "uses_state": 3888,
+        "uses_state_ratio": 0.94921875
+      }
+    ]
+  }
+}

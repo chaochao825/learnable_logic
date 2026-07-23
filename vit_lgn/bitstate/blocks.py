@@ -105,7 +105,7 @@ class LocalBitLogicBlock(nn.Module):
 
 
 class BinaryTopKBlock(nn.Module):
-    """XNOR-popcount routing, bitwise-majority values, and Boolean merge."""
+    """XNOR-popcount routing, discrete value messages, and Boolean merge."""
 
     def __init__(
         self,
@@ -119,6 +119,9 @@ class BinaryTopKBlock(nn.Module):
         attention_temperature: float = 0.25,
         exclude_self: bool = False,
         gate_init_strength: float = 2.0,
+        message_mode: str = "majority",
+        message_count_thresholds: tuple[int, ...] = (1, 3, 5, 7),
+        message_count_fraction: float = 0.25,
     ) -> None:
         super().__init__()
         if state_width % heads:
@@ -129,6 +132,10 @@ class BinaryTopKBlock(nn.Module):
             raise ValueError((qk_bits, attention_temperature))
         if gate_init_strength <= 0.0:
             raise ValueError(gate_init_strength)
+        if message_mode not in {"majority", "count_threshold_hybrid"}:
+            raise ValueError(message_mode)
+        if not 0.0 < message_count_fraction <= 1.0:
+            raise ValueError(message_count_fraction)
         self.state_width = int(state_width)
         self.num_tokens = int(num_tokens)
         self.heads = int(heads)
@@ -137,6 +144,32 @@ class BinaryTopKBlock(nn.Module):
         self.head_width = state_width // heads
         self.attention_temperature = float(attention_temperature)
         self.exclude_self = bool(exclude_self)
+        self.message_mode = str(message_mode)
+        thresholds = tuple(int(value) for value in message_count_thresholds)
+        if self.message_mode == "count_threshold_hybrid":
+            if not thresholds or tuple(sorted(set(thresholds))) != thresholds:
+                raise ValueError("message count thresholds must be strictly increasing")
+            if thresholds[0] < 1 or thresholds[-1] > self.topk:
+                raise ValueError((thresholds, self.topk))
+            count_output_width = int(self.head_width * message_count_fraction)
+            count_output_width -= count_output_width % len(thresholds)
+            if count_output_width < len(thresholds):
+                raise ValueError("head width is too small for count thresholds")
+            count_sources = count_output_width // len(thresholds)
+            source_indices = torch.div(
+                torch.arange(count_sources, dtype=torch.long) * self.head_width,
+                count_sources,
+                rounding_mode="floor",
+            )
+        else:
+            count_output_width = 0
+            source_indices = torch.empty(0, dtype=torch.long)
+        self.count_output_width = int(count_output_width)
+        self.register_buffer(
+            "message_count_thresholds",
+            torch.tensor(thresholds, dtype=torch.int32),
+        )
+        self.register_buffer("message_count_source_indices", source_indices)
         generator = torch.Generator().manual_seed(seed)
 
         qk_width = heads * qk_bits
@@ -215,10 +248,42 @@ class BinaryTopKBlock(nn.Module):
         selected = values[batch_index, head_index, indices]
         return selected
 
-    def _hard_message(self, state_bits: Tensor, query_bits: Tensor, key_bits: Tensor) -> tuple[Tensor, Tensor]:
+    def _encode_hard_counts(self, counts: Tensor) -> Tensor:
+        majority = counts * 2 >= self.topk
+        if self.message_mode == "majority":
+            return majority
+        selected_counts = counts[..., self.message_count_source_indices]
+        threshold_bits = (
+            selected_counts.unsqueeze(-1)
+            >= self.message_count_thresholds.view(1, 1, 1, 1, -1)
+        ).flatten(-2)
+        return torch.cat((threshold_bits, majority[..., self.count_output_width :]), dim=-1)
+
+    def _encode_soft_counts(self, average: Tensor, tau: float) -> Tensor:
+        if self.message_mode == "majority":
+            return average
+        selected_average = average[..., self.message_count_source_indices]
+        thresholds = self.message_count_thresholds.to(average.dtype) - 0.5
+        soft_count = selected_average.unsqueeze(-1) * self.topk
+        threshold_bits = torch.sigmoid(
+            (soft_count - thresholds.view(1, 1, 1, 1, -1))
+            / (self.attention_temperature * tau)
+        ).flatten(-2)
+        return torch.cat(
+            (threshold_bits, average[..., self.count_output_width :]),
+            dim=-1,
+        )
+
+    def _hard_message(
+        self,
+        state_bits: Tensor,
+        query_bits: Tensor,
+        key_bits: Tensor,
+    ) -> tuple[Tensor, Tensor]:
         indices = self._topk_indices(query_bits, key_bits)
         selected = self._gather_values(state_bits, indices)
-        message = selected.to(torch.int32).sum(dim=3) * 2 >= self.topk
+        counts = selected.to(torch.int32).sum(dim=3)
+        message = self._encode_hard_counts(counts)
         message = message.permute(0, 2, 1, 3).reshape(
             state_bits.shape[0],
             self.num_tokens,
@@ -249,6 +314,7 @@ class BinaryTopKBlock(nn.Module):
             state.shape[0], self.num_tokens, self.heads, self.head_width
         ).permute(0, 2, 1, 3)
         soft_message = torch.einsum("bhqk,bhkd->bhqd", weights, values)
+        soft_message = self._encode_soft_counts(soft_message, tau)
         soft_message = soft_message.permute(0, 2, 1, 3).reshape_as(state)
         message = hard_forward_soft_backward(
             hard_message.to(state.dtype),
@@ -279,6 +345,14 @@ class BinaryTopKBlock(nn.Module):
             "qk_bits": self.qk_bits,
             "topk": self.topk,
             "exclude_self": self.exclude_self,
+            "message_mode": self.message_mode,
+            "message_count_thresholds": self.message_count_thresholds.detach()
+            .cpu()
+            .to(torch.int32),
+            "message_count_source_indices": self.message_count_source_indices.detach()
+            .cpu()
+            .to(torch.int32),
+            "count_output_width": self.count_output_width,
             "query": self.query.deployment_payload(),
             "key": self.key.deployment_payload(),
             "merge": self.merge.deployment_payload(),

@@ -1,0 +1,41 @@
+name: research-governance
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  registry:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Validate registry
+        run: python -m research_registry.validate
+      - name: Check generated method table
+        run: python -m research_registry.render_method_table --check
+      - name: Run registry tests
+        run: python -m unittest research_registry.test_registry
+      - name: Verify frozen d12 strict evidence
+        run: |
+          python docs/repro/full_discrete_d12_strict_20260723/freeze_evidence.py
+          git diff --exit-code -- docs/repro/full_discrete_d12_strict_20260723/validation.json
+
+  strict-runtime:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install CPU PyTorch
+        run: pip install torch==2.4.1 --index-url https://download.pytorch.org/whl/cpu
+      - name: Test strict Boolean and integer executors
+        run: |
+          python -m unittest hard_lgn_gap_proto.test_boolean_executor
+          python -m unittest vit_lgn.bitstate.test_boolean_executor
+          python -m unittest vit_lgn.bitplane_lut.test_bitplane_lut
+          python -m unittest vit_lgn.full_discrete.test_integer_executor

@@ -1,0 +1,53 @@
+{
+  "args": {
+    "arity": 4,
+    "batch_size": 128,
+    "blocks": 2,
+    "candidate_count": 16,
+    "code_loss_weight": 0.25,
+    "device": "auto",
+    "epochs_per_block": 40,
+    "fanout_cap": 8.0,
+    "gradient_clip": 5.0,
+    "group_temperature": 0.0,
+    "group_temperature_effective": 5.656854249492381,
+    "layers_per_block": 1,
+    "learning_rate": 0.03,
+    "max_train_samples": 0,
+    "out_dir": "/home/wangmeiqi/bitplane_lut_hardlgn_20260724_v1/runs/v2_argmax_w832_s2",
+    "refit_mode": "argmax",
+    "seed": 2,
+    "split_seed": 20260724,
+    "state_bits": 832,
+    "table_cost_weight": 0.01,
+    "temperature_end": 0.5,
+    "temperature_start": 1.5,
+    "weight_decay": 0.0,
+    "wiring_constraint_weight": 0.001,
+    "wiring_passes": 1
+  },
+  "cuda": "12.8",
+  "device": "cuda",
+  "gpu": "NVIDIA H200 NVL",
+  "python": "3.11.15 (main, Mar 11 2026, 17:20:07) [GCC 14.3.0]",
+  "sha256": "ee60a5cb4140b646378a730ca9d25e64b7b5eab0e99ec748a20339e51ae4d748",
+  "sklearn": "1.9.0",
+  "source_sha256": {
+    "__init__.py": "b6701c7a1a2af8cc6ce8c0c80bb271a2b1c18fbc1206ea939fd414b284e757e7",
+    "executor.py": "26733ebe47cd3814a894d1dfdaf319c392fa1365cad7c4fed0029aad7e319e03",
+    "layers.py": "52e6823a343896779ef074a0be8f04396b21b5650ddf3309dfd064946860e11c",
+    "model.py": "ae31494675a23f9fe950eb996e39f9273a1afc042ee36c5529249690e606c9b3",
+    "train_digits.py": "518a6dd6fd1340ef505c16adbc86cf477ca8067d919ea24fce0be0f1cbc76441"
+  },
+  "split": {
+    "pixel_max": 16,
+    "pixel_min": 0,
+    "test_index_sha256": "18340ddadb581a35260e9bf857a50e9ee3e922c4a7b11d41d17014522804150d",
+    "test_size": 270,
+    "train_index_sha256": "7915d96bf6a03320002f4ce06f5bbbcf74505519b8f74fed833c3e38533a8595",
+    "train_size": 1257,
+    "validation_index_sha256": "66fcad4b37ff6cd541a88e99e655b215a244425d60f5de8e668481832518d5ef",
+    "validation_size": 270
+  },
+  "torch": "2.9.1+cu128"
+}

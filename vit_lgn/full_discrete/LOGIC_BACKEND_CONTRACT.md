@@ -8,11 +8,14 @@ claim that PyTorch indexing has hardware-like performance.  Training keeps
 FP32 shadow parameters, STE gradients, and AdamW; deployment exports only the
 hardened integer payload.
 
-The optional `logic_lut` evaluation path must avoid dense floating-point
-`linear`/`matmul` for Wmag4 projections and Q/K XNOR-popcount.  Phase 1 retains a
-power-of-two floating carrier at the boundary between an exact integer
-accumulator and the existing activation requantizer.  Replacing that boundary
-with an exponent-only requantizer is a separate, explicitly tracked phase.
+The optional `logic_lut` path in the training model remains a diagnostic
+floating carrier. It is not the deployment claim. Schema v6 is executed by
+`StrictIntegerExecutor`, whose only public image input is CPU `uint8` and whose
+only activation state is an `int64` code plus an `int32` signed exponent.
+Exact exponent selection, residual alignment, requantization, RMS lookup,
+attention, FFN, and classifier output are implemented without a floating or
+complex tensor. `IntegerRuntimeAudit` intercepts every executed Torch operator
+and rejects any violation.
 
 ## Numeric formats
 
@@ -34,6 +37,23 @@ For Wmag7 fan-in `F`, the required signed accumulator width is
 
 Representative widths are 21 bits for `F=48`, 23 bits for `F=192`, 24 bits
 for `F=384`, 25 bits for `F=768` or `F=1024`, and 26 bits for `F=1536`.
+
+## Audit payload versus compact hardware payload
+
+Schema v6 deliberately carries several equivalent weight views: signed int16
+codes, signs, unpacked magnitude bit planes, and U4 chunks. This makes the
+independent integer-matrix, bit-plane, and ROM oracles directly checkable, but
+it is not a minimal storage format. Capacity reports must therefore state both
+the serialized audit-payload bits and the logical bit-packed coefficient bits.
+They may not silently call either one the synthesized gate count.
+
+A compact backend may retain exactly one equivalent Wmag representation plus
+scale exponents and shared ROMs, after bit-exact equivalence is proven. Removing
+redundant views is a packaging optimization and cannot be reported as an
+accuracy method. Transformer block count is likewise only algorithmic depth;
+total Boolean depth requires lowering popcount, Top-K, shift/add, RMS lookup,
+comparison, and requantization networks. Dense fanout is measured from
+nonzero hard coefficients per input, not confused with patch-projection fan-in.
 
 ## Wmag4 product LUT
 
@@ -104,12 +124,16 @@ rewrite.  `torch.ldexp` in the QAT reference is only a floating carrier.
 
 - Wmag4 product and accumulation are exact, with no rounding or saturation.
 - V aggregation keeps the existing signed round-to-nearest integer division.
-- The Phase-1 bridge from accumulator/exponents to activation requantization
-  keeps the current nearest-power-of-two rule; it is not yet the final integer
-  requantizer.
-- Exponent overflow bounds, residual alignment, classifier output saturation,
-  and whole-model integer requantization must be frozen before RTL is claimed
-  bit-exact.
+- Schema v6 selects the nearest power-of-two scale with exact squared-boundary
+  comparisons and nearest-even ties. Signed right shifts use nearest-even
+  rounding; overflow is checked before exact left alignment and accumulation.
+- Residuals align to the elementwise minimum exponent, add in checked int64,
+  and requantize over the same last-axis grouping as the QAT reference.
+- The classifier emits A16 integer codes with one output exponent per sample.
+- A finite hardware exponent-range/saturation contract is still required
+  before fixed-width cycle-accurate RTL is claimed. The transaction reference
+  intentionally raises rather than wrapping when int64 cannot represent an
+  exact intermediate.
 
 ## Verification gates
 
@@ -118,7 +142,11 @@ rewrite.  `torch.ldexp` in the QAT reference is only a floating carrier.
 3. Compare packed XNOR scores against direct Boolean equality for non-word-
    aligned sizes and boundary patterns.
 4. Compare every RMS ROM entry with the frozen offline table generator.
-5. Run a small Wmag4 model through both fake-quant hard eval and `logic_lut` eval;
-   report exact/maximum differences layer by layer.
-6. Fail the `logic_lut` eval test if `F.linear`, floating `matmul`, or runtime
-   reciprocal square root is invoked on the hard path.
+5. Run a small Wmag4 model through the QAT hard carrier and schema-v6 integer
+   executor; require exact final dyadic logits and predictions.
+6. Require the ROM-linear and integer-matrix acceleration backends to emit
+   identical codes and exponents.
+7. Run the complete executor under `IntegerRuntimeAudit`; fail on every
+   floating/complex tensor input or output at every intercepted Torch operator.
+8. Parse `integer_executor.py` and reject float literals, true division, and
+   floating transcendental/activation calls.

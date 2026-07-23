@@ -41,15 +41,28 @@ Shift-RMS plus a repaired final calibration path remains promising.
 The training graph retains floating shadow parameters, AdamW state, and STE
 surrogates.  `export_logic_payload.py` removes those objects and exports only
 integer codes, signed scale exponents, U4 chunks/bitplanes, routing constants,
-and structural metadata.  `logic_lut` evaluation replaces learned matrix
-`F.linear` operations with the exact A8-by-U4 ROM transaction reference and
-uses packed XNOR-popcount for Q/K.
+and structural metadata. `integer_executor.py` consumes schema v6 directly:
+its public input is `torch.uint8`, every activation is an `int64` code plus an
+`int32` power-of-two exponent, and its output is integer classifier logits.
+Patch extraction, exact nearest-even requantization, RMS ROM, residual
+alignment, XNOR/Top-K routing, V aggregation, FFN gating, optional depthwise
+local branches, and the classifier all remain in Boolean/integer tensor
+domains. `IntegerRuntimeAudit` rejects a floating or complex tensor at every
+executed Torch operator. The old QAT/eval module remains a floating reference
+carrier and is not the deployable executor.
 
-This is not finished RTL.  The remaining deployment boundary is the
-accumulator/residual-to-A8 exponent-only requantizer; the Python reference
-still carries powers of two in floating tensors there.  Packed high-throughput
-device kernels, a cycle-accurate executor, fixed-width residual/exponent
-alignment, and synthesis/PPA are also still required.
+The current strict reference is d12/e192 at 50k steps. Its standalone payload
+reproduces `76.10%` on all 5,000 fixed CIFAR-10 validation rows, executes with
+zero floating tensors, and matches the offline hard carrier exactly on 20/20
+audited logits. This is a one-seed depth result; see
+[`../../docs/repro/full_discrete_d12_strict_20260723/`](../../docs/repro/full_discrete_d12_strict_20260723/README.md)
+for the immutable protocol, artifact hashes, capacity audit, and limitations.
+
+This is still not finished RTL. Packed high-throughput device kernels,
+cycle-accurate control, frozen finite hardware exponent bounds, and
+synthesis/PPA remain required. The strict executor currently fails closed for
+Hadamard, global LUT-tree, logic-tree local, and expert-FFN enhancements rather
+than silently falling back to their floating carriers.
 
 ## Minimal shared 3x3 logic-tree branch
 
@@ -137,7 +150,7 @@ forward value remains the exact hard lookup.  At d12/e384, one block contains
 96 ROMs, 6,291,456 learned A8 entries (6 MiB), and 12 blocks contain 72 MiB of
 hard table payload.  These bytes are not reported as standard-cell gate count.
 
-The current exporter is schema v5 and serializes every int8 reduce/context/
+The current exporter is schema v6 and serializes every int8 reduce/context/
 broadcast table together with the input group-requantizer, signed branch shift,
 content/LUT exponent alignment, and enclosing residual A8 requantization.  It
 cross-checks group, token, block, expected mixer mode, and content-router

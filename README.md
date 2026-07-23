@@ -14,6 +14,17 @@ run tree on 210 contains roughly 448MB of `runs/` artifacts, so this repo keeps:
 
 The raw large run directories remain on the 210 server.
 
+## Research governance
+
+New method claims are managed through the machine-readable
+[`research_registry/`](research_registry/README.md). It inventories every
+public branch in `chaochao825/learnable_logic` and `Vector-GitHub/ViT-LGN`,
+separates methods from protocols and results, records model-wide capacity, and
+enforces a three-seed hard-accuracy/no-real-value promotion policy in GitHub
+Actions. The generated [unified method table](research_registry/METHOD_TABLE.md)
+and [decision framework](research_registry/DECISION_FRAMEWORK.md) are the
+starting points for new experiments.
+
 ## What was validated
 
 1. Goal 0-2: LightLogic input-wise parametrization (`light_iwp`) is implemented
@@ -34,6 +45,10 @@ The raw large run directories remain on the 210 server.
 7. A persistent Boolean bit-state ViT/LGN path keeps hidden state Boolean,
    uses XNOR-popcount Top-K and integer GroupSum, and exports a float-free
    deployment payload.
+8. The A8 bit-plane Hard-LGN path preserves every raw input plane, learns only
+   4-input LUT truth bits and discrete candidate wiring, freezes blocks in
+   sequence, and replays exported payloads through an operator-audited
+   Boolean/integer executor.
 
 ## Headline results
 
@@ -80,6 +95,18 @@ The raw large run directories remain on the 210 server.
   the recipes intentionally use different initialization and optimizers.
 - Doubling progressive state width to 8192 reaches 27.88% hard accuracy and a
   0.05 pp gap with 82.05% more gates and 58.47% more H200 training time.
+- On the registered three-seed sklearn-digits logic-native screen, doubling
+  learned LUT vote planes from 160 to 320 improves mean validation hard
+  accuracy from 88.02% to 91.48% and test hard accuracy from 85.31% to 89.75%,
+  with 3/3 paired validation wins and zero inactive vote planes.
+- Independent per-LUT truth refit is rejected: it loses 1.67 pp mean validation
+  hard accuracy versus direct argmax. Greedy wiring refit changes no additional
+  source, although training itself moves 65.27%-73.67% of exported inputs away
+  from default routes.
+- ABC synthesis proves all 18 bit-plane LUT payloads equivalent after
+  optimization. The tables are not strongly compressible: 76%-79% depend on
+  all four inputs, K=4 remapping removes only 2.7%-6.9% of LUTs, and mapped
+  depth rises from two to three.
 
 ## Repository layout
 
@@ -95,6 +122,12 @@ The raw large run directories remain on the 210 server.
 - `docs/repro/mind_gap_scaled_required_table_20260723/`: requested 34-row
   metrics table with provenance
 - `vit_lgn/bitstate/`: persistent Boolean state model, trainer, and tests
+- `vit_lgn/bitplane_lut/`: protected A8 bit-plane state, learnable 2/3/4-input
+  LUTs and wiring, block-wise freeze/refit, and strict deployment executor
+- `docs/repro/bitplane_lut_digits_v2_20260724/`: all 18 registered digits runs,
+  hard payloads, curves, aggregate tables, and wiring reconstruction audit
+- `docs/repro/bitplane_lut_abc_20260724/`: BLIF exports, ABC-optimized networks,
+  CEC evidence, and per-seed truth-table compressibility metrics
 - `docs/repro/bitstate_h200_long_cifar_20260723/`: seed-0 full-CIFAR H200
   comparison with per-layer soft/hard diagnostics
 - `docs/repro/bitstate_h200_followup_cifar_20260723/`: strong annealing and
@@ -184,13 +217,15 @@ current deployment boundary are consolidated in:
 - [`docs/repro/score_gap_50k_20260712/`](docs/repro/score_gap_50k_20260712/README.md): exact source snapshot and six raw results
 - [`docs/repro/full_discrete_scale_probe_20260715/`](docs/repro/full_discrete_scale_probe_20260715/README.md): executable bounded probe and raw JSON
 
-Current headline: the d6/e192 hard-discrete model reaches 75.30% on the fixed
-5,000-example CIFAR-10 validation split, but its main capacity is still dense
+Current headline: the d12/e192 hard-discrete model reaches 76.10% on the fixed
+5,000-example CIFAR-10 validation split, versus 75.30% for d6/e192, but its main capacity is still dense
 Wmag7 shift/add projection.  The learned local logic-tree tables never left
-identity in 50k, and the independent whole-model integer/RTL executor is not
-yet complete.  The report deliberately separates a hard-discrete numerical
-model, a transaction-level integer specification, and a complete logic-gate
-executor.
+identity in 50k.  That 2026-07-15 report predates the schema-v6 standalone
+integer executor; the executor now reproduces all 5,000 d12/e192 predictions
+at 76.10% while its runtime audit observes zero floating or complex tensors.
+The gain is a one-seed depth result, not a robust scaling law. This is a
+transaction-level integer implementation, not completed RTL or synthesized
+Boolean gate count.
 
 ## ScaleLogic-ViT scaling experiment (2026-07-16)
 
@@ -208,32 +243,55 @@ a useful negative hardware ablation rather than the primary accuracy path.
 - [`docs/tables/global_lut_smoke_20260716.csv`](docs/tables/global_lut_smoke_20260716.csv)
 - [`docs/tables/scalelogic_50k_live_20260716.csv`](docs/tables/scalelogic_50k_live_20260716.csv)
 
-The first formal 5k point is recorded only as an intermediate diagnostic.  A
-claim about scaling or the local inductive bias waits for the paired 50k
-candidate/control results.
+The paired 50k candidate/control results are complete below. They reject this
+width-scaled d12/e384 direction under the matched budget; the earlier 5k point
+remains only an intermediate diagnostic.
 
 The same branch now also contains an accuracy-expensive nonlinear global
 option: a six-stage group-shared A8-by-A8 ROM reduction tree, root/CLS fusion
 ROM, and broadcast ROM in parallel with hard Top-K.  At d12/e384 its 12-block
-hard table payload is 72 MiB.  It is fully exported as schema v5 and is kept out
+hard table payload is 72 MiB.  It is fully exported as schema v6 and is kept out
 of the 50k queue until a matched 1k probe demonstrates value over attention.
-Schema v5 additionally freezes the input group-requantizer, signed shift,
+Schema v6 additionally freezes the input group-requantizer, signed shift,
 content/LUT exponent-aligned merge, outer residual A8 boundary, and
 cross-topology linkage, including one content router and one LUT tree per block.
 It also reports ROM reads and port/cycle assumptions:
 payload sharing is not mistaken for free multi-port throughput.  A packed
 C++/CUDA/RTL executor is still a separate deliverable.
 
-### Mainline 20k continuation
+### Completed ScaleLogic pair and long-training follow-up
 
-The later `main` audit remains the authoritative checkpoint record for the
-active `d12/e384/h12` ScaleLogic run.  It uses ordinary attention globally and
-depthwise shift-add in the first four blocks; it is not a Hadamard-global run.
-Validation accuracy reached `0.5958` at 5k, `0.6664` at 10k, `0.6830` at 15k,
-and `0.6960` at 20k of 50k planned steps.  These are intermediate points, not
-a completed matched comparison.
+The d12/e384/h12 ScaleLogic local4 and local0 runs are complete. They reach
+`71.68%` and `71.14%` best validation accuracy at 50k; local shift-add branches
+provide a small paired gain, but both remain below the historical d6/e192
+`75.34%` reference. The completed curves show that the large model is still
+improving through 40-45k while its learning rate has already decayed close to
+the floor.
+
+The clearest training-length scaling result remains attention-clean K=8 with
+augmentation: `71.34%` validation accuracy at 20k, `79.13%` at 150k, and
+`78.93%` final test accuracy. It retains real-valued projections, MLPs,
+residuals, and LayerNorm, so the Wmag7/A8 Full-Discrete model remains the
+primary deployment candidate. The attempted source-identical small/large H200
+continuation was stopped before its first evaluation point after the stricter
+no-real-value requirement was imposed; it used the old floating carrier and
+therefore provides no admissible result. Schema v6 now has a standalone
+`uint8 -> integer logits` executor for the supported attention/RMS/local
+topology. The d6/e192 checkpoint has completed a strict replay of all 5,000
+validation images at `75.30%`: `14,319,802` audited Torch operations produced
+zero floating or complex tensors. Its first 100 rows also match the offline
+QAT carrier logits exactly. The d12/e384/local4 checkpoint has a 100-image
+strict prefix replay and a 20-row exact-logit check; that prefix is a sanity
+check, not a full-validation replacement. Separately, the depth-only d12/e192
+checkpoint now has a complete strict replay: all 5,000 rows reproduce its
+`76.10%` final validation accuracy with zero floating tensors, and 20/20
+audited logits exactly match the QAT carrier. Its standalone payload is hashed
+and contains only Boolean/integer tensors.
 
 - [`docs/reports/full_discrete_logic_gate_report_20260716.md`](docs/reports/full_discrete_logic_gate_report_20260716.md)
 - [`docs/tables/full_discrete_results_20260716.csv`](docs/tables/full_discrete_results_20260716.csv)
+- [`docs/repro/scalelogic_50k_complete_20260723/`](docs/repro/scalelogic_50k_complete_20260723/README.md)
+- [`docs/repro/strict_integer_runtime_20260723/`](docs/repro/strict_integer_runtime_20260723/README.md)
+- [`docs/repro/full_discrete_d12_strict_20260723/`](docs/repro/full_discrete_d12_strict_20260723/README.md)
 - [`docs/protocols/scalelogic_d12e384_h12_local4_seed42_50k.protocol.json`](docs/protocols/scalelogic_d12e384_h12_local4_seed42_50k.protocol.json)
 - [`docs/protocols/full_discrete_publish_source_hashes_20260716.json`](docs/protocols/full_discrete_publish_source_hashes_20260716.json)

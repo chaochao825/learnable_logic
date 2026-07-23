@@ -94,8 +94,9 @@ channel, 64 sign controls, a `>>6` normalization and no multiplier.  A common
 power-of-two A8 scale is shared by each 32-channel group.  The training value
 is exactly the integer reference; a floating butterfly only supplies the STE
 gradient.  The formal `54229c1` snapshot stores the sign masks and structural
-ABI as schema v2; the current exporter is schema v5 after adding the nonlinear
-global ROM-tree payload and its requantize/merge/topology boundary.
+ABI as schema v2; the current exporter is schema v6 after adding the nonlinear
+global ROM-tree payload, its requantize/merge/topology boundary, and the strict
+integer executor contract.
 The branch input is A8, but its butterfly and branch values use explicitly
 bounded wide accumulators (14/20 bits through the two 64-token transforms and
 13 bits after `branch_shift=2` in the worst case).  The enclosing block, not

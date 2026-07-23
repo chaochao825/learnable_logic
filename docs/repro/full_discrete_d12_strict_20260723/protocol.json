@@ -1,0 +1,11 @@
+{
+  "checkpoint_sha256": "02d22b92d520a3c7e18f97186a0d594a804aeabcf6168e022d4730b949db4181",
+  "dataset": "CIFAR-10 fixed training-derived validation split",
+  "deployment_payload_sha256": "51ccd7bbfab9877c9cefdc070d836620be0fbc2b985fb517c7a7ada16f28a60a",
+  "executor": "schema-v6 StrictIntegerExecutor int_matmul backend",
+  "input_dtype": "uint8",
+  "runtime": "batch64 threads48 full operator dtype audit",
+  "selection": "all 5000 rows in torch.randperm seed 20260711 prefix",
+  "source_training_protocol": "full_discrete_d12e192_50k_s42",
+  "valid_size": 5000
+}
