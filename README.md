@@ -61,6 +61,10 @@ The raw large run directories remain on the 210 server.
   while reducing accuracy gap from 2.10 to 0.58 pp and entropy-unused gates
   from 40.24% to 0.06%. This is a gap and entropy-commitment win, not an
   accuracy win: 89.28% of its selected gates are still one-input literals.
+- Strong annealing reaches 28.81% hard accuracy and a 0.28 pp gap on the same
+  full-CIFAR architecture, seed, budget, and H200 hardware. It is the strongest
+  seed-0 classifier so far; progressive hardening instead has the smallest
+  internal layer mismatch and activation-inactive ratio.
 
 ## Repository layout
 
@@ -78,6 +82,8 @@ The raw large run directories remain on the 210 server.
 - `vit_lgn/bitstate/`: persistent Boolean state model, trainer, and tests
 - `docs/repro/bitstate_h200_long_cifar_20260723/`: seed-0 full-CIFAR H200
   comparison with per-layer soft/hard diagnostics
+- `docs/repro/bitstate_h200_followup_cifar_20260723/`: strong annealing and
+  width-scaling follow-up evidence
 - `docs/repro/bitstate_count_token_screen_20260723/`: matched bounded ablation
   of fixed-majority versus learned integer count-threshold global tokens
 

@@ -130,6 +130,44 @@ rows are not successful gap closure. CIFAR-10-small validates the execution
 path only; its 4,800-gate, 20-epoch setting is not comparable to the reported
 61M-gate ConvLGN result.
 
+## Persistent-state full CIFAR stress test
+
+A separate scalable prototype keeps every hidden boundary Boolean and uses
+XNOR-popcount Top-K routing, majority messages, Boolean state merges, and an
+integer GroupSum head. This is a stress test of persistent hard state and
+progressive hardening, not a direct scale-up of the per-block truth-table
+refitter above. All rows below use the same width-4096 architecture, full
+CIFAR-10 split, 30 epochs, seed 0, fixed wiring, and H200 NVL hardware.
+
+| method | hard acc | acc gap | train time | time to 20% | entropy-unused | max layer flip |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| strong DLGN | 28.13% | 2.10 pp | 1766.6 s | **60.5 s** | 40.24% | 19.11% |
+| strong annealing | **28.81%** | **0.28 pp** | **1766.4 s** | 413.3 s | 42.63% | 19.80% |
+| progressive scale16 | 26.44% | 0.58 pp | 1994.7 s | 263.9 s | **0.06%** | **6.85%** |
+| strong Gumbel-ST | 15.71% | 0.72 pp | 1849.7 s | not reached | 79.74% | 31.01% |
+
+Progressive hardening reduces the DLGN gap by `72.38%` and greatly limits
+depth-wise mismatch, but loses `1.69 pp` hard accuracy to DLGN. Strong
+annealing is the seed-0 winner: it improves DLGN hard accuracy by `0.68 pp`
+and produces a smaller gap than the proposed hardening schedule at essentially
+the same runtime as DLGN. The proposed schedule therefore does not beat the
+strongest simple baseline.
+
+The unused-gate result also needs qualification. Progressive scale16 selects
+one-input literals for `89.28%` of gates and genuinely two-input functions for
+only `7.48%`; its low entropy-unused ratio mostly reflects committed routing,
+not broad Boolean computation. Strong annealing retains `56.01%` nontrivial
+two-input gates. Conversely, annealing's tiny final accuracy gap coexists with
+a `19.80%` peak hidden-state flip ratio, so final accuracy-gap can hide large
+internal mismatch through downstream cancellation. The two methods trade
+internal bit stability against final classification accuracy rather than one
+strictly dominating the other.
+
+The complete evidence is in
+[bitstate_h200_long_cifar_20260723](../repro/bitstate_h200_long_cifar_20260723/README.md)
+and
+[bitstate_h200_followup_cifar_20260723](../repro/bitstate_h200_followup_cifar_20260723/README.md).
+
 ## Mind-the-Gap claim audit
 
 | paper target | scaled result | status |
@@ -179,14 +217,16 @@ hard model after fitting.
 | reduce unused gates | fail |
 | keep hard accuracy close to useful soft accuracy | mixed; fails image probes |
 | work without relying on Gumbel-ST | pass mechanically |
-| remain competitive with strongest baselines | partial on Boolean, fail on digits |
+| remain competitive with strongest baselines | partial on Boolean; fail on digits and against full-CIFAR annealing |
 
 The current prototype establishes a useful controlled ablation: per-block hard
 refitting localizes depth-wise mismatch and can improve Boolean hard accuracy.
 It does not yet establish a generally superior training method. The next
 research step should optimize hard block selection for downstream hard
 accuracy while explicitly regularizing gate entropy, then rerun at multiple
-depths and seeds before attempting the full CIFAR scale.
+depths and seeds. At full CIFAR scale, the next test is a role-specific
+anti-bypass penalty on global merge gates plus paired seed validation; forcing
+all Q/K and state gates to use both inputs is not structurally justified.
 
 ## References
 
