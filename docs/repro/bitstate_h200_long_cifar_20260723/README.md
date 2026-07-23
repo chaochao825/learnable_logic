@@ -113,7 +113,8 @@ accuracy gap alone.
 `gate_function_metrics.json` retains the 16-function argmax histograms and
 structural collapse ratios. `hard_scale16_gate_function_layers.json` retains
 the named-layer audit above.
-No checkpoints or dataset payloads are committed. Full matched DLGN and
-annealing runs under the low-margin AdamW protocol remain pending on the 4090s;
-multi-seed H200 runs are also pending, so this is a seed-0 ranking rather than
-a final variance-aware claim.
+No checkpoints or dataset payloads are committed. This directory remains the
+historical seed-0/strong-recipe artifact. The completed same-H200,
+shared-low-margin comparison over DLGN, annealing, Gumbel-ST, and progressive
+hardening is in
+[`bitstate_matched_full_cifar_20260723`](../bitstate_matched_full_cifar_20260723/README.md).

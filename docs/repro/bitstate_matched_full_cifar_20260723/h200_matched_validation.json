@@ -1,0 +1,148 @@
+{
+  "common_model_protocol": {
+    "attention_temperature": 0.25,
+    "encoder_identity_width": 192,
+    "encoder_kind": "redundant_predicate",
+    "exclude_self": false,
+    "gate_init_strength": 0.1,
+    "global_depth": 2,
+    "heads": 8,
+    "image_size": 32,
+    "in_channels": 3,
+    "local_depth": 2,
+    "num_classes": 10,
+    "patch_size": 4,
+    "predicate_chunk_size": 1024,
+    "predicate_fanin": 9,
+    "predicate_temperature": 1.0,
+    "qk_bits": 64,
+    "state_width": 4096,
+    "threshold_levels": 4,
+    "topk": 8,
+    "update_fraction": 0.5,
+    "votes_per_class": 64
+  },
+  "common_training_protocol": {
+    "amp_bfloat16": true,
+    "augment": true,
+    "batch_size": 128,
+    "dataset": "cifar10",
+    "epochs": 30,
+    "eval_limit": 0,
+    "gate_entropy_target_end": 0.1,
+    "gate_entropy_target_start": 0.8,
+    "gate_entropy_weight_end": -1.0,
+    "gate_entropy_weight_start": -1.0,
+    "gate_init_strength": 0.1,
+    "group_sum_temperature": 8.0,
+    "inactive_batches": 8,
+    "label_smoothing": 0.1,
+    "learning_rate": 0.002,
+    "lr_schedule": "cosine",
+    "min_learning_rate": 5e-05,
+    "optimizer": "adamw",
+    "restore_best": true,
+    "state_balance_weight": 0.05,
+    "state_diversity_pairs": 128,
+    "state_diversity_weight": 0.02,
+    "state_flip_weight": 0.02,
+    "state_maximum_flip": 0.5,
+    "state_maximum_similarity": 0.9,
+    "state_minimum_flip": 0.02,
+    "train_limit": 0,
+    "validation_size": 5000,
+    "warmup_epochs": 2,
+    "weight_decay": 0.0001
+  },
+  "hardware": "NVIDIA H200 NVL",
+  "input_sha256": {
+    "repro/bitstate_h200_long_cifar_20260723/gate_function_metrics.json": "ba4489975aa726b4cf9497e53bcdee696db4f386a0e5e723481bcdea710b3971",
+    "repro/bitstate_h200_long_cifar_20260723/gumbel_matched_posthoc.json": "e7a2ce996973fc73b72fcea3c69690c61537062f606ba5fe44e6d28fb0ce077e",
+    "repro/bitstate_h200_long_cifar_20260723/gumbel_matched_summary.json": "6a0a32671835a3858074dd831835c80ea4c211968a6708e2fb0a37bdc5fab50c",
+    "repro/bitstate_h200_long_cifar_20260723/hard_scale16_posthoc.json": "2322c505d7622abe08918d51c9b382fa50ac58643014546fea7209b496a46601",
+    "repro/bitstate_h200_long_cifar_20260723/hard_scale16_summary.json": "e5dfeb867d62f737903f167a8b52d415d6cfbb16e09dd86acbfeb6f86de65eae",
+    "repro/bitstate_matched_full_cifar_20260723/h200_anneal_seed0_posthoc_diagnostics.json": "651e1b08f02f104e3279c73b53d8969444904d7d4c8daaa6f5515049111e6878",
+    "repro/bitstate_matched_full_cifar_20260723/h200_anneal_seed0_summary.json": "417bdc90217a82ff8eb5798331d8e749cb9923d125793f5ef3838351cb5bc3b6",
+    "repro/bitstate_matched_full_cifar_20260723/h200_anneal_seed1_posthoc_diagnostics.json": "a5bc13687a8798218972bf5b153a6233864e553de3492467ad7ce0e834b92443",
+    "repro/bitstate_matched_full_cifar_20260723/h200_anneal_seed1_summary.json": "0b386dcb0499f38ef04dcffd54fb99082943c36f9b7c5f506b11faadde2eb565",
+    "repro/bitstate_matched_full_cifar_20260723/h200_anneal_seed2_posthoc_diagnostics.json": "c27d0ddd655c8be1c1cb964eaca097ec959ca8989eb5e6457ff094b98826471b",
+    "repro/bitstate_matched_full_cifar_20260723/h200_anneal_seed2_summary.json": "ef2d19bacc7028d55daf33e921500d90ce6eb389e614ed18e150e05d91e9f338",
+    "repro/bitstate_matched_full_cifar_20260723/h200_dlgn_seed0_posthoc_diagnostics.json": "81ed843460736f3b8dba5439849d72db46d55f4bc6088af25c9d7fdc10897e2d",
+    "repro/bitstate_matched_full_cifar_20260723/h200_dlgn_seed0_summary.json": "96037b59cf4c0a8374a83442c1a50fedd83375e46478bbbe055849fbd23a99aa",
+    "repro/bitstate_matched_full_cifar_20260723/h200_dlgn_seed1_posthoc_diagnostics.json": "588c226d4ee3e3f3986fbfdda7a4f375ff1531873fb58476b73032c3fba14ffc",
+    "repro/bitstate_matched_full_cifar_20260723/h200_dlgn_seed1_summary.json": "43faf66cb5f6309a6b2e4295a43e06e8e2bee3916f51ecae83c0a1261c50ec0e",
+    "repro/bitstate_matched_full_cifar_20260723/h200_dlgn_seed2_posthoc_diagnostics.json": "ae573c0bc96d436dec6b44ccc28f0f8e13cff7bddcbd7328127961ed7949a9a2",
+    "repro/bitstate_matched_full_cifar_20260723/h200_dlgn_seed2_summary.json": "aeb85f6db79bb64fe1855a3d23dc3518b7286cc09e4588ab9966c4b55c55d086",
+    "repro/bitstate_matched_full_cifar_20260723/h200_gumbel_seed1_posthoc_diagnostics.json": "22a4fa0864bdb8ac51a8083da41101e0b1fa916e413f667ba2e4b5f41c6e4bb0",
+    "repro/bitstate_matched_full_cifar_20260723/h200_gumbel_seed1_summary.json": "63442767fa3bedd923a1158af6aa4aad94d1b53f33bb150127548d9134ce4f83",
+    "repro/bitstate_matched_full_cifar_20260723/h200_gumbel_seed2_posthoc_diagnostics.json": "61f81a547231e368c393a2e182997f3554d7afa731d42c04d9c00ef8c2d5ee04",
+    "repro/bitstate_matched_full_cifar_20260723/h200_gumbel_seed2_summary.json": "2b7a4ab95e68c30c30b5baf3cd648cc043fa381973c39416f35e10c0b994c582",
+    "repro/bitstate_multiseed_cifar_20260723/proposed_seed1_gate_function_metrics.json": "d49b073e09ccb7c1d534882f4f9645cddc4561399ae76e5960657a8067c59dc9",
+    "repro/bitstate_multiseed_cifar_20260723/proposed_seed1_summary.json": "0bc457f365e2fb8f4cdef70a9bfc015a14584bd12a14ff6fa0acad694d733abf",
+    "repro/bitstate_multiseed_cifar_20260723/proposed_seed2_gate_function_metrics.json": "30978122372d859bab5588af888f42dfde3eb7a4f9b8bdd4312a116e3d99edab",
+    "repro/bitstate_multiseed_cifar_20260723/proposed_seed2_summary.json": "74c94552746506779026c146a65138cb82f39346ec845bcf911ebd21fc6ae974"
+  },
+  "layer_gap_signature": [
+    {
+      "layer": 0,
+      "name": "encoder"
+    },
+    {
+      "layer": 1,
+      "name": "local_1"
+    },
+    {
+      "layer": 2,
+      "name": "local_2"
+    },
+    {
+      "layer": 3,
+      "name": "global_1"
+    },
+    {
+      "layer": 4,
+      "name": "global_2"
+    },
+    {
+      "layer": 5,
+      "name": "votes"
+    }
+  ],
+  "method_count": 4,
+  "method_specific_fields_excluded_from_protocol_check": [
+    "method",
+    "tau/tau schedule",
+    "soft warmup and progressive hardening schedule",
+    "stored target_accuracy used only for logging, normalized to 20% here",
+    "output directory",
+    "seed"
+  ],
+  "metric_invariants": [
+    "acc_gap == abs(soft_acc - discrete_acc)",
+    "loss_gap == abs(soft_loss - discrete_loss)",
+    "20% convergence epoch/time is recomputed from per-epoch hard validation history",
+    "constant + literal + nontrivial gate ratios == 1",
+    "bit_exact_verified is true"
+  ],
+  "per_seed_topology": {
+    "0": {
+      "depth": 9,
+      "fanout_max": 228,
+      "gate_count": 14976
+    },
+    "1": {
+      "depth": 9,
+      "fanout_max": 219,
+      "gate_count": 14976
+    },
+    "2": {
+      "depth": 9,
+      "fanout_max": 232,
+      "gate_count": 14976
+    }
+  },
+  "run_count": 12,
+  "seed_count": 3,
+  "status": "passed",
+  "uniform_reporting_target_accuracy": 0.2
+}

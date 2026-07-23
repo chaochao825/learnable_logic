@@ -10,8 +10,8 @@ Strong DLGN uses N(0,1) gate logits, Adam at constant learning rate 0.01, and
 no custom regularization. Proposed progressive scale16 uses targeted
 low-margin initialization, AdamW/cosine, state regularization, four soft epochs
 before hard straight-through training, and the entropy schedule selected by
-the bounded screen. The separate low-margin artifact supplies the strict
-shared-protocol comparison; its seeds 1-2 are still queued.
+the bounded screen. The separate low-margin artifact now supplies the strict
+four-method, three-seed shared-protocol comparison.
 
 ## Aggregate metrics
 

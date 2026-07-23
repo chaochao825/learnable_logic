@@ -1,7 +1,7 @@
 # learnable_logic
 
 LightLogic / Hard-LGN discretization prototypes, experiment summaries, and
-selected publishable artifacts from the 210 server workflow.
+selected publishable artifacts from the 210 baseline and 236 H200 workflows.
 
 This repository is a clean publish tree, not a raw dump of the entire
 `/home/spco/sow_linear/hard_lgn_gap_proto` experiment directory. The original
@@ -65,11 +65,21 @@ The raw large run directories remain on the 210 server.
   full-CIFAR architecture, seed, budget, and H200 hardware. It is the strongest
   seed-0 classifier so far; progressive hardening instead has the smallest
   internal layer mismatch and activation-inactive ratio.
-- At strictly matched low-margin settings, progressive hardening improves
-  DLGN hard accuracy from 25.50% to 26.44% and reduces gap from 2.33 to
-  0.58 pp, but annealing reaches 27.64%. Doubling progressive state width to
-  8192 reaches 27.88% hard accuracy and a 0.05 pp gap with 82.05% more gates
-  and 58.47% more H200 training time.
+- In the same-H200, shared-low-margin three-seed comparison, DLGN, annealing,
+  and progressive hardening reach `27.14 +/- 0.68%`, `25.91 +/- 1.35%`, and
+  `27.79 +/- 1.17%` hard accuracy. Progressive beats DLGN hard accuracy in all
+  seeds and reduces mean gap from `0.92` to `0.62 pp`, but the gap direction
+  is not consistent in every seed.
+- Gumbel-ST collapses in that persistent-state protocol: `10.00%` soft and
+  `13.06 +/- 1.26%` hard accuracy, no 20% target hits, `94.39%` entropy-unused
+  gates, and `47.36%` peak layer mismatch. This is not presented as a
+  reproduction or refutation of the paper's original feed-forward result.
+- The strongest-recipe three-seed comparison is less favorable: strong DLGN
+  and progressive reach `27.70 +/- 0.43%` and `27.79 +/- 1.17%` hard accuracy.
+  Progressive cuts mean gap by `75.03%` but is `3.55x` slower to 20% because
+  the recipes intentionally use different initialization and optimizers.
+- Doubling progressive state width to 8192 reaches 27.88% hard accuracy and a
+  0.05 pp gap with 82.05% more gates and 58.47% more H200 training time.
 
 ## Repository layout
 
@@ -90,9 +100,15 @@ The raw large run directories remain on the 210 server.
 - `docs/repro/bitstate_h200_followup_cifar_20260723/`: strong annealing and
   width-scaling follow-up evidence
 - `docs/repro/bitstate_matched_full_cifar_20260723/`: strict low-margin
-  one-factor DLGN/annealing/Gumbel/progressive comparison
+  four-method, three-seed, same-H200 comparison with protocol/hash validation
+- `docs/repro/bitstate_multiseed_cifar_20260723/`: strongest-recipe DLGN versus
+  progressive three-seed comparison and paired deltas
+- `docs/repro/bitstate_nontrivial_screen_20260723/`: bounded all-layer and
+  global-merge anti-literal screens
 - `docs/repro/bitstate_count_token_screen_20260723/`: matched bounded ablation
   of fixed-majority versus learned integer count-threshold global tokens
+- `docs/repro/mind_gap_scaled_abc_20260723/`: optional ABC optimization and
+  post-ABC functional evaluation for the Boolean networks
 
 ## Raw artifact location on 210
 
@@ -107,6 +123,13 @@ The most important report directories are:
 - `/home/spco/sow_linear/hard_lgn_gap_proto/runs/lightlogic_distill_report_goal56_v2`
 - `/home/spco/sow_linear/hard_lgn_gap_proto/reports/lightlogic_b_lut_goal7_v2_configdoc_v1`
 - `/home/spco/sow_linear/hard_lgn_gap_proto/reports/lut_xag_backend_v1`
+
+The H200 full-CIFAR run/checkpoint tree remains on server 236 at:
+
+- `/home/wangmeiqi/learnable_logic_bitstate_20260723/remote_runs/`
+
+Only summaries, diagnostics, and compact generated tables are published here;
+CIFAR payloads and checkpoints remain remote.
 
 ## ViT-LGN attention and token-mixer extension
 

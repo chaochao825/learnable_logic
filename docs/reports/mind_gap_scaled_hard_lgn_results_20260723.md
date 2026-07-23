@@ -154,13 +154,9 @@ and produces a smaller gap than the proposed hardening schedule at essentially
 the same runtime as DLGN. The proposed schedule therefore does not beat the
 strongest simple baseline.
 
-Under the strictly shared low-margin AdamW protocol at width 4096, DLGN,
-annealing, Gumbel-ST, and progressive scale16 reach `25.50%`, `27.64%`,
-`12.64%`, and `26.44%` hard accuracy, with gaps of `2.33`, `0.87`, `2.64`,
-and `0.58 pp`. Progressive hardening therefore cleanly beats matched DLGN in
-both hard accuracy (`+0.94 pp`) and gap (`-1.75 pp`) and beats Gumbel, but still
-loses `1.20 pp` hard accuracy to annealing. This separates the positive
-one-factor result from the negative strongest-baseline ranking.
+The earlier mixed-hardware low-margin seed-0 table is superseded by the
+same-H200, four-method, three-seed comparison below. The old rows remain useful
+as a hardware-sensitivity replay, not as the primary method ranking.
 
 Width 8192 adds `82.05%` gates and `58.47%` H200 training time for `1.44 pp`
 more hard accuracy than width 4096. It also lowers the final gap to `0.05 pp`,
@@ -184,6 +180,54 @@ identity-biased protocol shared by those ablations, not by progressive
 hardening alone. The N(0,1) strong baselines are needed to expose that
 confounder.
 
+### Strict shared-protocol three-seed check
+
+All four methods use low-margin targeted initialization, AdamW/cosine, the
+same collapse regularization, width 4096, 30 epochs, seeds 0-2, and H200 NVL
+hardware. Values are mean plus or minus sample standard deviation.
+
+| method | hard acc | acc gap | loss gap | train time | time to 20% | entropy-unused | max layer flip |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| DLGN | 27.14 +/- 0.68% | 0.92 +/- 0.61 pp | 0.0306 +/- 0.0130 | 1966.1 +/- 13.5 s | 285.4 +/- 36.3 s | 10.61 +/- 0.98% | 12.33 +/- 0.62% |
+| annealing | 25.91 +/- 1.35% | 0.75 +/- 0.98 pp | 0.0141 +/- 0.0080 | **1955.0 +/- 12.6 s** | 717.0 +/- 126.5 s | 13.59 +/- 0.27% | 20.58 +/- 1.27% |
+| Gumbel-ST | 13.06 +/- 1.26% | 3.06 +/- 1.26 pp | 0.0486 +/- 0.0289 | 2041.0 +/- 10.4 s | not reached (0/3) | 94.39 +/- 3.56% | 47.36 +/- 0.74% |
+| progressive scale16 | **27.79 +/- 1.17%** | **0.62 +/- 0.27 pp** | **0.0139 +/- 0.0053** | 1987.8 +/- 6.7 s | **284.3 +/- 38.7 s** | **0.042 +/- 0.017%** | **7.23 +/- 0.35%** |
+
+Progressive beats DLGN hard accuracy in all paired seeds by `+0.07`, `+0.98`,
+and `+0.90 pp`. Mean gap falls by `0.30 pp` (`32.85%` relative), but seed 1
+is a counterexample: its gap rises by `0.35 pp`. The method uses `1.10%` more
+total time and has essentially identical time to 20%, so the strict result is
+neither a convergence penalty nor a Mind-the-Gap-like speedup.
+
+Progressive also beats annealing hard accuracy in all three seeds by `+0.05`,
+`+1.43`, and `+4.17 pp`. Annealing has a smaller final gap in seeds 0 and 1,
+while progressive wins seed 2 and has a slightly smaller mean. Progressive
+reaches 20% `432.7 s` earlier and reduces the peak internal flip ratio by
+`13.35 pp`; annealing retains a `1.24 pp` lower activation-inactive ratio.
+
+Gumbel-ST collapses in this persistent-state architecture: soft accuracy is
+exactly `10.00%` in every seed, hard accuracy is `13.06 +/- 1.26%`, and no run
+reaches 20%. Relative to Gumbel-ST, progressive raises mean hard accuracy by
+`14.73 pp`, lowers accuracy gap by `2.44 pp`, entropy-unused gates by
+`94.35 pp`, and peak layer flips by `40.13 pp`. This negative result is
+specific to the tested architecture and shared recipe; it is not a direct
+reproduction or refutation of the paper's feed-forward LGN result.
+
+The depth traces separate final cancellation from stable hard computation.
+Mean DLGN flip ratio grows from `0.27%` at the encoder to `12.33%` at the vote
+head. Annealing peaks at `20.58%` after the second global block before falling
+to `13.98%` at votes. Gumbel-ST grows from `1.07%` to `47.36%` before ending
+at `42.20%`. Progressive grows from `0.81%` to only `7.23%`, with
+`1.17-2.96%` mismatch through its local/global blocks. It therefore reduces,
+but does not eliminate, depth-wise mismatch accumulation.
+
+The hard function mix remains literal dominated: DLGN and progressive select
+`88.14%` and `89.09%` literals, with only `8.30%` and `7.65%` genuinely
+two-input gates. Gumbel-ST selects `27.43%` nontrivial functions but leaves
+`94.39%` of gates entropy-unused. Progressive's `99.60%` relative reduction
+in entropy-unused gates is a commitment result, not evidence for more complex
+Boolean functions.
+
 ### Three-seed strongest-recipe check
 
 Over seeds 0-2, strong DLGN and progressive scale16 reach `27.70 +/- 0.43%`
@@ -197,8 +241,9 @@ and entropy-unused gates by `39.53 pp` on average.
 The cost is slower optimization: proposed takes `12.65%` more total training
 time and reaches 20% hard validation accuracy in `284.3 s` versus `80.0 s` for
 DLGN. This comparison uses each method's strongest recipe, so it ranks final
-systems but is not a one-factor optimizer/initialization ablation. Strict
-low-margin seeds 1-2 remain queued separately.
+systems but is not a one-factor optimizer/initialization ablation. The strict
+comparison above shows that the 3.55x convergence difference is attributable
+to the strong DLGN recipe rather than hardening alone.
 
 The complete evidence is in
 [bitstate_h200_long_cifar_20260723](../repro/bitstate_h200_long_cifar_20260723/README.md)
@@ -213,9 +258,9 @@ Three-seed rows, sample deviations, and paired deltas are in
 
 | paper target | scaled result | status |
 | --- | --- | --- |
-| up to 4.5x faster convergence | direct block refit is 3.63x to 4.13x faster in Boolean total training time, but no compared method reaches the task target; task-aware refit is 0.95x to 1.94x | not reproduced as convergence speed |
-| 98% lower discretization gap | block methods reduce Boolean gap by 6.1% to 72.4%; Gumbel reduces it by 41.4% to 86.1% | not reproduced on Boolean tasks |
-| 100% lower unused-gate ratio | block refit has 98.6% to 99.0% entropy-unused gates and is worse than DLGN | rejected at this scale |
+| up to 4.5x faster convergence | strict full-CIFAR progressive and DLGN reach 20% in 284.3 and 285.4 s; strongest-recipe progressive is 3.55x slower than strong DLGN. Boolean total time is not convergence because targets are missed | not reproduced |
+| 98% lower discretization gap | truth-table block methods reduce Boolean gap by 6.1% to 72.4%; strict full-CIFAR progressive reduces mean DLGN gap by 32.85%, and strongest-recipe progressive by 75.03% | not reproduced |
+| 100% lower unused-gate ratio | truth-table refit is worse than DLGN on Boolean tasks; strict progressive reduces full-CIFAR DLGN entropy-unused gates by 99.60% but does not reach zero and remains 89.09% literal | not reproduced; metric nearly matched only by committed routing |
 
 The digits Gumbel row reaches a `97.35%` relative gap reduction and the
 task-aware row reaches `96.46%`, but their hard accuracies are `8.22%` and
@@ -253,12 +298,12 @@ hard model after fitting.
 
 | success criterion | result |
 | --- | --- |
-| reduce gap relative to DLGN | pass on all tested datasets |
-| avoid depth-wise accumulation | pass within frozen prefixes |
-| reduce unused gates | fail |
-| keep hard accuracy close to useful soft accuracy | mixed; fails image probes |
-| work without relying on Gumbel-ST | pass mechanically |
-| remain competitive with strongest baselines | partial on Boolean; fail on digits and against full-CIFAR annealing |
+| reduce gap relative to DLGN | truth-table refit passes on all Boolean task means; scalable progressive passes on full-CIFAR mean but not every seed |
+| avoid depth-wise accumulation | exact frozen prefixes pass by construction; scalable progressive lowers vote flip from 12.33% to 7.23% versus strict DLGN |
+| reduce unused gates | truth-table refit fails on Boolean tasks; scalable progressive reduces strict DLGN entropy-unused gates by 99.60% but mostly selects literals |
+| keep hard accuracy close to useful soft accuracy | mixed for exact block refit; scalable progressive reaches 27.79% hard from 28.16% soft on full CIFAR |
+| work without relying on Gumbel-ST | pass mechanically and in the strict full-CIFAR hard-accuracy comparison |
+| remain competitive with strongest baselines | partial: strict progressive beats DLGN/annealing hard accuracy, but strong annealing remains the best seed-0 classifier and absolute CIFAR accuracy is low |
 
 The current prototype establishes a useful controlled ablation: per-block hard
 refitting localizes depth-wise mismatch and can improve Boolean hard accuracy.
