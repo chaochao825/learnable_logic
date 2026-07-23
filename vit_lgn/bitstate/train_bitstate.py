@@ -21,6 +21,7 @@ from .regularization import (
     entropy_unused_gate_ratio,
     gate_distribution_metrics,
     gate_entropy_target_penalty,
+    gate_nontrivial_target_penalty,
     selected_gate_function_metrics,
 )
 from .teacher import ATTENTION_CLEAN_PROFILE, load_attention_clean_teacher
@@ -59,6 +60,7 @@ RESULT_COLUMNS = (
     "layer_gap_final_flip_ratio",
     "gate_entropy",
     "gate_confidence",
+    "gate_nontrivial_probability_mass",
     "hard_carrier_acc",
     "hard_bit_acc",
     "hard_path_acc_gap",
@@ -745,10 +747,15 @@ def train(args: argparse.Namespace) -> dict[str, object]:
                     model.gate_layers(),
                     entropy_target,
                 )
+                nontrivial_penalty, nontrivial_mass = gate_nontrivial_target_penalty(
+                    model.gate_layers(),
+                    args.gate_nontrivial_target,
+                )
                 loss = (
                     task_loss
                     + collapse_loss
                     + entropy_weight * gate_penalty
+                    + args.gate_nontrivial_weight * nontrivial_penalty
                 )
             loss.backward()
             if args.grad_clip > 0:
@@ -763,6 +770,8 @@ def train(args: argparse.Namespace) -> dict[str, object]:
                 "gate_entropy": gate_entropy,
                 "gate_confidence": gate_confidence,
                 "gate_entropy_penalty": gate_penalty,
+                "gate_nontrivial_penalty": nontrivial_penalty,
+                "gate_nontrivial_probability_mass": nontrivial_mass,
                 "supervised_loss": supervised_loss,
                 "distillation_loss": distillation_loss,
             }
@@ -805,6 +814,8 @@ def train(args: argparse.Namespace) -> dict[str, object]:
             "learning_rate": learning_rate,
             "gate_entropy_target": entropy_target,
             "gate_entropy_weight": entropy_weight,
+            "gate_nontrivial_target": args.gate_nontrivial_target,
+            "gate_nontrivial_weight": args.gate_nontrivial_weight,
             "hardening_applied": hardening_applied,
             "elapsed": time.perf_counter() - started,
         }
@@ -877,6 +888,12 @@ def train(args: argparse.Namespace) -> dict[str, object]:
         final_gate_entropy, final_gate_confidence = gate_distribution_metrics(
             model.gate_layers()
         )
+        _final_nontrivial_penalty, final_nontrivial_mass = (
+            gate_nontrivial_target_penalty(
+                model.gate_layers(),
+                args.gate_nontrivial_target,
+            )
+        )
     selected_gate_metrics = selected_gate_function_metrics(model.gate_layers())
     method_name = {
         "soft": "bitstate_soft_argmax",
@@ -915,6 +932,7 @@ def train(args: argparse.Namespace) -> dict[str, object]:
         "layer_gap_final_flip_ratio": layer_gap_diagnostics[-1]["flip_ratio"],
         "gate_entropy": float(final_gate_entropy),
         "gate_confidence": float(final_gate_confidence),
+        "gate_nontrivial_probability_mass": float(final_nontrivial_mass),
         "hard_carrier_acc": hard_carrier_acc,
         "hard_bit_acc": discrete_acc,
         "hard_path_acc_gap": abs(hard_carrier_acc - discrete_acc),
@@ -1064,6 +1082,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--gate-entropy-weight-end", type=float, default=-1.0)
     parser.add_argument("--gate-entropy-target-start", type=float, default=0.8)
     parser.add_argument("--gate-entropy-target-end", type=float, default=0.1)
+    parser.add_argument("--gate-nontrivial-weight", type=float, default=0.0)
+    parser.add_argument("--gate-nontrivial-target", type=float, default=0.5)
     parser.add_argument("--save-checkpoint", action="store_true")
     parser.add_argument(
         "--save-best-checkpoint",
@@ -1109,8 +1129,11 @@ def parse_args() -> argparse.Namespace:
         args.state_diversity_weight,
         args.state_flip_weight,
         args.gate_entropy_weight,
+        args.gate_nontrivial_weight,
     ) < 0.0:
         parser.error("regularization weights must be non-negative")
+    if not 0.0 <= args.gate_nontrivial_target <= 1.0:
+        parser.error("gate-nontrivial-target must be in [0, 1]")
     if any(
         value != -1.0 and value < 0.0
         for value in (

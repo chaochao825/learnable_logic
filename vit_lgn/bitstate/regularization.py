@@ -11,6 +11,7 @@ from .gates import HardSTGateLayer
 
 
 MIND_GAP_ENTROPY_THRESHOLD = 1.8843154907226562
+NONTRIVIAL_GATE_IDS = (1, 2, 4, 6, 7, 8, 9, 11, 13, 14)
 
 
 def gate_distribution_metrics(
@@ -76,7 +77,7 @@ def selected_gate_function_metrics(
     wire_ratio = ratio((3, 5))
     inverted_literal_ratio = ratio((10, 12))
     literal_ratio = wire_ratio + inverted_literal_ratio
-    nontrivial_ratio = ratio((1, 2, 4, 6, 7, 8, 9, 11, 13, 14))
+    nontrivial_ratio = ratio(NONTRIVIAL_GATE_IDS)
     return {
         "constant_gate_ratio": constant_ratio,
         "wire_gate_ratio": wire_ratio,
@@ -99,6 +100,29 @@ def gate_entropy_target_penalty(
         raise ValueError(target)
     entropy, confidence = gate_distribution_metrics(layers, tau=tau)
     return (entropy - target).square(), entropy, confidence
+
+
+def gate_nontrivial_target_penalty(
+    layers: Iterable[HardSTGateLayer],
+    target: float,
+    *,
+    tau: float = 1.0,
+) -> tuple[Tensor, Tensor]:
+    """Penalize gates with too little probability on true two-input logic."""
+
+    if not 0.0 <= target <= 1.0:
+        raise ValueError(target)
+    if tau <= 0.0:
+        raise ValueError(tau)
+    masses = []
+    for layer in layers:
+        probabilities = F.softmax(layer.logits / tau, dim=-1)
+        masses.append(probabilities[..., list(NONTRIVIAL_GATE_IDS)].sum(dim=-1))
+    if not masses:
+        raise ValueError("at least one gate layer is required")
+    nontrivial_mass = torch.cat(masses)
+    penalty = F.relu(target - nontrivial_mass).square().mean()
+    return penalty, nontrivial_mass.mean()
 
 
 def _activity_metrics(state: Tensor) -> tuple[Tensor, Tensor, Tensor]:

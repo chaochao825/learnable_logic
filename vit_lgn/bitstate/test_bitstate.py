@@ -19,6 +19,7 @@ from vit_lgn.bitstate.regularization import (
     collapse_regularization,
     entropy_unused_gate_ratio,
     gate_entropy_target_penalty,
+    gate_nontrivial_target_penalty,
     selected_gate_function_metrics,
 )
 from vit_lgn.bitstate.train_bitstate import (
@@ -143,6 +144,37 @@ class BitStateTest(unittest.TestCase):
         self.assertEqual(metrics["selected_function_count"], 6)
         self.assertAlmostEqual(metrics["selected_function_coverage"], 6 / 16)
         self.assertEqual(metrics["selected_function_histogram"][3], 1)
+
+    def test_nontrivial_gate_penalty_discourages_literal_concentration(self) -> None:
+        literal = HardSTGateLayer(
+            2,
+            2,
+            torch.tensor([0, 0]),
+            torch.tensor([1, 1]),
+            init_ops=torch.tensor([3, 5]),
+            init_strength=2.0,
+        )
+        nontrivial = HardSTGateLayer(
+            2,
+            2,
+            torch.tensor([0, 0]),
+            torch.tensor([1, 1]),
+            init_ops=torch.tensor([1, 6]),
+            init_strength=2.0,
+        )
+        literal_penalty, literal_mass = gate_nontrivial_target_penalty(
+            [literal], 0.5
+        )
+        nontrivial_penalty, nontrivial_mass = gate_nontrivial_target_penalty(
+            [nontrivial], 0.5
+        )
+        self.assertGreater(
+            float(literal_penalty.detach()),
+            float(nontrivial_penalty.detach()),
+        )
+        self.assertLess(float(literal_mass.detach()), float(nontrivial_mass.detach()))
+        literal_penalty.backward()
+        self.assertGreater(float(literal.logits.grad.abs().sum()), 0.0)
 
     def test_train_validation_split_is_deterministic_and_disjoint(self) -> None:
         dataset = TensorDataset(torch.arange(20))

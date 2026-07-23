@@ -94,6 +94,12 @@ wire, inverted-literal, all-literal, and genuinely two-input function ratios,
 plus the selected 16-function histogram. These structural metrics are kept
 separate from the paper's entropy-unused definition.
 
+`--gate-nontrivial-weight` optionally penalizes gates whose soft probability
+mass on the ten genuinely two-input functions falls below
+`--gate-nontrivial-target`. The default weight is zero, so historical methods
+and matched baselines are unchanged. `hard_scale16_nontrivial` is the bounded
+anti-literal-collapse ablation exposed by the H200 launcher.
+
 The default `--gate-init-mode targeted` preserves the model's identity-biased
 Boolean state initialization. `--gate-init-mode normal
 --gate-init-normal-std 1` instead reproduces the DLGN/GLGN N(0,1) logit

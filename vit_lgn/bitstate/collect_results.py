@@ -49,6 +49,7 @@ RESULT_FIELDS = (
     "layer_gap_final_flip_ratio",
     "gate_entropy",
     "gate_confidence",
+    "gate_nontrivial_probability_mass",
     "hard_path_acc_gap",
     "hard_path_loss_gap",
     "bit_exact_verified",
@@ -75,6 +76,8 @@ RESULT_FIELDS = (
     "optimizer",
     "learning_rate",
     "lr_schedule",
+    "gate_nontrivial_weight",
+    "gate_nontrivial_target",
 )
 
 
@@ -153,6 +156,8 @@ def summary_row(
         optimizer=training.get("optimizer", ""),
         learning_rate=training.get("learning_rate", ""),
         lr_schedule=training.get("lr_schedule", ""),
+        gate_nontrivial_weight=training.get("gate_nontrivial_weight", 0.0),
+        gate_nontrivial_target=training.get("gate_nontrivial_target", ""),
     )
     for epoch in summary.get("history") or []:
         if float(epoch.get("discrete_acc", 0.0)) >= 0.2:
@@ -187,6 +192,7 @@ def summary_row(
             "nontrivial_gate_ratio",
             "selected_function_count",
             "selected_function_coverage",
+            "gate_nontrivial_probability_mass",
             "layer_gap_max_mae",
             "layer_gap_max_flip_ratio",
             "layer_gap_final_flip_ratio",

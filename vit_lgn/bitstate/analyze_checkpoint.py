@@ -12,6 +12,7 @@ from .model import BitStateConfig, BitStateViT
 from .regularization import (
     entropy_unused_gate_ratio,
     gate_distribution_metrics,
+    gate_nontrivial_target_penalty,
     selected_gate_function_metrics,
 )
 from .train_bitstate import (
@@ -67,6 +68,9 @@ def main() -> None:
         max_batches=args.batches,
     )
     gate_entropy, gate_confidence = gate_distribution_metrics(model.gate_layers())
+    _nontrivial_penalty, nontrivial_mass = gate_nontrivial_target_penalty(
+        model.gate_layers(), 0.0
+    )
     result = {
         "source_summary": str(summary_path),
         "checkpoint": str(checkpoint_path),
@@ -76,6 +80,7 @@ def main() -> None:
         "unused_gate_definition": "mind_gap_entropy_above_initialization_2.5pct",
         "gate_entropy": float(gate_entropy.detach()),
         "gate_confidence": float(gate_confidence.detach()),
+        "gate_nontrivial_probability_mass": float(nontrivial_mass.detach()),
         "layer_gap_max_mae": max(item["mae"] for item in layer_gap),
         "layer_gap_max_flip_ratio": max(item["flip_ratio"] for item in layer_gap),
         "layer_gap_final_flip_ratio": layer_gap[-1]["flip_ratio"],
