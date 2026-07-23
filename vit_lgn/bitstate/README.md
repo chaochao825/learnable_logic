@@ -91,8 +91,11 @@ the two definitions.
 Committed gates can still collapse to constants or one-input literals. New
 runs and post-hoc checkpoint analysis therefore also report constant, direct
 wire, inverted-literal, all-literal, and genuinely two-input function ratios,
-plus the selected 16-function histogram. These structural metrics are kept
-separate from the paper's entropy-unused definition.
+plus the selected 16-function histogram. Post-hoc analysis records the same
+ratios for every named local, query, key, merge, and head layer, including
+separate direct-`a` and direct-`b` ratios. This exposes message-bypass collapse
+that an aggregate committed-gate statistic can hide. These structural metrics
+are kept separate from the paper's entropy-unused definition.
 
 `--gate-nontrivial-weight` optionally penalizes gates whose soft probability
 mass on the ten genuinely two-input functions falls below

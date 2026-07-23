@@ -66,7 +66,12 @@ def selected_gate_function_metrics(
     operations = [layer.hard_ops().cpu() for layer in layers]
     if not operations:
         raise ValueError("at least one gate layer is required")
-    operations_tensor = torch.cat(operations)
+    return _selected_gate_function_metrics(torch.cat(operations))
+
+
+def _selected_gate_function_metrics(
+    operations_tensor: Tensor,
+) -> dict[str, float | int | list[int]]:
     histogram = torch.bincount(operations_tensor, minlength=16)
     total = operations_tensor.numel()
 
@@ -74,12 +79,20 @@ def selected_gate_function_metrics(
         return float(histogram[list(indices)].sum()) / total
 
     constant_ratio = ratio((0, 15))
-    wire_ratio = ratio((3, 5))
-    inverted_literal_ratio = ratio((10, 12))
+    input_a_ratio = ratio((3,))
+    input_b_ratio = ratio((5,))
+    not_b_ratio = ratio((10,))
+    not_a_ratio = ratio((12,))
+    wire_ratio = input_a_ratio + input_b_ratio
+    inverted_literal_ratio = not_b_ratio + not_a_ratio
     literal_ratio = wire_ratio + inverted_literal_ratio
     nontrivial_ratio = ratio(NONTRIVIAL_GATE_IDS)
     return {
         "constant_gate_ratio": constant_ratio,
+        "input_a_gate_ratio": input_a_ratio,
+        "input_b_gate_ratio": input_b_ratio,
+        "not_a_gate_ratio": not_a_ratio,
+        "not_b_gate_ratio": not_b_ratio,
         "wire_gate_ratio": wire_ratio,
         "inverted_literal_gate_ratio": inverted_literal_ratio,
         "literal_gate_ratio": literal_ratio,
@@ -88,6 +101,27 @@ def selected_gate_function_metrics(
         "selected_function_coverage": float(torch.count_nonzero(histogram)) / 16,
         "selected_function_histogram": histogram.tolist(),
     }
+
+
+@torch.no_grad()
+def selected_gate_function_metrics_by_layer(
+    named_layers: Iterable[tuple[str, HardSTGateLayer]],
+) -> list[dict[str, float | int | str | list[int]]]:
+    """Report deterministic function use for every named gate layer."""
+
+    rows = []
+    for name, layer in named_layers:
+        metrics = _selected_gate_function_metrics(layer.hard_ops().cpu())
+        rows.append(
+            {
+                "layer": name,
+                "gate_count": layer.out_dim,
+                **metrics,
+            }
+        )
+    if not rows:
+        raise ValueError("at least one named gate layer is required")
+    return rows
 
 
 def gate_entropy_target_penalty(

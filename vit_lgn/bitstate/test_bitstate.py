@@ -21,6 +21,7 @@ from vit_lgn.bitstate.regularization import (
     gate_entropy_target_penalty,
     gate_nontrivial_target_penalty,
     selected_gate_function_metrics,
+    selected_gate_function_metrics_by_layer,
 )
 from vit_lgn.bitstate.train_bitstate import (
     initialize_gate_logits,
@@ -137,6 +138,10 @@ class BitStateTest(unittest.TestCase):
         )
         metrics = selected_gate_function_metrics([layer])
         self.assertAlmostEqual(metrics["constant_gate_ratio"], 2 / 6)
+        self.assertAlmostEqual(metrics["input_a_gate_ratio"], 1 / 6)
+        self.assertAlmostEqual(metrics["input_b_gate_ratio"], 1 / 6)
+        self.assertAlmostEqual(metrics["not_a_gate_ratio"], 0)
+        self.assertAlmostEqual(metrics["not_b_gate_ratio"], 1 / 6)
         self.assertAlmostEqual(metrics["wire_gate_ratio"], 2 / 6)
         self.assertAlmostEqual(metrics["inverted_literal_gate_ratio"], 1 / 6)
         self.assertAlmostEqual(metrics["literal_gate_ratio"], 3 / 6)
@@ -144,6 +149,12 @@ class BitStateTest(unittest.TestCase):
         self.assertEqual(metrics["selected_function_count"], 6)
         self.assertAlmostEqual(metrics["selected_function_coverage"], 6 / 16)
         self.assertEqual(metrics["selected_function_histogram"][3], 1)
+
+        layer_rows = selected_gate_function_metrics_by_layer([("logic", layer)])
+        self.assertEqual(len(layer_rows), 1)
+        self.assertEqual(layer_rows[0]["layer"], "logic")
+        self.assertEqual(layer_rows[0]["gate_count"], 6)
+        self.assertAlmostEqual(layer_rows[0]["nontrivial_gate_ratio"], 1 / 6)
 
     def test_nontrivial_gate_penalty_discourages_literal_concentration(self) -> None:
         literal = HardSTGateLayer(

@@ -8,12 +8,14 @@ from pathlib import Path
 
 import torch
 
+from .gates import HardSTGateLayer
 from .model import BitStateConfig, BitStateViT
 from .regularization import (
     entropy_unused_gate_ratio,
     gate_distribution_metrics,
     gate_nontrivial_target_penalty,
     selected_gate_function_metrics,
+    selected_gate_function_metrics_by_layer,
 )
 from .train_bitstate import (
     make_loaders,
@@ -85,6 +87,13 @@ def main() -> None:
         "layer_gap_max_flip_ratio": max(item["flip_ratio"] for item in layer_gap),
         "layer_gap_final_flip_ratio": layer_gap[-1]["flip_ratio"],
         "layer_gap_diagnostics": layer_gap,
+        "gate_function_layers": selected_gate_function_metrics_by_layer(
+            (
+                (name, module)
+                for name, module in model.named_modules()
+                if isinstance(module, HardSTGateLayer)
+            )
+        ),
     }
     result.update(selected_gate_function_metrics(model.gate_layers()))
     output = args.output or args.run_dir / "posthoc_diagnostics.json"
