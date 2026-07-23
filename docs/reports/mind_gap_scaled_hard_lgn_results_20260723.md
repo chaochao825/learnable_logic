@@ -249,10 +249,15 @@ anti-literal screen has now tested both all-layer and role-specific global-merge
 penalties. The merge-only penalty removes the argmax bypass almost completely,
 but raises entropy-unused gates from `1.03%` to `47.72-50.11%`, peak layer
 flips from `27.38%` to about `49%`, and the accuracy gap from `1.25 pp` to
-`5.20-6.10 pp`. It is therefore not promoted to a full-CIFAR run. The next
-research step should optimize hard block selection for downstream hard
-accuracy while coupling message usefulness to gate commitment, then validate
-the resulting method over paired seeds.
+`5.20-6.10 pp`. Raising all-layer entropy pressure reduces that gap to
+`1.55-2.05 pp` but still leaves `45.82-46.51%` gates entropy-unused and about
+`45-47%` peak internal flips. Restricting entropy pressure to merges reaches
+`22.25%` hard accuracy in one bounded row, but has a `3.40 pp` gap,
+`55.75%` unused gates, and only `22.63%` merge confidence. None passes the
+joint accuracy, gap, and commitment screen, so no variant is promoted to a
+full-CIFAR run. The next research step should optimize hard block selection
+for downstream hard accuracy while retaining base commitment and coupling
+message usefulness to a role-specific margin, then validate over paired seeds.
 
 The complete anti-literal evidence, including named-layer 16-function
 histograms, is in
