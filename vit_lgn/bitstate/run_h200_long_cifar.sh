@@ -22,6 +22,8 @@ soft_warmup_epochs="${SOFT_WARMUP_EPOCHS:-15}"
 gate_nontrivial_weight="${GATE_NONTRIVIAL_WEIGHT:-0}"
 gate_nontrivial_target="${GATE_NONTRIVIAL_TARGET:-0.5}"
 gate_nontrivial_scope="${GATE_NONTRIVIAL_SCOPE:-all}"
+gate_entropy_weight="${GATE_ENTROPY_WEIGHT:-0.01}"
+gate_entropy_scope="${GATE_ENTROPY_SCOPE:-all}"
 seed="${SEED:-0}"
 
 common=(
@@ -61,7 +63,8 @@ common=(
   --state-balance-weight 0.05
   --state-diversity-weight 0.02
   --state-flip-weight 0.02
-  --gate-entropy-weight 0.01
+  --gate-entropy-weight "${gate_entropy_weight}"
+  --gate-entropy-scope "${gate_entropy_scope}"
   --gate-nontrivial-weight "${gate_nontrivial_weight}"
   --gate-nontrivial-target "${gate_nontrivial_target}"
   --gate-nontrivial-scope "${gate_nontrivial_scope}"

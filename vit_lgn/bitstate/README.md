@@ -107,6 +107,15 @@ combine old state with the Top-K message; `hard_scale16_merge_nontrivial`
 provides a targeted message-bypass ablation without forcing query/key gates to
 use both inputs.
 
+`--gate-entropy-scope global_merges` independently restricts the entropy target
+to those merge gates. This allows a commitment ablation that combines a
+merge-only nontrivial-function target with merge-only sharpening without
+forcing unrelated query, key, local, or head gates. Summaries retain aggregate
+`gate_entropy`/`gate_confidence` for cross-run comparison and add
+`scoped_gate_entropy`/`scoped_gate_confidence` for the optimized role. The H200
+launcher accepts `GATE_ENTROPY_WEIGHT` and `GATE_ENTROPY_SCOPE`; their defaults
+preserve every historical command.
+
 The default `--gate-init-mode targeted` preserves the model's identity-biased
 Boolean state initialization. `--gate-init-mode normal
 --gate-init-normal-std 1` instead reproduces the DLGN/GLGN N(0,1) logit

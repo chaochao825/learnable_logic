@@ -157,7 +157,7 @@ class BitStateTest(unittest.TestCase):
         self.assertEqual(layer_rows[0]["gate_count"], 6)
         self.assertAlmostEqual(layer_rows[0]["nontrivial_gate_ratio"], 1 / 6)
 
-    def test_nontrivial_gate_scope_can_target_global_merges(self) -> None:
+    def test_gate_regularizer_scope_can_target_global_merges(self) -> None:
         model = BitStateViT(small_config())
         all_layers = select_nontrivial_gate_layers(model, "all")
         merge_layers = select_nontrivial_gate_layers(model, "global_merges")

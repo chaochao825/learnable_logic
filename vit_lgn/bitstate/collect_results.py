@@ -53,6 +53,9 @@ RESULT_FIELDS = (
     "layer_gap_final_flip_ratio",
     "gate_entropy",
     "gate_confidence",
+    "gate_entropy_scope",
+    "scoped_gate_entropy",
+    "scoped_gate_confidence",
     "gate_nontrivial_probability_mass",
     "hard_path_acc_gap",
     "hard_path_loss_gap",
@@ -164,6 +167,7 @@ def summary_row(
         gate_nontrivial_weight=training.get("gate_nontrivial_weight", 0.0),
         gate_nontrivial_target=training.get("gate_nontrivial_target", ""),
         gate_nontrivial_scope=training.get("gate_nontrivial_scope", "all"),
+        gate_entropy_scope=training.get("gate_entropy_scope", "all"),
     )
     for epoch in summary.get("history") or []:
         if float(epoch.get("discrete_acc", 0.0)) >= 0.2:

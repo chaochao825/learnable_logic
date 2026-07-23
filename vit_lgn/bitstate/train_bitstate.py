@@ -61,6 +61,9 @@ RESULT_COLUMNS = (
     "layer_gap_final_flip_ratio",
     "gate_entropy",
     "gate_confidence",
+    "gate_entropy_scope",
+    "scoped_gate_entropy",
+    "scoped_gate_confidence",
     "gate_nontrivial_probability_mass",
     "hard_carrier_acc",
     "hard_bit_acc",
@@ -180,7 +183,7 @@ def select_nontrivial_gate_layers(
     model: BitStateViT,
     scope: str,
 ) -> list[HardSTGateLayer]:
-    """Select the gate roles constrained by the anti-literal penalty."""
+    """Select gate roles for a scoped distribution regularizer."""
 
     if scope == "all":
         return model.gate_layers()
@@ -623,6 +626,10 @@ def train(args: argparse.Namespace) -> dict[str, object]:
         normal_std=args.gate_init_normal_std,
         seed=args.seed + 4000,
     )
+    entropy_layers = select_nontrivial_gate_layers(
+        model,
+        args.gate_entropy_scope,
+    )
     nontrivial_layers = select_nontrivial_gate_layers(
         model,
         args.gate_nontrivial_scope,
@@ -765,7 +772,7 @@ def train(args: argparse.Namespace) -> dict[str, object]:
                     teacher_temperature=args.teacher_temperature,
                 )
                 gate_penalty, gate_entropy, gate_confidence = gate_entropy_target_penalty(
-                    model.gate_layers(),
+                    entropy_layers,
                     entropy_target,
                 )
                 nontrivial_penalty, nontrivial_mass = gate_nontrivial_target_penalty(
@@ -909,6 +916,9 @@ def train(args: argparse.Namespace) -> dict[str, object]:
         final_gate_entropy, final_gate_confidence = gate_distribution_metrics(
             model.gate_layers()
         )
+        scoped_gate_entropy, scoped_gate_confidence = gate_distribution_metrics(
+            entropy_layers
+        )
         _final_nontrivial_penalty, final_nontrivial_mass = (
             gate_nontrivial_target_penalty(
                 nontrivial_layers,
@@ -953,6 +963,9 @@ def train(args: argparse.Namespace) -> dict[str, object]:
         "layer_gap_final_flip_ratio": layer_gap_diagnostics[-1]["flip_ratio"],
         "gate_entropy": float(final_gate_entropy),
         "gate_confidence": float(final_gate_confidence),
+        "gate_entropy_scope": args.gate_entropy_scope,
+        "scoped_gate_entropy": float(scoped_gate_entropy),
+        "scoped_gate_confidence": float(scoped_gate_confidence),
         "gate_nontrivial_probability_mass": float(final_nontrivial_mass),
         "hard_carrier_acc": hard_carrier_acc,
         "hard_bit_acc": discrete_acc,
@@ -1103,6 +1116,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--gate-entropy-weight-end", type=float, default=-1.0)
     parser.add_argument("--gate-entropy-target-start", type=float, default=0.8)
     parser.add_argument("--gate-entropy-target-end", type=float, default=0.1)
+    parser.add_argument(
+        "--gate-entropy-scope",
+        choices=("all", "global_merges"),
+        default="all",
+    )
     parser.add_argument("--gate-nontrivial-weight", type=float, default=0.0)
     parser.add_argument("--gate-nontrivial-target", type=float, default=0.5)
     parser.add_argument(
