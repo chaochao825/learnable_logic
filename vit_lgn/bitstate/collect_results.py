@@ -82,6 +82,7 @@ RESULT_FIELDS = (
     "lr_schedule",
     "gate_nontrivial_weight",
     "gate_nontrivial_target",
+    "gate_nontrivial_scope",
 )
 
 
@@ -162,6 +163,7 @@ def summary_row(
         lr_schedule=training.get("lr_schedule", ""),
         gate_nontrivial_weight=training.get("gate_nontrivial_weight", 0.0),
         gate_nontrivial_target=training.get("gate_nontrivial_target", ""),
+        gate_nontrivial_scope=training.get("gate_nontrivial_scope", "all"),
     )
     for epoch in summary.get("history") or []:
         if float(epoch.get("discrete_acc", 0.0)) >= 0.2:

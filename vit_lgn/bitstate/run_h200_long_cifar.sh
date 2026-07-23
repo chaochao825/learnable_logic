@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-variant="${1:?usage: run_h200_long_cifar.sh dlgn|anneal|gumbel|dlgn_normal_adam|anneal_normal_adam|gumbel_normal_adam_tau010|gumbel_normal_adam_tau100|hard_scale4|hard_scale16|hard_scale16_count_token|hard_scale16_nontrivial|hard_scale4_ramp050 [output-root]}"
+variant="${1:?usage: run_h200_long_cifar.sh dlgn|anneal|gumbel|dlgn_normal_adam|anneal_normal_adam|gumbel_normal_adam_tau010|gumbel_normal_adam_tau100|hard_scale4|hard_scale16|hard_scale16_count_token|hard_scale16_nontrivial|hard_scale16_merge_nontrivial|hard_scale4_ramp050 [output-root]}"
 output_root="${2:-remote_runs/h200_long_cifar_20260723}"
 python_bin="${PYTHON_BIN:-/home/wangmeiqi/miniconda3/envs/lgn/bin/python}"
 data_root="${CIFAR10_ROOT:-/home/wangmeiqi/phz/attention-clean/data/cifar-10}"
@@ -21,6 +21,7 @@ global_token_mode="${GLOBAL_TOKEN_MODE:-majority}"
 soft_warmup_epochs="${SOFT_WARMUP_EPOCHS:-15}"
 gate_nontrivial_weight="${GATE_NONTRIVIAL_WEIGHT:-0}"
 gate_nontrivial_target="${GATE_NONTRIVIAL_TARGET:-0.5}"
+gate_nontrivial_scope="${GATE_NONTRIVIAL_SCOPE:-all}"
 seed="${SEED:-0}"
 
 common=(
@@ -63,6 +64,7 @@ common=(
   --gate-entropy-weight 0.01
   --gate-nontrivial-weight "${gate_nontrivial_weight}"
   --gate-nontrivial-target "${gate_nontrivial_target}"
+  --gate-nontrivial-scope "${gate_nontrivial_scope}"
   --target-accuracy 0.2
   --inactive-batches 8
   --seed "${seed}"
@@ -167,6 +169,15 @@ case "${variant}" in
       --hardening-logit-scale 16
       --gate-nontrivial-weight 0.1
       --gate-nontrivial-target 0.5
+    )
+    ;;
+  hard_scale16_merge_nontrivial)
+    variant_args=(
+      --method progressive_hard_st
+      --hardening-logit-scale 16
+      --gate-nontrivial-weight 0.5
+      --gate-nontrivial-target 0.8
+      --gate-nontrivial-scope global_merges
     )
     ;;
   hard_scale4_ramp050)

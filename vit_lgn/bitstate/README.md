@@ -101,7 +101,11 @@ are kept separate from the paper's entropy-unused definition.
 mass on the ten genuinely two-input functions falls below
 `--gate-nontrivial-target`. The default weight is zero, so historical methods
 and matched baselines are unchanged. `hard_scale16_nontrivial` is the bounded
-anti-literal-collapse ablation exposed by the H200 launcher.
+all-layer anti-literal-collapse ablation exposed by the H200 launcher.
+`--gate-nontrivial-scope global_merges` instead constrains only the gates that
+combine old state with the Top-K message; `hard_scale16_merge_nontrivial`
+provides a targeted message-bypass ablation without forcing query/key gates to
+use both inputs.
 
 The default `--gate-init-mode targeted` preserves the model's identity-biased
 Boolean state initialization. `--gate-init-mode normal

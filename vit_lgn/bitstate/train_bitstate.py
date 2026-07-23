@@ -15,6 +15,7 @@ import torch.nn.functional as F
 from torch import Tensor
 from torch.utils.data import DataLoader, Dataset, Subset, TensorDataset
 
+from .gates import HardSTGateLayer
 from .model import BitStateConfig, BitStateViT
 from .regularization import (
     collapse_regularization,
@@ -173,6 +174,22 @@ def initialize_gate_logits(
     for layer in model.gate_layers():
         values = torch.randn(layer.logits.shape, generator=generator) * normal_std
         layer.logits.copy_(values.to(device=layer.logits.device, dtype=layer.logits.dtype))
+
+
+def select_nontrivial_gate_layers(
+    model: BitStateViT,
+    scope: str,
+) -> list[HardSTGateLayer]:
+    """Select the gate roles constrained by the anti-literal penalty."""
+
+    if scope == "all":
+        return model.gate_layers()
+    if scope == "global_merges":
+        layers = [block.merge for block in model.global_blocks]
+        if not layers:
+            raise ValueError("global_merges scope requires at least one global block")
+        return layers
+    raise ValueError(scope)
 
 
 def subset(dataset: Dataset, limit: int, seed: int) -> Dataset:
@@ -606,6 +623,10 @@ def train(args: argparse.Namespace) -> dict[str, object]:
         normal_std=args.gate_init_normal_std,
         seed=args.seed + 4000,
     )
+    nontrivial_layers = select_nontrivial_gate_layers(
+        model,
+        args.gate_nontrivial_scope,
+    )
     teacher = None
     teacher_metadata: dict[str, object] | None = None
     if args.teacher_alpha > 0.0:
@@ -748,7 +769,7 @@ def train(args: argparse.Namespace) -> dict[str, object]:
                     entropy_target,
                 )
                 nontrivial_penalty, nontrivial_mass = gate_nontrivial_target_penalty(
-                    model.gate_layers(),
+                    nontrivial_layers,
                     args.gate_nontrivial_target,
                 )
                 loss = (
@@ -890,7 +911,7 @@ def train(args: argparse.Namespace) -> dict[str, object]:
         )
         _final_nontrivial_penalty, final_nontrivial_mass = (
             gate_nontrivial_target_penalty(
-                model.gate_layers(),
+                nontrivial_layers,
                 args.gate_nontrivial_target,
             )
         )
@@ -1084,6 +1105,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--gate-entropy-target-end", type=float, default=0.1)
     parser.add_argument("--gate-nontrivial-weight", type=float, default=0.0)
     parser.add_argument("--gate-nontrivial-target", type=float, default=0.5)
+    parser.add_argument(
+        "--gate-nontrivial-scope",
+        choices=("all", "global_merges"),
+        default="all",
+    )
     parser.add_argument("--save-checkpoint", action="store_true")
     parser.add_argument(
         "--save-best-checkpoint",
