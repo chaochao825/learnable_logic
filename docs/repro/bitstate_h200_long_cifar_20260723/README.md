@@ -66,6 +66,29 @@ pass a stronger nontrivial-computation criterion. Future training should
 penalize excessive literal retention or allocate identity highways outside the
 trainable gate count.
 
+The aggregate ratio also hides where the bypass occurs. A named-layer audit of
+the proposed checkpoint gives:
+
+| layer | gates | constant | direct `a` | direct `b` | all literals | nontrivial |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| local 1 | 2,048 | 0.29% | 89.06% | 2.73% | 95.17% | 4.54% |
+| local 2 | 2,048 | 0.88% | 90.14% | 3.12% | 96.39% | 2.73% |
+| global 1 query | 512 | 73.24% | 13.67% | 0.78% | 14.65% | 12.11% |
+| global 1 key | 512 | 0.00% | 69.73% | 11.52% | 93.36% | 6.64% |
+| global 1 merge | 4,096 | 0.27% | 81.23% | 5.54% | 91.14% | 8.59% |
+| global 2 query | 512 | 13.67% | 76.76% | 1.37% | 79.30% | 7.03% |
+| global 2 key | 512 | 0.00% | 90.62% | 4.30% | 98.24% | 1.76% |
+| global 2 merge | 4,096 | 0.12% | 81.69% | 5.40% | 89.55% | 10.33% |
+| vote head | 640 | 0.00% | 22.81% | 20.47% | 91.41% | 8.59% |
+
+Here `a` is the old-state input for each global merge and `b` is its Top-K
+message. The two merge layers therefore bypass their message on more than 81%
+of channels, while the first query collapses mostly to constants. This is
+direct evidence that the current accuracy comes primarily from wide Boolean
+routing plus a small active cross-token subnetwork. The anti-literal ablation
+must be judged by both accuracy/gap and these per-role ratios; lowering the
+aggregate literal count alone is insufficient.
+
 ## Depth gap
 
 | boundary | proposed | strong DLGN | strong Gumbel | matched Gumbel |
@@ -88,7 +111,8 @@ accuracy gap alone.
 `*_summary.json` retains every epoch and complete training arguments.
 `*_posthoc.json` retains both unused definitions and every depth boundary.
 `gate_function_metrics.json` retains the 16-function argmax histograms and
-structural collapse ratios.
+structural collapse ratios. `hard_scale16_gate_function_layers.json` retains
+the named-layer audit above.
 No checkpoints or dataset payloads are committed. Full matched DLGN and
 annealing runs under the low-margin AdamW protocol remain pending on the 4090s;
 multi-seed H200 runs are also pending, so this is a seed-0 ranking rather than
