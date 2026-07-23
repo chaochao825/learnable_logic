@@ -65,6 +65,11 @@ The raw large run directories remain on the 210 server.
   full-CIFAR architecture, seed, budget, and H200 hardware. It is the strongest
   seed-0 classifier so far; progressive hardening instead has the smallest
   internal layer mismatch and activation-inactive ratio.
+- At strictly matched low-margin settings, progressive hardening improves
+  DLGN hard accuracy from 25.50% to 26.44% and reduces gap from 2.33 to
+  0.58 pp, but annealing reaches 27.64%. Doubling progressive state width to
+  8192 reaches 27.88% hard accuracy and a 0.05 pp gap with 82.05% more gates
+  and 58.47% more H200 training time.
 
 ## Repository layout
 
@@ -84,6 +89,8 @@ The raw large run directories remain on the 210 server.
   comparison with per-layer soft/hard diagnostics
 - `docs/repro/bitstate_h200_followup_cifar_20260723/`: strong annealing and
   width-scaling follow-up evidence
+- `docs/repro/bitstate_matched_full_cifar_20260723/`: strict low-margin
+  one-factor DLGN/annealing/Gumbel/progressive comparison
 - `docs/repro/bitstate_count_token_screen_20260723/`: matched bounded ablation
   of fixed-majority versus learned integer count-threshold global tokens
 

@@ -144,6 +144,7 @@ CIFAR-10 split, 30 epochs, seed 0, fixed wiring, and H200 NVL hardware.
 | strong DLGN | 28.13% | 2.10 pp | 1766.6 s | **60.5 s** | 40.24% | 19.11% |
 | strong annealing | **28.81%** | **0.28 pp** | **1766.4 s** | 413.3 s | 42.63% | 19.80% |
 | progressive scale16 | 26.44% | 0.58 pp | 1994.7 s | 263.9 s | **0.06%** | **6.85%** |
+| progressive scale16, width 8192 | 27.88% | **0.05 pp** | 3161.1 s | 521.2 s | **0.03%** | 9.05% |
 | strong Gumbel-ST | 15.71% | 0.72 pp | 1849.7 s | not reached | 79.74% | 31.01% |
 
 Progressive hardening reduces the DLGN gap by `72.38%` and greatly limits
@@ -152,6 +153,20 @@ annealing is the seed-0 winner: it improves DLGN hard accuracy by `0.68 pp`
 and produces a smaller gap than the proposed hardening schedule at essentially
 the same runtime as DLGN. The proposed schedule therefore does not beat the
 strongest simple baseline.
+
+Under the strictly shared low-margin AdamW protocol at width 4096, DLGN,
+annealing, Gumbel-ST, and progressive scale16 reach `25.50%`, `27.64%`,
+`12.64%`, and `26.44%` hard accuracy, with gaps of `2.33`, `0.87`, `2.64`,
+and `0.58 pp`. Progressive hardening therefore cleanly beats matched DLGN in
+both hard accuracy (`+0.94 pp`) and gap (`-1.75 pp`) and beats Gumbel, but still
+loses `1.20 pp` hard accuracy to annealing. This separates the positive
+one-factor result from the negative strongest-baseline ranking.
+
+Width 8192 adds `82.05%` gates and `58.47%` H200 training time for `1.44 pp`
+more hard accuracy than width 4096. It also lowers the final gap to `0.05 pp`,
+but increases the maximum internal flip ratio from `6.85%` to `9.05%` and
+raises literal selection to `93.98%`. Scaling supplies useful routing
+redundancy, with visibly diminishing structural efficiency.
 
 The unused-gate result also needs qualification. Progressive scale16 selects
 one-input literals for `89.28%` of gates and genuinely two-input functions for
@@ -163,10 +178,18 @@ internal mismatch through downstream cancellation. The two methods trade
 internal bit stability against final classification accuracy rather than one
 strictly dominating the other.
 
+The low-margin matched DLGN and annealing rows also select `88.27%` and
+`93.06%` literals. Thus this structural collapse is driven mainly by the
+identity-biased protocol shared by those ablations, not by progressive
+hardening alone. The N(0,1) strong baselines are needed to expose that
+confounder.
+
 The complete evidence is in
 [bitstate_h200_long_cifar_20260723](../repro/bitstate_h200_long_cifar_20260723/README.md)
 and
 [bitstate_h200_followup_cifar_20260723](../repro/bitstate_h200_followup_cifar_20260723/README.md).
+The one-factor table and complete provenance are in
+[bitstate_matched_full_cifar_20260723](../repro/bitstate_matched_full_cifar_20260723/README.md).
 
 ## Mind-the-Gap claim audit
 
