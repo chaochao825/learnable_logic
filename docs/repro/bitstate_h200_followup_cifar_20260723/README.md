@@ -77,7 +77,8 @@ verification.
 width-scaling evidence. `width_scaling_results.csv` is the two-row
 machine-readable comparison.
 
-Strict low-margin AdamW DLGN/annealing rows are complete on the 4090s, but their
-H200 timing replays and paired seeds 1-2 remain in progress. The first table is
-therefore a strongest-baseline comparison; the separate matched-protocol
-artifact supplies the one-factor accuracy/gap ablation.
+The strongest-recipe DLGN/proposed comparison is now complete over seeds 0-2.
+Strict low-margin AdamW DLGN/annealing rows are complete on the 4090s; their
+H200 seed-0 timing replays and strict seeds 1-2 remain in progress. The first
+table is therefore a strongest-baseline comparison; the separate
+matched-protocol artifact supplies the one-factor accuracy/gap ablation.

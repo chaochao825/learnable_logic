@@ -184,12 +184,30 @@ identity-biased protocol shared by those ablations, not by progressive
 hardening alone. The N(0,1) strong baselines are needed to expose that
 confounder.
 
+### Three-seed strongest-recipe check
+
+Over seeds 0-2, strong DLGN and progressive scale16 reach `27.70 +/- 0.43%`
+and `27.79 +/- 1.17%` mean hard accuracy. The paired proposed-minus-DLGN
+differences are `-1.69`, `+1.11`, and `+0.85 pp`; the `+0.09 pp` mean does not
+support a consistent accuracy win. Proposed nevertheless reduces the gap in
+all three seeds, from `2.48 +/- 0.39 pp` to `0.62 +/- 0.27 pp`, a `75.03%`
+relative mean reduction. It also lowers peak hidden-state flips by `12.63 pp`
+and entropy-unused gates by `39.53 pp` on average.
+
+The cost is slower optimization: proposed takes `12.65%` more total training
+time and reaches 20% hard validation accuracy in `284.3 s` versus `80.0 s` for
+DLGN. This comparison uses each method's strongest recipe, so it ranks final
+systems but is not a one-factor optimizer/initialization ablation. Strict
+low-margin seeds 1-2 remain queued separately.
+
 The complete evidence is in
 [bitstate_h200_long_cifar_20260723](../repro/bitstate_h200_long_cifar_20260723/README.md)
 and
 [bitstate_h200_followup_cifar_20260723](../repro/bitstate_h200_followup_cifar_20260723/README.md).
 The one-factor table and complete provenance are in
 [bitstate_matched_full_cifar_20260723](../repro/bitstate_matched_full_cifar_20260723/README.md).
+Three-seed rows, sample deviations, and paired deltas are in
+[bitstate_multiseed_cifar_20260723](../repro/bitstate_multiseed_cifar_20260723/README.md).
 
 ## Mind-the-Gap claim audit
 
