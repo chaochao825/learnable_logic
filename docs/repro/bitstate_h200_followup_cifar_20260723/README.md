@@ -14,6 +14,7 @@ and no custom state/gate regularization. Training source is `5aaee9d`.
 | strong DLGN | 30.23% | 28.13% | 2.10 pp | 1.9259 | 1.9704 | 0.0445 | 1766.6 s | 60.5 s | 40.24% | 29.41% |
 | strong annealing | 29.09% | **28.81%** | **0.28 pp** | 1.9457 | 1.9505 | **0.0048** | **1766.4 s** | 413.3 s | 42.63% | 30.63% |
 | progressive scale16 | 27.02% | 26.44% | 0.58 pp | 1.9917 | 2.0050 | 0.0133 | 1994.7 s | 263.9 s | **0.06%** | **3.61%** |
+| progressive scale16, width 8192 | 27.93% | 27.88% | **0.05 pp** | 1.9631 | 1.9740 | 0.0110 | 3161.1 s | 521.2 s | **0.03%** | **1.90%** |
 | strong Gumbel-ST | 14.99% | 15.71% | 0.72 pp | 2.2547 | 2.2551 | 0.0003 | 1849.7 s | not reached | 79.74% | 22.01% |
 
 Annealing is the strongest final classifier in this seed: it improves hard
@@ -23,6 +24,29 @@ scale16. The proposed method therefore cannot claim a seed-0 win over simple
 annealing. It still reaches 20% hard accuracy earlier than annealing and has
 far fewer entropy-unused and activation-inactive gates, although DLGN reaches
 that target fastest.
+
+## Width scaling
+
+| width | gates | predicates | fanout max | hard acc | acc gap | max layer flip | train time |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 4,096 | 14,976 | 3,904 | 228 | 26.44% | 0.58 pp | **6.85%** | 1994.7 s |
+| 8,192 | 27,264 | 8,000 | 429 | **27.88%** | **0.05 pp** | 9.05% | 3161.1 s |
+
+Doubling state width improves hard test accuracy by `1.44 pp`, lowers the
+final accuracy gap by `0.53 pp`, and nearly halves activation-inactive gates.
+It costs `82.05%` more trainable gates, `88.16%` higher maximum fanout, and
+`58.47%` more training time. It also reaches 20% later and increases peak
+internal bit mismatch from `6.85%` to `9.05%`, despite the smaller final
+accuracy gap. Width therefore supplies useful redundant Boolean capacity, but
+does not eliminate depth-wise mismatch or yield linear accuracy scaling.
+
+The larger model is even more literal-dominated: all-literal selection rises
+from `89.28%` to `93.98%`, and nontrivial two-input selection falls from
+`7.48%` to `4.51%`. Its two global merge layers copy the old-state input on
+`89.56%` and `90.38%` of channels. The scaling gain is consequently best
+interpreted as wider Boolean routing redundancy, not broader logic-function
+use. A still wider full run is not justified before testing the targeted
+global-merge anti-bypass regularizer.
 
 ## Structural and depth diagnostics
 
@@ -47,7 +71,12 @@ added after the queued matched-protocol runs release a GPU; the summary already
 contains the final eight-batch depth diagnostics and exact hard-carrier versus
 integer-bit verification.
 
-The width-8192 progressive run, strict low-margin AdamW DLGN/annealing rows,
-and paired seeds 1-2 remain in progress. Until those finish, the optimizer
-comparison above is a strongest-baseline comparison rather than a one-factor
-training-method ablation.
+`hard_scale16_w8192_seed0_summary.json` and
+`hard_scale16_w8192_seed0_gate_function_metrics.json` contain the corresponding
+width-scaling evidence. `width_scaling_results.csv` is the two-row
+machine-readable comparison.
+
+Strict low-margin AdamW DLGN/annealing rows are complete on the 4090s, but their
+H200 timing replays and paired seeds 1-2 remain in progress. The first table is
+therefore a strongest-baseline comparison; the separate matched-protocol
+artifact supplies the one-factor accuracy/gap ablation.
