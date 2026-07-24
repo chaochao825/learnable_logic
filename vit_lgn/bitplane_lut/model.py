@@ -10,6 +10,7 @@ from .layers import (
     LearnableLUTLayer,
     RefitMetrics,
     bitplanes_to_uint8,
+    spatial_candidate_indices,
     uint8_to_bitplanes,
 )
 
@@ -80,6 +81,9 @@ class BitPlaneLUTBlock(nn.Module):
         arity: int = 4,
         candidate_count: int = 16,
         seed: int = 0,
+        num_classes: int | None = None,
+        candidate_policy: str = "mixed",
+        input_shape: tuple[int, int, int] | None = None,
     ) -> None:
         super().__init__()
         if state_bits < 8 or state_bits % 8:
@@ -93,19 +97,39 @@ class BitPlaneLUTBlock(nn.Module):
         self.state_bits = int(state_bits)
         self.preserved_bits = int(preserved_bits)
         self.vote_bits = self.state_bits - self.preserved_bits
-        self.layers = nn.ModuleList(
-            [
+        if candidate_policy not in {"mixed", "image_spatial"}:
+            raise ValueError("unsupported candidate policy")
+        if candidate_policy == "image_spatial" and (
+            num_classes is None or input_shape is None
+        ):
+            raise ValueError("image_spatial routing needs classes and input shape")
+        built_layers = []
+        for index in range(layers):
+            layer_seed = seed + index * 10_007
+            candidates = None
+            if candidate_policy == "image_spatial":
+                candidates = spatial_candidate_indices(
+                    self.state_bits,
+                    self.preserved_bits,
+                    self.vote_bits,
+                    arity,
+                    candidate_count,
+                    int(num_classes),
+                    input_shape,
+                    layer_seed,
+                )
+            built_layers.append(
                 LearnableLUTLayer(
                     self.state_bits,
                     self.vote_bits,
                     arity=arity,
                     candidate_count=candidate_count,
-                    seed=seed + index * 10_007,
+                    seed=layer_seed,
                     identity_offset=self.preserved_bits,
+                    candidate_indices=candidates,
                 )
-                for index in range(layers)
-            ]
-        )
+            )
+        self.layers = nn.ModuleList(built_layers)
 
     @property
     def is_frozen(self) -> bool:
@@ -194,6 +218,8 @@ class BitPlaneLUTClassifier(nn.Module):
         arity: int = 4,
         candidate_count: int = 16,
         seed: int = 0,
+        candidate_policy: str = "mixed",
+        input_shape: tuple[int, int, int] | None = None,
     ) -> None:
         super().__init__()
         if input_symbols < 1:
@@ -214,6 +240,15 @@ class BitPlaneLUTClassifier(nn.Module):
             raise ValueError("learned vote planes must align to A8 and GroupSum")
         self.arity = int(arity)
         self.candidate_count = int(candidate_count)
+        if candidate_policy not in {"mixed", "image_spatial"}:
+            raise ValueError("unsupported candidate policy")
+        if candidate_policy == "image_spatial":
+            if input_shape is None:
+                raise ValueError("image_spatial routing requires input_shape")
+            if math.prod(input_shape) != self.input_symbols:
+                raise ValueError("input_shape does not match input_symbols")
+        self.candidate_policy = candidate_policy
+        self.input_shape = tuple(input_shape) if input_shape is not None else None
 
         # Every source bit appears once before deterministic repetition.  This
         # is fixed wiring, not learned projection capacity.
@@ -230,6 +265,9 @@ class BitPlaneLUTClassifier(nn.Module):
                     arity=self.arity,
                     candidate_count=self.candidate_count,
                     seed=seed + index * 100_003,
+                    num_classes=self.num_classes,
+                    candidate_policy=self.candidate_policy,
+                    input_shape=self.input_shape,
                 )
                 for index in range(blocks)
             ]
@@ -390,6 +428,7 @@ class BitPlaneLUTClassifier(nn.Module):
             ),
             "learned_dense_integer_matrix_count": 0,
             "learned_numeric_weight_count": 0,
+            "candidate_policy": self.candidate_policy,
             "layers": layer_rows,
         }
 
@@ -405,6 +444,8 @@ class BitPlaneLUTClassifier(nn.Module):
             "preserved_bits": self.preserved_bits,
             "vote_bits": self.vote_bits,
             "num_classes": self.num_classes,
+            "candidate_policy": self.candidate_policy,
+            "input_shape": list(self.input_shape) if self.input_shape else None,
             "encoder_route": self.encoder_route.detach().cpu().to(torch.int32),
             "blocks": [
                 {

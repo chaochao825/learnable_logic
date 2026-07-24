@@ -29,3 +29,8 @@ bitplane_lut_wiring_refit,w672_p512_v160_b2_k4_c16,512,512,84,8,672,1,,,,25600,2
 bitplane_lut_wiring_refit,w832_p512_v320_b2_k4_c16,512,512,104,8,832,1,,,,51200,44608,640,2,12,"all learned deployment capacity remains LUT truth bits and discrete source indices"
 bitplane_lut_abc_dc2_k4,w672_argmax_abc_k4_s012,512,512,84,8,672,1,,,,25600,15502,313,3,14,"conservative max over three argmax seeds after ABC; excludes fixed GroupSum/argmax; source learned payload was 17920 bits"
 bitplane_lut_abc_dc2_k4,w832_argmax_abc_k4_s012,512,512,104,8,832,1,,,,51200,32656,606,3,21,"conservative max over three argmax seeds after ABC; excludes fixed GroupSum/argmax; source learned payload was 35840 bits"
+bitplane_lut_argmax,c100_mixed_v64_d2,24576,24576,3872,8,30976,1,,,,1024000,1482240,12800,2,,"fixed mixed candidate baseline; each final vote has at most 16 raw-input support leaves before repeated-source reduction"
+bitplane_lut_spatial_argmax,c100_spatial_v64_d2,24576,24576,3872,8,30976,1,,,,1024000,1482240,12800,2,,"same gate budget as mixed baseline; fixed 3x3 raw probes and same-class recurrent vote candidates"
+bitplane_lut_spatial_argmax,c100_spatial_v128_d2,24576,24576,4672,8,37376,1,,,,2048000,2698240,25600,2,,"2x votes and gates versus v64 at the same Boolean depth; final support remains bounded by 16 leaves"
+bitplane_lut_spatial_argmax,c100_spatial_v128_d4,24576,24576,4672,8,37376,1,,,,4096000,4746240,51200,4,,"same vote width as v128-d2 with 2x depth/gates and at most 256 raw-input support leaves per final vote"
+bitplane_lut_spatial_argmax,c100_spatial_v256_d4,24576,24576,6272,8,50176,1,,,,8192000,9123840,102400,4,,"2x votes versus v128-d4; largest pre-registered logic-native capacity point"

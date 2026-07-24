@@ -112,6 +112,104 @@ def deterministic_candidate_indices(
     return result
 
 
+def spatial_candidate_indices(
+    state_bits: int,
+    preserved_bits: int,
+    output_bits: int,
+    arity: int,
+    candidate_count: int,
+    num_classes: int,
+    image_shape: tuple[int, int, int],
+    seed: int,
+) -> torch.Tensor:
+    """Build fixed image-local, class-state, and global source candidates."""
+
+    height, width, channels = (int(value) for value in image_shape)
+    if min(height, width, channels) < 1:
+        raise ValueError("image dimensions must be positive")
+    if preserved_bits != height * width * channels * 8:
+        raise ValueError("preserved bit width does not match the image shape")
+    if state_bits != preserved_bits + output_bits:
+        raise ValueError("spatial routing expects raw planes plus vote planes")
+    if output_bits % num_classes:
+        raise ValueError("output bits must divide evenly across classes")
+    if arity not in {2, 3, 4}:
+        raise ValueError("arity must be one of 2, 3, or 4")
+    if not 1 <= candidate_count <= state_bits:
+        raise ValueError("invalid candidate_count")
+
+    result = torch.empty(
+        output_bits, arity, candidate_count, dtype=torch.int64
+    )
+    pixel_count = height * width
+    votes_per_class = output_bits // num_classes
+    offsets = (
+        (0, 0),
+        (-1, 0),
+        (1, 0),
+        (0, -1),
+        (0, 1),
+        (-1, -1),
+        (-1, 1),
+        (1, -1),
+        (1, 1),
+    )
+
+    for output in range(output_bits):
+        class_index = output % num_classes
+        vote_index = output // num_classes
+        identity = preserved_bits + output
+        anchor = (
+            vote_index * 1_315_423_911
+            + class_index * 2_654_435_761
+            + int(seed) * 433_494_437
+        ) % pixel_count
+        anchor_y, anchor_x = divmod(anchor, width)
+        for slot in range(arity):
+            ordered = [identity] if slot == 0 else []
+
+            # Previous vote planes from the same class let deeper blocks grow
+            # Boolean support without introducing a numeric mixing matrix.
+            for delta in (slot + 1, -(slot + 1), slot + 3):
+                neighbor_vote = (vote_index + delta) % votes_per_class
+                ordered.append(
+                    preserved_bits + neighbor_vote * num_classes + class_index
+                )
+
+            # Tile deterministic 3x3 pixel neighborhoods, channels, and bit
+            # planes across class votes. Every entry is a raw Boolean source.
+            for probe in range(max(candidate_count // 2, len(offsets))):
+                dy, dx = offsets[(probe + slot) % len(offsets)]
+                y = (anchor_y + dy) % height
+                x = (anchor_x + dx) % width
+                channel = (class_index + vote_index + slot + probe) % channels
+                plane = (vote_index + 2 * slot + probe) % 8
+                symbol = (y * width + x) * channels + channel
+                ordered.append(symbol * 8 + plane)
+
+            ordered.append(identity)
+            unique: list[int] = []
+            for value in ordered:
+                value %= state_bits
+                if value not in unique:
+                    unique.append(value)
+                if len(unique) == candidate_count:
+                    break
+            probe = 0
+            while len(unique) < candidate_count:
+                value = (
+                    (output + 1) * 2_246_822_519
+                    + (slot + 1) * 3_266_489_917
+                    + (probe + 1) * 668_265_263
+                    + int(seed) * 374_761_393
+                ) % state_bits
+                if value not in unique:
+                    unique.append(value)
+                probe += 1
+            result[output, slot] = torch.tensor(unique, dtype=torch.int64)
+    return result
+
+
 @dataclass(frozen=True)
 class RefitMetrics:
     bit_error: float
@@ -134,6 +232,7 @@ class LearnableLUTLayer(nn.Module):
         identity_offset: int = 0,
         wiring_temperature: float = 1.0,
         truth_temperature: float = 1.0,
+        candidate_indices: torch.Tensor | None = None,
     ) -> None:
         super().__init__()
         if arity not in {2, 3, 4}:
@@ -152,14 +251,30 @@ class LearnableLUTLayer(nn.Module):
         self.wiring_temperature = float(wiring_temperature)
         self.truth_temperature = float(truth_temperature)
 
-        candidates = deterministic_candidate_indices(
-            self.input_bits,
-            self.output_bits,
-            self.arity,
-            self.candidate_count,
-            seed,
-            identity_offset,
-        )
+        if candidate_indices is None:
+            candidates = deterministic_candidate_indices(
+                self.input_bits,
+                self.output_bits,
+                self.arity,
+                self.candidate_count,
+                seed,
+                identity_offset,
+            )
+        else:
+            candidates = candidate_indices.detach().cpu().to(torch.int64).clone()
+            expected = (self.output_bits, self.arity, self.candidate_count)
+            if tuple(candidates.shape) != expected:
+                raise ValueError("fixed candidate tensor shape mismatch")
+            if candidates.numel() and (
+                int(candidates.min().item()) < 0
+                or int(candidates.max().item()) >= self.input_bits
+            ):
+                raise ValueError("fixed candidate source is out of range")
+            ordered, _ = candidates.sort(dim=-1)
+            if self.candidate_count > 1 and bool(
+                (ordered[..., 1:] == ordered[..., :-1]).any()
+            ):
+                raise ValueError("fixed candidate pools must contain unique sources")
         self.register_buffer("candidate_indices", candidates, persistent=True)
         self.register_buffer("truth_patterns", _patterns(self.arity), persistent=False)
         self.register_buffer(
@@ -532,5 +647,6 @@ __all__ = [
     "RefitMetrics",
     "bitplanes_to_uint8",
     "deterministic_candidate_indices",
+    "spatial_candidate_indices",
     "uint8_to_bitplanes",
 ]

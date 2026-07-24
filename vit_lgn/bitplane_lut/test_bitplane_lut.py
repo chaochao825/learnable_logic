@@ -13,6 +13,7 @@ from vit_lgn.bitplane_lut.executor import (
 from vit_lgn.bitplane_lut.layers import (
     LearnableLUTLayer,
     bitplanes_to_uint8,
+    spatial_candidate_indices,
     uint8_to_bitplanes,
 )
 from vit_lgn.bitplane_lut.model import (
@@ -53,6 +54,25 @@ class BitPlaneCodecTest(unittest.TestCase):
 
 
 class LearnableLUTLayerTest(unittest.TestCase):
+    def test_spatial_candidates_are_unique_and_preserve_vote_identity(self) -> None:
+        candidates = spatial_candidate_indices(
+            state_bits=64,
+            preserved_bits=32,
+            output_bits=32,
+            arity=4,
+            candidate_count=12,
+            num_classes=2,
+            image_shape=(2, 2, 1),
+            seed=7,
+        )
+        self.assertEqual(candidates.shape, (32, 4, 12))
+        self.assertGreaterEqual(int(candidates.min()), 0)
+        self.assertLess(int(candidates.max()), 64)
+        self.assertTrue(
+            bool((candidates.sort(dim=-1).values[..., 1:] != candidates.sort(dim=-1).values[..., :-1]).all())
+        )
+        torch.testing.assert_close(candidates[:, 0, 0], torch.arange(32) + 32)
+
     def test_truth_support_counts_only_essential_inputs(self) -> None:
         parity4 = sum(
             (address.bit_count() & 1) << address for address in range(16)
@@ -224,6 +244,29 @@ class StrictBitPlaneModelTest(unittest.TestCase):
         payload["forbidden_shadow"] = torch.zeros(1, dtype=torch.float32)
         with self.assertRaises(TypeError):
             validate_hard_payload(payload)
+
+    def test_image_spatial_model_has_the_same_strict_payload_boundary(self) -> None:
+        model = BitPlaneLUTClassifier(
+            input_symbols=4,
+            state_bits=48,
+            num_classes=2,
+            blocks=2,
+            arity=4,
+            candidate_count=8,
+            seed=13,
+            candidate_policy="image_spatial",
+            input_shape=(2, 2, 1),
+        )
+        for block in model.blocks:
+            block.freeze_hard()
+        payload = model.hard_payload()
+        validate_hard_payload(payload)
+        self.assertEqual(payload["candidate_policy"], "image_spatial")
+        symbols = torch.arange(16, dtype=torch.uint8).reshape(4, 4)
+        torch.testing.assert_close(
+            StrictBitPlaneLUTExecutor(payload).logits(symbols),
+            model.hard_logits(symbols),
+        )
 
 
 if __name__ == "__main__":

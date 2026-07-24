@@ -58,6 +58,16 @@
       "selection": "best validation hard accuracy within each block, then one final test replay",
       "seeds": [0, 1, 2]
     },
+    "bitplane_lut_cifar100_scale_s0_v1": {
+      "architecture": "24,576 protected raw A8 bit planes; 6,400/12,800/25,600 learned class-vote planes per layer; 2/4 sequential blocks; one 4-input LUT per vote plane per block; 16 fixed candidate wires per LUT input; fixed interleaved integer GroupSum",
+      "budget": "at most 30 epochs per block, minimum 8, validation hard-accuracy patience 5, batch 128",
+      "dataset": "CIFAR-100 official train stratified 45,000/5,000 split seed 20260724; official 10,000 test report-only; raw uint8 with integer crop/flip augmentation",
+      "declared_variables": "candidate routing in {mixed, image_spatial}, votes per class in {64, 128, 256}, and Boolean depth in {2, 4}",
+      "deployment": "Boolean protected/state planes, Boolean 4-input truth tables, integer source indices, fixed integer GroupSum; zero learned dense integer matrices and zero learned numeric weights",
+      "optimizer": "AdamW lr0.03 cosine on training-only truth/wiring shadows; hard-ST forward; direct argmax and per-block hard freeze",
+      "selection": "best validation hard accuracy within each block; test is evaluated only after every block is frozen",
+      "seeds": [0]
+    },
     "bitplane_lut_digits_abc_dc2_k4_s012_v1": {
       "source": "all 18 hard payloads from bitplane_lut_digits_scale_s012_v2",
       "scope": "two learned LUT/wiring blocks from 512 raw Boolean inputs to final vote bits; GroupSum and argmax excluded",
