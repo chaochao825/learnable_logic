@@ -103,3 +103,10 @@ The protocol and capacity gates are recorded in
 `docs/protocols/bitplane_lut_shakespeare_char_scale_v1_20260724.md` and the
 machine-readable research registry. Seed 0 is only a feasibility screen;
 promotion requires the matched seeds 1 and 2.
+
+In the matched 20,000-window smoke, causal routing improves validation hard
+accuracy from 25.82% to 28.99% and test hard accuracy from 25.59% to 28.50%
+at the same 4,160-gate budget. Unused gates fall from 2.21% to 1.68%, while the
+accuracy gap increases slightly from 2.74% to 3.08%. The candidate is still
+below the 38.21% integer trigram reference, so this result authorizes the full
+width ladder but is not a language-model promotion.

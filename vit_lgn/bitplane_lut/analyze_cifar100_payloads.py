@@ -14,6 +14,7 @@ import torch
 from vit_lgn.bitplane_lut.executor import validate_hard_payload
 from vit_lgn.bitplane_lut.layers import (
     deterministic_candidate_indices,
+    sequence_candidate_indices,
     spatial_candidate_indices,
 )
 from vit_lgn.bitplane_lut.train_digits import atomic_json, file_sha256
@@ -75,6 +76,8 @@ def candidate_tensor(
     input_bits: int,
     output_bits: int,
     preserved_bits: int,
+    num_classes: int,
+    input_shape: tuple[int, ...],
     block_index: int,
     layer_index: int,
 ) -> torch.Tensor:
@@ -96,12 +99,25 @@ def candidate_tensor(
             **common,
         )
     if manifest_args["candidate_policy"] == "image_spatial":
+        if len(input_shape) != 3:
+            raise ValueError("image payload is missing its three-dimensional shape")
         return spatial_candidate_indices(
             input_bits,
             preserved_bits,
             output_bits,
-            num_classes=100,
-            image_shape=(32, 32, 3),
+            num_classes=num_classes,
+            image_shape=input_shape,
+            **common,
+        )
+    if manifest_args["candidate_policy"] == "sequence_causal":
+        if len(input_shape) != 1:
+            raise ValueError("sequence payload is missing its context shape")
+        return sequence_candidate_indices(
+            input_bits,
+            preserved_bits,
+            output_bits,
+            num_classes=num_classes,
+            sequence_length=input_shape[0],
             **common,
         )
     raise ValueError("unsupported candidate policy")
@@ -119,6 +135,7 @@ def analyze_run(run_dir: Path) -> dict[str, object]:
     preserved_bits = int(payload["preserved_bits"])
     vote_bits = int(payload["vote_bits"])
     num_classes = int(payload["num_classes"])
+    input_shape = tuple(int(value) for value in payload.get("input_shape") or ())
     route = payload["encoder_route"].to(torch.int64).tolist()
     raw_masks = [1 << index for index in range(input_bits)]
     state_support = [raw_masks[index] for index in route]
@@ -141,6 +158,8 @@ def analyze_run(run_dir: Path) -> dict[str, object]:
                 input_bits=int(layer["input_bits"]),
                 output_bits=int(layer["output_bits"]),
                 preserved_bits=preserved_bits,
+                num_classes=num_classes,
+                input_shape=input_shape,
                 block_index=block_index,
                 layer_index=layer_index,
             )

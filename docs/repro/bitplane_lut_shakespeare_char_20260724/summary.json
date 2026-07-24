@@ -1,0 +1,26 @@
+{
+  "all_strict_no_real": true,
+  "best_test_hard_acc_report_only": 0.2849962302085951,
+  "best_training_hard_acc": 0.3157,
+  "best_validation_hard_acc": 0.2899,
+  "best_variant": "smoke-causal-v32-d2",
+  "comparisons": [
+    {
+      "acc_gap_delta": 0.0033500000000000196,
+      "baseline": "smoke-mixed-v32-d2",
+      "candidate": "smoke-causal-v32-d2",
+      "comparison": "causal_routing_vs_mixed_smoke",
+      "gate_count_ratio": 1.0,
+      "test_hard_acc_delta_report_only": 0.029135102143395653,
+      "training_hard_acc_delta": 0.027599999999999958,
+      "unused_gate_ratio_delta": -0.0052884615384615405,
+      "validation_hard_acc_delta": 0.03165000000000001,
+      "validation_scaling_success": true
+    }
+  ],
+  "protocol_sha256": "1315c24e895669c69305215e0d63026268046fc752d1235a8c914208b1d2618c",
+  "runs": 2,
+  "selection_split": "validation",
+  "source_bundle_sha256": "e201b7372b0a421a022e3289b82590d63c31b0b97d689a0d57774836551ceb8c",
+  "summarizer_sha256": "7cf5ec1d24d2f7e5d2826e1ec61c329d1ca55382779dd760dd1d2d9c04132c09"
+}

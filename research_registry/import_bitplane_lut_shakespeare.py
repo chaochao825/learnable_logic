@@ -10,36 +10,42 @@ from research_registry.manifest import canonical_sha256
 
 ROOT = Path(__file__).resolve().parents[1]
 REGISTRY = ROOT / "research_registry"
-PROTOCOL_ID = "bitplane_lut_cifar100_scale_s0_v1"
+PROTOCOL_ID = "bitplane_lut_shakespeare_char_scale_s0_v1"
 VARIANTS = {
-    "mixed-v64-d2": {
-        "result_id": "bitplane_c100_mixed_v64_d2_s0",
-        "method_id": "bitplane_lut_argmax",
-        "config_id": "c100_mixed_v64_d2",
+    "smoke-mixed-v32-d2": {
+        "result_id": "bitplane_shakespeare_smoke_mixed_v32_d2_s0",
+        "method_id": "bitplane_lut_sequence_mixed_argmax",
+        "config_id": "shakespeare_mixed_v32_d2",
         "decision": "baseline",
     },
-    "spatial-v64-d2": {
-        "result_id": "bitplane_c100_spatial_v64_d2_s0",
-        "method_id": "bitplane_lut_spatial_argmax",
-        "config_id": "c100_spatial_v64_d2",
+    "smoke-causal-v32-d2": {
+        "result_id": "bitplane_shakespeare_smoke_causal_v32_d2_s0",
+        "method_id": "bitplane_lut_sequence_causal_argmax",
+        "config_id": "shakespeare_causal_v32_d2",
         "decision": "screen",
     },
-    "spatial-v128-d2": {
-        "result_id": "bitplane_c100_spatial_v128_d2_s0",
-        "method_id": "bitplane_lut_spatial_argmax",
-        "config_id": "c100_spatial_v128_d2",
+    "causal-v32-d2": {
+        "result_id": "bitplane_shakespeare_causal_v32_d2_s0",
+        "method_id": "bitplane_lut_sequence_causal_argmax",
+        "config_id": "shakespeare_causal_v32_d2",
         "decision": "screen",
     },
-    "spatial-v128-d4": {
-        "result_id": "bitplane_c100_spatial_v128_d4_s0",
-        "method_id": "bitplane_lut_spatial_argmax",
-        "config_id": "c100_spatial_v128_d4",
+    "causal-v64-d2": {
+        "result_id": "bitplane_shakespeare_causal_v64_d2_s0",
+        "method_id": "bitplane_lut_sequence_causal_argmax",
+        "config_id": "shakespeare_causal_v64_d2",
         "decision": "screen",
     },
-    "spatial-v256-d4": {
-        "result_id": "bitplane_c100_spatial_v256_d4_s0",
-        "method_id": "bitplane_lut_spatial_argmax",
-        "config_id": "c100_spatial_v256_d4",
+    "causal-v64-d4": {
+        "result_id": "bitplane_shakespeare_causal_v64_d4_s0",
+        "method_id": "bitplane_lut_sequence_causal_argmax",
+        "config_id": "shakespeare_causal_v64_d4",
+        "decision": "screen",
+    },
+    "causal-v128-d4": {
+        "result_id": "bitplane_shakespeare_causal_v128_d4_s0",
+        "method_id": "bitplane_lut_sequence_causal_argmax",
+        "config_id": "shakespeare_causal_v128_d4",
         "decision": "screen",
     },
 }
@@ -71,19 +77,19 @@ def build_result(
 ) -> dict[str, str]:
     variant = source["variant"]
     if variant not in VARIANTS:
-        raise ValueError(f"unexpected CIFAR-100 variant: {variant}")
+        raise ValueError(f"unexpected character-model variant: {variant}")
     identity = VARIANTS[variant]
     if source["method"] != identity["method_id"]:
         raise ValueError(f"method mismatch for {variant}")
-    run_id = source["run_id"]
+    sample_budget = "20000" if variant.startswith("smoke-") else "100000"
     return {
         "result_id": identity["result_id"],
         "method_id": identity["method_id"],
-        "dataset": "cifar100",
+        "dataset": "tiny_shakespeare_char",
         "protocol_id": PROTOCOL_ID,
         "seed": source["seed"],
         "seeds": "1",
-        "aggregation": "single pre-registered screen seed",
+        "aggregation": "single pre-registered feasibility seed",
         "selection_split": "validation",
         "soft_acc": source["soft_acc"],
         "hard_acc": source["discrete_acc"],
@@ -91,7 +97,9 @@ def build_result(
         "final_hard_acc": source["discrete_acc"],
         "best_hard_acc": source["discrete_acc"],
         "train_time_s": source["train_time_s"],
-        "budget": f"{source['epochs_ran']} block epochs",
+        "budget": (
+            f"{source['epochs_ran']} block epochs on {sample_budget} windows"
+        ),
         "unused_gate_ratio": source["unused_gate_ratio"],
         "gate_count": source["gate_count"],
         "depth": source["depth"],
@@ -102,8 +110,8 @@ def build_result(
         "training_health": "pass",
         "decision": identity["decision"],
         "evidence": (
-            "../docs/repro/bitplane_lut_cifar100_scale_20260724/"
-            f"runs/{run_id}/result.json"
+            "../docs/repro/bitplane_lut_shakespeare_char_20260724/"
+            f"runs/{source['run_id']}/result.json"
         ),
         "soft_loss": source["soft_loss"],
         "hard_loss": source["discrete_loss"],
@@ -119,10 +127,7 @@ def build_result(
 
 def update_capacity(source_rows: list[dict[str, str]]) -> None:
     fields, rows = load_csv(REGISTRY / "capacity.csv")
-    by_key = {
-        (row["method_id"], row["config_id"]): row
-        for row in rows
-    }
+    by_key = {(row["method_id"], row["config_id"]): row for row in rows}
     for source in source_rows:
         identity = VARIANTS[source["variant"]]
         key = (identity["method_id"], identity["config_id"])
@@ -151,18 +156,17 @@ def main() -> None:
     )["protocols"]
     protocol_sha256 = canonical_sha256(protocols[PROTOCOL_ID])
     _, source_rows = load_csv(args.summary_dir / "required_results.csv")
-    if len(source_rows) != len(VARIANTS):
-        raise ValueError(
-            f"expected {len(VARIANTS)} CIFAR-100 rows, found {len(source_rows)}"
-        )
-    if {row["variant"] for row in source_rows} != set(VARIANTS):
-        raise ValueError("CIFAR-100 scale ladder is incomplete")
+    if not source_rows:
+        raise ValueError("character-model summary is empty")
+    if len({row["variant"] for row in source_rows}) != len(source_rows):
+        raise ValueError("duplicate character-model variant")
+    unexpected = {row["variant"] for row in source_rows} - set(VARIANTS)
+    if unexpected:
+        raise ValueError(f"unexpected variants: {sorted(unexpected)}")
 
     results_path = REGISTRY / "results.csv"
     fields, existing = load_csv(results_path)
-    generated = [
-        build_result(row, protocol_sha256) for row in source_rows
-    ]
+    generated = [build_result(row, protocol_sha256) for row in source_rows]
     expected_fields = set(fields)
     for row in generated:
         if set(row) != expected_fields:
