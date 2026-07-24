@@ -59,10 +59,22 @@ is a screen; seed 1/2 repeats are mandatory before promotion.
 
 The completed matched smoke selects causal routing: validation hard accuracy
 is 28.99% versus 25.82% for mixed routing, with 28.50% versus 25.59% report-only
-test accuracy. Causal routing lowers unused gates from 2.21% to 1.68% but is
-still below the 38.21% integer trigram validation reference. The 100,000-window
-v32-d2 and v64-d2 runs are therefore justified and queued; deeper models remain
-conditional on the width result.
+test accuracy. Causal routing lowers unused gates from 2.21% to 1.68%.
+
+The 100,000-window fixed-depth width screen is also complete. Causal v32-d2
+reaches 33.82% validation and 33.16% report-only test hard accuracy. Causal
+v64-d2 reaches 36.275% validation and 35.434% test hard accuracy, gains 2.455
+and 2.276 percentage points respectively, and raises training hard accuracy by
+4.099 points. The final validation soft/hard gap is 0.14 points and strict
+execution audits 63,216 operations with zero floating tensors. Width therefore
+scales task accuracy, not only the gap. It also raises the unused-gate ratio
+from 2.57% to 4.01%, so utilization remains an explicit optimization target.
+The v64 result is still 1.940 points below the 38.215% integer trigram
+reference.
+
+Causal v64-d4 is now running from the exact v64-d2 hard payload. The two prefix
+blocks are tensor-identical to the d2 payload, remain frozen, and are charged
+their original training time; only blocks three and four are newly trained.
 
 ## Scaling path
 
@@ -72,6 +84,8 @@ conditional on the width result.
    accuracy and train hard accuracy both behave normally.
 3. Add depth at fixed width. Reject depth when it increases mismatch, identity
    carry, unused gates, or context-support collapse without hard gain.
+   Deeper runs must load the shallower strict payload, verify exact logits, and
+   train only the appended blocks.
 4. Measure structural context support for every final vote and class. Protected
    input planes prevent destructive state loss, but they do not guarantee that
    learned functions actually use long-range context.
@@ -106,8 +120,10 @@ failure. Every accepted run must also show finite training, exact strict replay,
 zero real-valued payload/runtime tensors, zero learned dense numeric matrices,
 payload hashes, gate/depth/fanout/unused metrics, and reproducible split hashes.
 
-Stop the current language-model branch if width does not improve hard accuracy,
-if it remains below the integer bigram/trigram references after the full v64
-screen, or if depth primarily increases identity paths and inactive vote planes.
-In that case, the next justified experiment is hierarchical output coding or a
-task-margin-aware hard refit, not a larger imitation Transformer.
+The positive v32-to-v64 width result permits the registered v64-d4 depth test.
+Stop or redirect the current language-model branch if d4 does not beat v64-d2,
+if it remains below the integer trigram reference, or if depth primarily
+increases identity paths and inactive vote planes. In that case, the next
+justified experiment is hierarchical output coding or a task-margin-aware hard
+refit, not a larger imitation Transformer. Causal v128-d4 is allowed only after
+the d4 depth gate passes.

@@ -1,2 +1,3 @@
 comparison,baseline,candidate,validation_hard_acc_delta,training_hard_acc_delta,test_hard_acc_delta_report_only,acc_gap_delta,unused_gate_ratio_delta,gate_count_ratio,validation_scaling_success
 causal_routing_vs_mixed_smoke,smoke-mixed-v32-d2,smoke-causal-v32-d2,0.03165000000000001,0.027599999999999958,0.029135102143395653,0.0033500000000000196,-0.0052884615384615405,1.0,True
+width_64_vs_32_d2,causal-v32-d2,causal-v64-d2,0.024550000000000016,0.040990000000000026,0.022762359530391685,0.0006999999999999784,0.014423076923076927,2.0,True
