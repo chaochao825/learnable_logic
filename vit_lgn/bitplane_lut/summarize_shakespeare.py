@@ -106,6 +106,11 @@ def flatten_run(
         raise RuntimeError(f"incomplete block history: {run_id}")
     final_vote = blocks[-1]["vote_state_diagnostics"]
     references = result["integer_ngram_references"]
+    prefix = manifest.get("prefix") or {}
+    core_sources = {
+        name: manifest["source_sha256"][name]
+        for name in ("__init__.py", "executor.py", "layers.py", "model.py")
+    }
     return {
         "run_id": run_id,
         "method": method,
@@ -169,6 +174,9 @@ def flatten_run(
         "payload_sha256": payload_sha256,
         "protocol_sha256": manifest["protocol_sha256"],
         "source_bundle_sha256": canonical_sha256(manifest["source_sha256"]),
+        "core_source_bundle_sha256": canonical_sha256(core_sources),
+        "prefix_blocks": int(prefix.get("blocks", 0)),
+        "prefix_payload_sha256": prefix.get("payload_sha256", ""),
         "corpus_sha256": manifest["split"]["corpus_sha256"],
         "vocab_sha256": manifest["split"]["vocab_sha256"],
         "train_split_sha256": manifest["split"]["train_index_sha256"],
@@ -194,6 +202,10 @@ def deltas(rows: list[dict[str, object]]) -> list[dict[str, object]]:
             "validation_split_sha256"
         ]:
             raise RuntimeError(f"validation split mismatch: {comparison}")
+        if comparison == "depth_4_vs_2_v64" and candidate[
+            "prefix_payload_sha256"
+        ] != baseline["payload_sha256"]:
+            raise RuntimeError("depth comparison does not reuse the d2 hard prefix")
         output.append(
             {
                 "comparison": comparison,
@@ -334,7 +346,11 @@ def main() -> None:
             rows.append(flatten_run(args.runs_root, run_id, method, variant))
     if not rows:
         raise RuntimeError("no registered character-model runs are complete")
-    for field in ("protocol_sha256", "source_bundle_sha256", "corpus_sha256"):
+    for field in (
+        "protocol_sha256",
+        "core_source_bundle_sha256",
+        "corpus_sha256",
+    ):
         if len({row[field] for row in rows}) != 1:
             raise RuntimeError(f"mismatched ladder provenance: {field}")
     comparison_rows = deltas(rows)
@@ -350,6 +366,10 @@ def main() -> None:
         "comparisons": comparison_rows,
         "protocol_sha256": best["protocol_sha256"],
         "source_bundle_sha256": best["source_bundle_sha256"],
+        "source_bundle_sha256_values": sorted(
+            {str(row["source_bundle_sha256"]) for row in rows}
+        ),
+        "core_source_bundle_sha256": best["core_source_bundle_sha256"],
         "summarizer_sha256": sha256_file(Path(__file__)),
     }
     args.out_dir.mkdir(parents=True, exist_ok=True)

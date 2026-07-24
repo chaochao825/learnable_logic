@@ -21,6 +21,7 @@ from vit_lgn.bitplane_lut.model import (
     BitPlaneLUTClassifier,
     boolean_state_diagnostics,
 )
+from vit_lgn.bitplane_lut.train_shakespeare import load_hard_prefix
 from vit_lgn.bitplane_lut.synthesize_payloads import (
     essential_input_count,
     realized_truth,
@@ -205,6 +206,31 @@ class LearnableLUTLayerTest(unittest.TestCase):
 
 
 class StrictBitPlaneModelTest(unittest.TestCase):
+    def test_strict_prefix_can_seed_a_deeper_model_exactly(self) -> None:
+        common = {
+            "input_symbols": 4,
+            "state_bits": 48,
+            "num_classes": 2,
+            "arity": 4,
+            "candidate_count": 8,
+            "seed": 23,
+            "candidate_policy": "sequence_causal",
+            "input_shape": (4,),
+        }
+        source = BitPlaneLUTClassifier(blocks=2, **common)
+        for block in source.blocks:
+            block.freeze_hard()
+        payload = source.hard_payload()
+        target = BitPlaneLUTClassifier(blocks=4, **common)
+        self.assertEqual(load_hard_prefix(target, payload), 2)
+        self.assertTrue(all(block.is_frozen for block in target.blocks[:2]))
+        self.assertTrue(all(not block.is_frozen for block in target.blocks[2:]))
+        symbols = torch.arange(16, dtype=torch.uint8).reshape(4, 4)
+        torch.testing.assert_close(
+            StrictBitPlaneLUTExecutor(payload).logits(symbols),
+            target.hard_logits(symbols, block_count=2),
+        )
+
     def _model(self) -> BitPlaneLUTClassifier:
         model = BitPlaneLUTClassifier(
             input_symbols=2,

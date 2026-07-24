@@ -57,6 +57,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--out-dir", type=Path, required=True)
     parser.add_argument("--corpus-path", type=Path, required=True)
     parser.add_argument("--protocol-path", type=Path, required=True)
+    parser.add_argument("--prefix-run-dir", type=Path)
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--split-seed", type=int, default=20260724)
     parser.add_argument("--context-length", type=int, default=64)
@@ -349,6 +350,73 @@ def greedy_generate(
     return "".join(characters[token] for token in generated), audit.operations
 
 
+@torch.no_grad()
+def load_hard_prefix(
+    model: BitPlaneLUTClassifier,
+    payload: dict[str, object],
+) -> int:
+    """Load an exact strict payload as frozen leading blocks."""
+
+    validate_hard_payload(payload)
+    expected_scalars = {
+        "input_symbols": model.input_symbols,
+        "input_bits": model.input_bits,
+        "state_bits": model.state_bits,
+        "preserved_bits": model.preserved_bits,
+        "vote_bits": model.vote_bits,
+        "num_classes": model.num_classes,
+    }
+    for key, expected in expected_scalars.items():
+        if int(payload[key]) != expected:
+            raise ValueError(f"prefix payload mismatch: {key}")
+    if payload["candidate_policy"] != model.candidate_policy:
+        raise ValueError("prefix candidate policy mismatch")
+    if list(payload.get("input_shape") or []) != list(model.input_shape or ()):
+        raise ValueError("prefix input shape mismatch")
+    if not torch.equal(
+        payload["encoder_route"].to(torch.int64),
+        model.encoder_route.detach().cpu().to(torch.int64),
+    ):
+        raise ValueError("prefix encoder route mismatch")
+    if not torch.equal(
+        payload["readout"]["group"].to(torch.int64),
+        model.readout_group.detach().cpu().to(torch.int64),
+    ):
+        raise ValueError("prefix readout mismatch")
+
+    prefix_blocks = payload["blocks"]
+    if not isinstance(prefix_blocks, (list, tuple)) or not prefix_blocks:
+        raise ValueError("prefix payload has no blocks")
+    if len(prefix_blocks) >= len(model.blocks):
+        raise ValueError("prefix must be shallower than the target model")
+    for block_index, block_payload in enumerate(prefix_blocks):
+        block = model.blocks[block_index]
+        layer_payloads = block_payload["layers"]
+        if len(layer_payloads) != len(block.layers):
+            raise ValueError("prefix layer count mismatch")
+        for layer, layer_payload in zip(block.layers, layer_payloads):
+            sources = layer_payload["source_indices"].to(
+                device=layer.frozen_sources.device, dtype=torch.int64
+            )
+            truth = layer_payload["truth_table"].to(
+                device=layer.frozen_truth.device, dtype=torch.bool
+            )
+            if sources.shape != layer.frozen_sources.shape:
+                raise ValueError("prefix source shape mismatch")
+            if truth.shape != layer.frozen_truth.shape:
+                raise ValueError("prefix truth shape mismatch")
+            candidates = layer.candidate_indices.to(sources.device)
+            matches = sources.unsqueeze(-1).eq(candidates)
+            if not bool(matches.any(dim=-1).all()):
+                raise ValueError("prefix source is outside the candidate pool")
+            layer.frozen_sources.copy_(sources)
+            layer.frozen_truth.copy_(truth)
+            layer.frozen_flag.fill_(True)
+            layer.wiring_logits.requires_grad_(False)
+            layer.truth_logits.requires_grad_(False)
+    return len(prefix_blocks)
+
+
 def main() -> None:
     args = parse_args()
     if args.context_length < 2 or args.context_length % 8:
@@ -412,6 +480,72 @@ def main() -> None:
         candidate_policy=args.candidate_policy,
         input_shape=(args.context_length,),
     ).to(device)
+    prefix_blocks = 0
+    prefix_block_rows: list[dict[str, object]] = []
+    prefix_training_seconds = 0.0
+    prefix_gradient_finite = True
+    prefix_metadata: dict[str, object] | None = None
+    if args.prefix_run_dir is not None:
+        prefix_dir = args.prefix_run_dir.resolve()
+        prefix_result_path = prefix_dir / "result.json"
+        prefix_manifest_path = prefix_dir / "run_manifest.json"
+        prefix_payload_path = prefix_dir / "hard_payload.pt"
+        prefix_result = json.loads(prefix_result_path.read_text(encoding="utf-8"))
+        prefix_manifest = json.loads(prefix_manifest_path.read_text(encoding="utf-8"))
+        prefix_payload_sha256 = file_sha256(prefix_payload_path)
+        if prefix_payload_sha256 != prefix_result["hard_payload_sha256"]:
+            raise RuntimeError("prefix payload hash mismatch")
+        if prefix_manifest["protocol_sha256"] != file_sha256(args.protocol_path):
+            raise RuntimeError("prefix protocol hash mismatch")
+        prefix_args = prefix_manifest["args"]
+        for key in (
+            "seed",
+            "split_seed",
+            "context_length",
+            "votes_per_class",
+            "layers_per_block",
+            "arity",
+            "candidate_count",
+            "candidate_policy",
+            "train_samples",
+            "validation_samples",
+            "test_samples",
+            "calibration_samples",
+        ):
+            if prefix_args[key] != getattr(args, key):
+                raise RuntimeError(f"prefix training argument mismatch: {key}")
+        for key, value in split_metadata.items():
+            if prefix_manifest["split"].get(key) != value:
+                raise RuntimeError(f"prefix split provenance mismatch: {key}")
+        prefix_payload = torch.load(
+            prefix_payload_path, map_location="cpu", weights_only=True
+        )
+        prefix_blocks = load_hard_prefix(model, prefix_payload)
+        if prefix_blocks != int(prefix_args["blocks"]):
+            raise RuntimeError("prefix block count differs from its manifest")
+        probe = validation_split[0][: min(256, validation_split[0].shape[0])]
+        expected_prefix_logits = StrictBitPlaneLUTExecutor(prefix_payload).logits(probe)
+        actual_prefix_logits = model.hard_logits(
+            probe.to(device), block_count=prefix_blocks
+        ).cpu()
+        if not torch.equal(actual_prefix_logits, expected_prefix_logits):
+            raise RuntimeError("loaded prefix differs from its strict executor")
+        prefix_block_rows = list(prefix_result["block_results"])
+        if len(prefix_block_rows) != prefix_blocks:
+            raise RuntimeError("prefix result has incomplete block metrics")
+        prefix_training_seconds = float(prefix_result["train_time_s"])
+        prefix_gradient_finite = bool(
+            prefix_result["training_health"]["finite_gradients"]
+        )
+        prefix_metadata = {
+            "run_dir": str(prefix_dir),
+            "blocks": prefix_blocks,
+            "payload_sha256": prefix_payload_sha256,
+            "result_sha256": file_sha256(prefix_result_path),
+            "manifest_file_sha256": file_sha256(prefix_manifest_path),
+            "manifest_sha256": prefix_manifest["sha256"],
+            "exact_strict_logit_match": True,
+        }
     group_temperature = args.group_temperature or math.sqrt(args.votes_per_class)
     train_class_count = torch.bincount(
         train_split[1], minlength=vocab_size
@@ -440,6 +574,11 @@ def main() -> None:
             "out_dir": str(args.out_dir.resolve()),
             "corpus_path": str(args.corpus_path.resolve()),
             "protocol_path": str(args.protocol_path.resolve()),
+            "prefix_run_dir": (
+                str(args.prefix_run_dir.resolve())
+                if args.prefix_run_dir is not None
+                else None
+            ),
             "group_temperature_effective": group_temperature,
             "vocab_size": vocab_size,
             "state_bits": state_bits,
@@ -447,6 +586,7 @@ def main() -> None:
         },
         "split": split_metadata,
         "vocabulary": characters,
+        "prefix": prefix_metadata,
         "protocol_sha256": file_sha256(args.protocol_path),
         "source_sha256": {
             name: file_sha256(source_root / name) for name in SOURCE_FILES
@@ -461,11 +601,12 @@ def main() -> None:
     atomic_json(args.out_dir / "run_manifest.json", manifest)
 
     epoch_rows: list[dict[str, object]] = []
-    block_rows: list[dict[str, object]] = []
+    block_rows: list[dict[str, object]] = list(prefix_block_rows)
     started = time.perf_counter()
-    gradient_finite = True
+    gradient_finite = prefix_gradient_finite
     final_pre_hard_test: dict[str, float] | None = None
-    for block_index, block in enumerate(model.blocks):
+    for block_index in range(prefix_blocks, len(model.blocks)):
+        block = model.blocks[block_index]
         model.set_trainable_block(block_index)
         parameters = trainable_parameters([block])
         optimizer = torch.optim.AdamW(
@@ -669,7 +810,8 @@ def main() -> None:
 
     if final_pre_hard_test is None:
         raise RuntimeError("missing final pre-hard test metrics")
-    training_seconds = time.perf_counter() - started
+    continuation_training_seconds = time.perf_counter() - started
+    training_seconds = prefix_training_seconds + continuation_training_seconds
     payload = model.hard_payload()
     validate_hard_payload(payload)
     payload_path = args.out_dir / "hard_payload.pt"
@@ -749,6 +891,9 @@ def main() -> None:
         "test_hard_metrics": strict_test,
         "integer_ngram_references": references,
         "train_time_s": training_seconds,
+        "continuation_train_time_s": continuation_training_seconds,
+        "prefix_train_time_s": prefix_training_seconds,
+        "prefix": prefix_metadata,
         "epochs_to_target": sum(
             int(row["epochs_to_90pct_best"]) for row in block_rows
         ),

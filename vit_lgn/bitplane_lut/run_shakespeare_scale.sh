@@ -25,6 +25,12 @@ protocol=${project_root}/docs/protocols/bitplane_lut_shakespeare_char_scale_v1_2
 out_dir=${run_root}/runs/${run_id}
 log_dir=${run_root}/logs
 status_dir=${run_root}/status
+prefix_run_dir=${BITPLANE_PREFIX_RUN_DIR:-}
+
+prefix_args=()
+if [[ -n "${prefix_run_dir}" ]]; then
+  prefix_args=(--prefix-run-dir "${prefix_run_dir}")
+fi
 
 mkdir -p "${log_dir}" "${status_dir}"
 if [[ -e "${out_dir}" ]]; then
@@ -46,6 +52,7 @@ export PYTHONUNBUFFERED=1
   --out-dir "${out_dir}" \
   --corpus-path "${corpus}" \
   --protocol-path "${protocol}" \
+  "${prefix_args[@]}" \
   --seed "${seed}" \
   --context-length 64 \
   --votes-per-class "${votes_per_class}" \
