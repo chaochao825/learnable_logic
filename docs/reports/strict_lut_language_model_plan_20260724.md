@@ -79,6 +79,11 @@ reference.
 Causal v64-d4 is now running from the exact v64-d2 hard payload. The two prefix
 blocks are tensor-identical to the d2 payload, remain frozen, and are charged
 their original training time; only blocks three and four are newly trained.
+A support-only v128-d2 prefix runs in parallel on otherwise idle hardware. The
+tracked conditional launcher starts the registered v128-d4 continuation only
+if final v64-d4 beats both v64-d2 and trigram, v128-d2 beats v64-d2, all three
+strict audits contain zero floating tensors/numeric matrices, and the v64-d4
+prefix hash exactly matches v64-d2.
 
 ## Scaling path
 
