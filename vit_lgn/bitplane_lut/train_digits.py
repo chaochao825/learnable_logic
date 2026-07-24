@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import csv
 import hashlib
+from importlib.metadata import version
 import json
 import math
 import os
@@ -11,9 +12,6 @@ import random
 import time
 
 import numpy as np
-import sklearn
-from sklearn.datasets import load_digits
-from sklearn.model_selection import train_test_split
 import torch
 import torch.nn.functional as F
 from torch.utils.data import DataLoader, TensorDataset
@@ -130,6 +128,9 @@ def write_csv(path: Path, rows: list[dict[str, object]]) -> None:
 def make_split(
     split_seed: int, max_train_samples: int
 ) -> tuple[tuple[torch.Tensor, torch.Tensor], ...] | tuple:
+    from sklearn.datasets import load_digits
+    from sklearn.model_selection import train_test_split
+
     dataset = load_digits()
     symbols = dataset.images.reshape(-1, 64).astype(np.uint8)
     labels = dataset.target.astype(np.int64)
@@ -349,7 +350,7 @@ def main() -> None:
         "python": os.sys.version,
         "torch": torch.__version__,
         "cuda": torch.version.cuda,
-        "sklearn": sklearn.__version__,
+        "sklearn": version("scikit-learn"),
         "device": str(device),
         "gpu": torch.cuda.get_device_name(device) if device.type == "cuda" else None,
     }
