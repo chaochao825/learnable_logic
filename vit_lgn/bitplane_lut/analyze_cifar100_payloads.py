@@ -223,6 +223,17 @@ def analyze_run(run_dir: Path) -> dict[str, object]:
         for vote_index in range(class_index, vote_bits, num_classes):
             mask |= final_support[vote_index]
         class_support.append(mask.bit_count())
+    zero_support_classes = [
+        class_index
+        for class_index, support_count in enumerate(class_support)
+        if support_count == 0
+    ]
+    vocabulary = manifest.get("vocabulary")
+    zero_support_labels = (
+        [str(vocabulary[index]) for index in zero_support_classes]
+        if isinstance(vocabulary, list) and len(vocabulary) == num_classes
+        else []
+    )
     gate_count = int(result["structure"]["gate_count"])
     payload_sha256 = file_sha256(payload_path)
     if payload_sha256 != result["hard_payload_sha256"]:
@@ -267,6 +278,10 @@ def analyze_run(run_dir: Path) -> dict[str, object]:
         "class_input_support_mean": sum(class_support) / len(class_support),
         "class_input_support_min": min(class_support),
         "class_input_support_max": max(class_support),
+        "class_zero_support_count": len(zero_support_classes),
+        "class_zero_support_ratio": len(zero_support_classes) / num_classes,
+        "class_zero_support_indices": zero_support_classes,
+        "class_zero_support_labels": zero_support_labels,
         "layers": layer_rows,
     }
     atomic_json(run_dir / "payload_diagnostics.json", output)
@@ -297,6 +312,8 @@ def write_summary(path: Path, rows: list[dict[str, object]]) -> None:
         "class_input_support_mean",
         "class_input_support_min",
         "class_input_support_max",
+        "class_zero_support_count",
+        "class_zero_support_ratio",
         "payload_sha256",
     ]
     with path.open("w", newline="", encoding="utf-8") as handle:

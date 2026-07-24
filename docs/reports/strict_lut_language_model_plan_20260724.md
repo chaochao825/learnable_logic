@@ -69,6 +69,10 @@ and 2.276 percentage points respectively, and raises training hard accuracy by
 execution audits 63,216 operations with zero floating tensors. Width therefore
 scales task accuracy, not only the gap. It also raises the unused-gate ratio
 from 2.57% to 4.01%, so utilization remains an explicit optimization target.
+The v32 payload has three zero-input-support output classes (`$`, `&`, and
+`3`); the first two are absent from the sampled training windows, while `3`
+exposes a learned class-support collapse. V64 reduces this count from three to
+zero and raises mean class input support from 95.7 to 186.2 raw context bits.
 The v64 result is still 1.940 points below the 38.215% integer trigram
 reference.
 

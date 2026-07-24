@@ -9,6 +9,7 @@
       "acc_gap_delta": 0.0033500000000000196,
       "baseline": "smoke-mixed-v32-d2",
       "candidate": "smoke-causal-v32-d2",
+      "class_zero_support_ratio_delta": 0.0,
       "comparison": "causal_routing_vs_mixed_smoke",
       "gate_count_ratio": 1.0,
       "test_hard_acc_delta_report_only": 0.029135102143395653,
@@ -21,6 +22,7 @@
       "acc_gap_delta": 0.0006999999999999784,
       "baseline": "causal-v32-d2",
       "candidate": "causal-v64-d2",
+      "class_zero_support_ratio_delta": -0.046153846153846156,
       "comparison": "width_64_vs_32_d2",
       "gate_count_ratio": 2.0,
       "test_hard_acc_delta_report_only": 0.022762359530391685,
@@ -38,5 +40,5 @@
   "source_bundle_sha256_values": [
     "e201b7372b0a421a022e3289b82590d63c31b0b97d689a0d57774836551ceb8c"
   ],
-  "summarizer_sha256": "5e49e690f07a61579d9ef912f640497c386a41908547e936dbc8d890ff286f11"
+  "summarizer_sha256": "2814f5abba8f21a8ef6197d752dde3ef538c00ae22d76179d9f1720005938b4e"
 }

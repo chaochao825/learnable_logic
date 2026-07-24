@@ -170,6 +170,12 @@ def flatten_run(
         "class_input_support_mean": float(
             diagnostic["class_input_support_mean"]
         ),
+        "class_zero_support_count": int(
+            diagnostic["class_zero_support_count"]
+        ),
+        "class_zero_support_ratio": float(
+            diagnostic["class_zero_support_ratio"]
+        ),
         "audit_ops": int(strict["audit_operations"]),
         "payload_sha256": payload_sha256,
         "protocol_sha256": manifest["protocol_sha256"],
@@ -223,6 +229,10 @@ def deltas(rows: list[dict[str, object]]) -> list[dict[str, object]]:
                 - float(baseline["acc_gap"]),
                 "unused_gate_ratio_delta": float(candidate["unused_gate_ratio"])
                 - float(baseline["unused_gate_ratio"]),
+                "class_zero_support_ratio_delta": float(
+                    candidate["class_zero_support_ratio"]
+                )
+                - float(baseline["class_zero_support_ratio"]),
                 "gate_count_ratio": int(candidate["gate_count"])
                 / int(baseline["gate_count"]),
                 "validation_scaling_success": float(candidate["discrete_acc"])
@@ -257,14 +267,15 @@ def render_report(
         "GroupSum. Perplexity is an offline analysis of integer logits, not a",
         "floating deployment operator.",
         "",
-        "| variant | soft acc | hard acc | gap | train hard | test hard | top-5 | bpc | time | epochs | unused | inactive | gates | depth | fanout | context support |",
-        "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
+        "| variant | soft acc | hard acc | gap | train hard | test hard | top-5 | bpc | time | epochs | unused | inactive | gates | depth | fanout | context support | zero-support classes |",
+        "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
     ]
     for row in rows:
         lines.append(
             "| {variant} | {soft} | {hard} | {gap} | {train} | {test} | "
             "{top5} | {bpc:.3f} | {time:.1f}s | {epochs} | {unused} | "
-            "{inactive} | {gates} | {depth} | {fanout} | {support:.1f} |".format(
+            "{inactive} | {gates} | {depth} | {fanout} | {support:.1f} | "
+            "{zero_classes} |".format(
                 variant=row["variant"],
                 soft=percent(float(row["soft_acc"])),
                 hard=percent(float(row["discrete_acc"])),
@@ -281,6 +292,7 @@ def render_report(
                 depth=row["depth"],
                 fanout=row["fanout_max"],
                 support=float(row["class_input_support_mean"]),
+                zero_classes=row["class_zero_support_count"],
             )
         )
     lines.extend(
@@ -300,20 +312,23 @@ def render_report(
     if comparison_rows:
         lines.extend(
             [
-                "| comparison | validation hard delta | training hard delta | test delta (report-only) | gap delta | unused delta | gates x | success |",
-                "| --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |",
+                "| comparison | validation hard delta | training hard delta | test delta (report-only) | gap delta | unused delta | zero-support class delta | gates x | success |",
+                "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |",
             ]
         )
         for row in comparison_rows:
             lines.append(
                 "| {comparison} | {validation} | {training} | {test} | {gap} | "
-                "{unused} | {gates:.2f} | {success} |".format(
+                "{unused} | {zero_support} | {gates:.2f} | {success} |".format(
                     comparison=row["comparison"],
                     validation=percent(float(row["validation_hard_acc_delta"])),
                     training=percent(float(row["training_hard_acc_delta"])),
                     test=percent(float(row["test_hard_acc_delta_report_only"])),
                     gap=percent(float(row["acc_gap_delta"])),
                     unused=percent(float(row["unused_gate_ratio_delta"])),
+                    zero_support=percent(
+                        float(row["class_zero_support_ratio_delta"])
+                    ),
                     gates=float(row["gate_count_ratio"]),
                     success="yes" if row["validation_scaling_success"] else "no",
                 )
