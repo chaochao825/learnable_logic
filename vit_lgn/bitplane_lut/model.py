@@ -10,6 +10,7 @@ from .layers import (
     LearnableLUTLayer,
     RefitMetrics,
     bitplanes_to_uint8,
+    sequence_candidate_indices,
     spatial_candidate_indices,
     uint8_to_bitplanes,
 )
@@ -83,7 +84,7 @@ class BitPlaneLUTBlock(nn.Module):
         seed: int = 0,
         num_classes: int | None = None,
         candidate_policy: str = "mixed",
-        input_shape: tuple[int, int, int] | None = None,
+        input_shape: tuple[int, ...] | None = None,
     ) -> None:
         super().__init__()
         if state_bits < 8 or state_bits % 8:
@@ -97,12 +98,12 @@ class BitPlaneLUTBlock(nn.Module):
         self.state_bits = int(state_bits)
         self.preserved_bits = int(preserved_bits)
         self.vote_bits = self.state_bits - self.preserved_bits
-        if candidate_policy not in {"mixed", "image_spatial"}:
+        if candidate_policy not in {"mixed", "image_spatial", "sequence_causal"}:
             raise ValueError("unsupported candidate policy")
-        if candidate_policy == "image_spatial" and (
+        if candidate_policy != "mixed" and (
             num_classes is None or input_shape is None
         ):
-            raise ValueError("image_spatial routing needs classes and input shape")
+            raise ValueError("structured routing needs classes and input shape")
         built_layers = []
         for index in range(layers):
             layer_seed = seed + index * 10_007
@@ -116,6 +117,19 @@ class BitPlaneLUTBlock(nn.Module):
                     candidate_count,
                     int(num_classes),
                     input_shape,
+                    layer_seed,
+                )
+            elif candidate_policy == "sequence_causal":
+                if len(input_shape) != 1:
+                    raise ValueError("sequence_causal routing needs a 1D input shape")
+                candidates = sequence_candidate_indices(
+                    self.state_bits,
+                    self.preserved_bits,
+                    self.vote_bits,
+                    arity,
+                    candidate_count,
+                    int(num_classes),
+                    int(input_shape[0]),
                     layer_seed,
                 )
             built_layers.append(
@@ -219,7 +233,7 @@ class BitPlaneLUTClassifier(nn.Module):
         candidate_count: int = 16,
         seed: int = 0,
         candidate_policy: str = "mixed",
-        input_shape: tuple[int, int, int] | None = None,
+        input_shape: tuple[int, ...] | None = None,
     ) -> None:
         super().__init__()
         if input_symbols < 1:
@@ -240,11 +254,11 @@ class BitPlaneLUTClassifier(nn.Module):
             raise ValueError("learned vote planes must align to A8 and GroupSum")
         self.arity = int(arity)
         self.candidate_count = int(candidate_count)
-        if candidate_policy not in {"mixed", "image_spatial"}:
+        if candidate_policy not in {"mixed", "image_spatial", "sequence_causal"}:
             raise ValueError("unsupported candidate policy")
-        if candidate_policy == "image_spatial":
+        if candidate_policy != "mixed":
             if input_shape is None:
-                raise ValueError("image_spatial routing requires input_shape")
+                raise ValueError("structured routing requires input_shape")
             if math.prod(input_shape) != self.input_symbols:
                 raise ValueError("input_shape does not match input_symbols")
         self.candidate_policy = candidate_policy

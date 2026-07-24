@@ -13,6 +13,7 @@ from vit_lgn.bitplane_lut.executor import (
 from vit_lgn.bitplane_lut.layers import (
     LearnableLUTLayer,
     bitplanes_to_uint8,
+    sequence_candidate_indices,
     spatial_candidate_indices,
     uint8_to_bitplanes,
 )
@@ -54,6 +55,24 @@ class BitPlaneCodecTest(unittest.TestCase):
 
 
 class LearnableLUTLayerTest(unittest.TestCase):
+    def test_sequence_candidates_are_unique_and_preserve_vote_identity(self) -> None:
+        candidates = sequence_candidate_indices(
+            state_bits=64,
+            preserved_bits=32,
+            output_bits=32,
+            arity=4,
+            candidate_count=12,
+            num_classes=2,
+            sequence_length=4,
+            seed=7,
+        )
+        self.assertEqual(candidates.shape, (32, 4, 12))
+        self.assertGreaterEqual(int(candidates.min()), 0)
+        self.assertLess(int(candidates.max()), 64)
+        ordered = candidates.sort(dim=-1).values
+        self.assertTrue(bool((ordered[..., 1:] != ordered[..., :-1]).all()))
+        torch.testing.assert_close(candidates[:, 0, 0], torch.arange(32) + 32)
+
     def test_spatial_candidates_are_unique_and_preserve_vote_identity(self) -> None:
         candidates = spatial_candidate_indices(
             state_bits=64,
@@ -262,6 +281,29 @@ class StrictBitPlaneModelTest(unittest.TestCase):
         payload = model.hard_payload()
         validate_hard_payload(payload)
         self.assertEqual(payload["candidate_policy"], "image_spatial")
+        symbols = torch.arange(16, dtype=torch.uint8).reshape(4, 4)
+        torch.testing.assert_close(
+            StrictBitPlaneLUTExecutor(payload).logits(symbols),
+            model.hard_logits(symbols),
+        )
+
+    def test_sequence_model_has_the_same_strict_payload_boundary(self) -> None:
+        model = BitPlaneLUTClassifier(
+            input_symbols=4,
+            state_bits=48,
+            num_classes=2,
+            blocks=2,
+            arity=4,
+            candidate_count=8,
+            seed=17,
+            candidate_policy="sequence_causal",
+            input_shape=(4,),
+        )
+        for block in model.blocks:
+            block.freeze_hard()
+        payload = model.hard_payload()
+        validate_hard_payload(payload)
+        self.assertEqual(payload["candidate_policy"], "sequence_causal")
         symbols = torch.arange(16, dtype=torch.uint8).reshape(4, 4)
         torch.testing.assert_close(
             StrictBitPlaneLUTExecutor(payload).logits(symbols),

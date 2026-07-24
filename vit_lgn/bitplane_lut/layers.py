@@ -210,6 +210,86 @@ def spatial_candidate_indices(
     return result
 
 
+def sequence_candidate_indices(
+    state_bits: int,
+    preserved_bits: int,
+    output_bits: int,
+    arity: int,
+    candidate_count: int,
+    num_classes: int,
+    sequence_length: int,
+    seed: int,
+) -> torch.Tensor:
+    """Build fixed recent-token, class-state, and global source candidates."""
+
+    if sequence_length < 1:
+        raise ValueError("sequence length must be positive")
+    if preserved_bits != sequence_length * 8:
+        raise ValueError("preserved bit width does not match the sequence length")
+    if state_bits != preserved_bits + output_bits:
+        raise ValueError("sequence routing expects raw planes plus vote planes")
+    if output_bits % num_classes:
+        raise ValueError("output bits must divide evenly across classes")
+    if arity not in {2, 3, 4}:
+        raise ValueError("arity must be one of 2, 3, or 4")
+    if not 1 <= candidate_count <= state_bits:
+        raise ValueError("invalid candidate_count")
+
+    result = torch.empty(
+        output_bits, arity, candidate_count, dtype=torch.int64
+    )
+    votes_per_class = output_bits // num_classes
+    recent_offsets = (0, 1, 2, 3, 4, 7, 15, 31)
+    for output in range(output_bits):
+        class_index = output % num_classes
+        vote_index = output // num_classes
+        identity = preserved_bits + output
+        anchor = (
+            vote_index * 1_315_423_911
+            + class_index * 2_654_435_761
+            + int(seed) * 433_494_437
+        ) % sequence_length
+        for slot in range(arity):
+            ordered = [identity] if slot == 0 else []
+            for delta in (slot + 1, -(slot + 1), slot + 3):
+                neighbor_vote = (vote_index + delta) % votes_per_class
+                ordered.append(
+                    preserved_bits + neighbor_vote * num_classes + class_index
+                )
+            for probe in range(max(candidate_count // 2, len(recent_offsets))):
+                if probe < len(recent_offsets):
+                    offset = recent_offsets[(probe + slot) % len(recent_offsets)]
+                    position = (sequence_length - 1 - offset) % sequence_length
+                else:
+                    position = (
+                        anchor + (probe + 1) * (2 * slot + 1)
+                    ) % sequence_length
+                plane = (class_index + vote_index + 2 * slot + probe) % 8
+                ordered.append(position * 8 + plane)
+
+            ordered.append(identity)
+            unique: list[int] = []
+            for value in ordered:
+                value %= state_bits
+                if value not in unique:
+                    unique.append(value)
+                if len(unique) == candidate_count:
+                    break
+            probe = 0
+            while len(unique) < candidate_count:
+                value = (
+                    (output + 1) * 2_246_822_519
+                    + (slot + 1) * 3_266_489_917
+                    + (probe + 1) * 668_265_263
+                    + int(seed) * 374_761_393
+                ) % state_bits
+                if value not in unique:
+                    unique.append(value)
+                probe += 1
+            result[output, slot] = torch.tensor(unique, dtype=torch.int64)
+    return result
+
+
 @dataclass(frozen=True)
 class RefitMetrics:
     bit_error: float
@@ -647,6 +727,7 @@ __all__ = [
     "RefitMetrics",
     "bitplanes_to_uint8",
     "deterministic_candidate_indices",
+    "sequence_candidate_indices",
     "spatial_candidate_indices",
     "uint8_to_bitplanes",
 ]

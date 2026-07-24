@@ -81,3 +81,25 @@ and split-hashed `run_manifest.json`, and the standalone `hard_payload.pt`.
 
 Use `synthesize_payloads.py export`, `abc`, and `summarize` to reproduce the
 BLIF export, ABC optimization, formal equivalence checks, and synthesis tables.
+
+## Strict character-model feasibility
+
+The frozen Tiny Shakespeare protocol extends the same deployment boundary to
+next-character prediction. A rolling 64-character context is encoded as 512
+protected Boolean planes. The learned payload remains only 4-input truth bits
+and discrete source indices, followed by fixed integer GroupSum; there is no
+embedding, attention, MLP, or learned dense numeric matrix. `mixed` routing is
+the matched global-candidate baseline and `sequence_causal` adds fixed recent
+history and same-class vote candidates.
+
+Run a pre-registered cell through:
+
+```bash
+vit_lgn/bitplane_lut/run_shakespeare_scale.sh \
+  causal-v32-d2-s0 3 sequence_causal 32 2 20 6 4 100000 0
+```
+
+The protocol and capacity gates are recorded in
+`docs/protocols/bitplane_lut_shakespeare_char_scale_v1_20260724.md` and the
+machine-readable research registry. Seed 0 is only a feasibility screen;
+promotion requires the matched seeds 1 and 2.
