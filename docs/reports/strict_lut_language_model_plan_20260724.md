@@ -76,14 +76,27 @@ zero and raises mean class input support from 95.7 to 186.2 raw context bits.
 The v64 result is still 1.940 points below the 38.215% integer trigram
 reference.
 
-Causal v64-d4 is now running from the exact v64-d2 hard payload. The two prefix
-blocks are tensor-identical to the d2 payload, remain frozen, and are charged
-their original training time; only blocks three and four are newly trained.
+Causal v64-d4 is complete at 39.935% validation, 39.403% report-only test, and
+46.825% training hard accuracy. It improves 3.660 validation points over
+v64-d2 and exceeds the integer trigram validation reference by 1.720 points.
+Its final soft/hard accuracy gap is 0.005 points. The two prefix blocks are
+tensor-identical to the d2 payload, remain frozen, and are charged their
+original training time; only blocks three and four were newly trained. The
+strict executor audits 113,808 operations with zero floating tensors, and the
+payload contains zero learned numeric weights or dense integer matrices.
+
+Depth doubles the logical payload from 636,928 to 1,202,688 bits, raises unused
+gates from 4.01% to 4.60%, and raises mean class input support from 186.2 to
+397.8 raw context bits. For context, the corpus trigram count table needs about
+3.845 Mbit as a dense 14-bit counter table, while an ideal sparse-entry lower
+bound is about 0.382 Mbit before lookup logic. The current result establishes a
+hard-accuracy depth gain, not superior storage efficiency.
+
 A support-only v128-d2 prefix runs in parallel on otherwise idle hardware. The
 tracked conditional launcher starts the registered v128-d4 continuation only
-if final v64-d4 beats both v64-d2 and trigram, v128-d2 beats v64-d2, all three
-strict audits contain zero floating tensors/numeric matrices, and the v64-d4
-prefix hash exactly matches v64-d2.
+if v128-d2 beats v64-d2 and its strict audit contains zero floating tensors or
+numeric matrices. The completed v64-d4 already passes the other gate checks:
+it beats both v64-d2 and trigram, and its exact prefix hash matches v64-d2.
 
 ## Scaling path
 
@@ -117,9 +130,9 @@ component explicitly:
 | MLP | residual LUT blocks with protected planes | avoids identity and inactive collapse |
 | output head | hierarchical Boolean code/tree | vocabulary cost below flat GroupSum |
 
-This phase is conditional. Building Boolean attention before the rolling model
-beats integer n-gram references would add large fixed logic without evidence
-that the learned LUT basis can fit language statistics.
+This phase remains conditional. The seed-0 rolling model now beats trigram, but
+building Boolean attention before seed repeats and the v128 scale point would
+add large fixed logic without enough evidence that the gain is reproducible.
 
 ## Promotion and stop rules
 
@@ -129,10 +142,10 @@ failure. Every accepted run must also show finite training, exact strict replay,
 zero real-valued payload/runtime tensors, zero learned dense numeric matrices,
 payload hashes, gate/depth/fanout/unused metrics, and reproducible split hashes.
 
-The positive v32-to-v64 width result permits the registered v64-d4 depth test.
-Stop or redirect the current language-model branch if d4 does not beat v64-d2,
-if it remains below the integer trigram reference, or if depth primarily
-increases identity paths and inactive vote planes. In that case, the next
-justified experiment is hierarchical output coding or a task-margin-aware hard
-refit, not a larger imitation Transformer. Causal v128-d4 is allowed only after
-the d4 depth gate passes.
+The v64-d4 depth gate passes: hard validation accuracy improves, exceeds
+trigram, and does not show inactive or class-support collapse. Causal v128-d4
+is now conditional only on the running v128-d2 support prefix beating v64-d2
+and passing strict replay. Stop or redirect the branch if v128 regresses, if
+seed-1/2 do not reproduce the gain, or if the larger vocabulary/output-tree
+stage fails. The next fallback is hierarchical output coding or a
+task-margin-aware hard refit, not a larger imitation Transformer.
