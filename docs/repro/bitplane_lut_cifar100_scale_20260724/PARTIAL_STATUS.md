@@ -1,9 +1,8 @@
 # CIFAR-100 strict LUT scale screen: partial evidence
 
-Status: three of five pre-registered full configurations are complete. The
-v128-d4 and H200 v256-d4 runs remain active. This partial table is deliberately
-not imported into the unified result registry; the importer requires all five
-rows.
+Status: superseded historical snapshot. All five configurations are now
+complete, audited, and imported. See the
+[final capacity report](README.md) for the authoritative table and conclusion.
 
 Every completed row uses raw A8 input bit-planes, learned 4-input Boolean LUT
 truth tables and discrete source indices, and fixed integer GroupSum. Full

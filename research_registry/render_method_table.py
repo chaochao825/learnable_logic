@@ -191,8 +191,16 @@ def render() -> str:
             "functions are only weakly K4-compressible: 2.7%-6.9% fewer mapped",
             "LUTs, with mapped depth increasing from two to three. All 18 optimized",
             "networks pass CEC; GroupSum and argmax are outside that synthesis scope.",
-            "Next work must use joint task-margin-aware hard fitting and matched",
-            "vote-width/spatial scaling without learned dense numeric matrices.",
+            "On CIFAR-100, fixed spatial routing and an 8x gate expansion reach only",
+            "21.82% seed-0 validation hard accuracy. The soft-hard gap is 0.02 pp,",
+            "so the dominant failure is capacity and routing rather than",
+            "discretization collapse; doubling v128 depth adds only 0.08 pp while",
+            "unused gates rise by 4.07 pp. On Tiny Shakespeare, exact hard-prefix",
+            "continuation from two to four blocks improves validation hard accuracy",
+            "by 3.97 pp mean with 3/3 wins, and v128-d4 reaches 40.82% on seed 0.",
+            "Next image work must replace flat local candidate pools with",
+            "hierarchical multi-scale Boolean aggregation and optimized discrete",
+            "routing, without learned dense numeric matrices.",
             "",
         ]
     )

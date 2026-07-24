@@ -10,7 +10,8 @@ from research_registry.manifest import canonical_sha256
 
 ROOT = Path(__file__).resolve().parents[1]
 REGISTRY = ROOT / "research_registry"
-PROTOCOL_ID = "bitplane_lut_shakespeare_char_scale_s0_v1"
+SCREEN_PROTOCOL_ID = "bitplane_lut_shakespeare_char_scale_s0_v1"
+DEPTH_PROTOCOL_ID = "bitplane_lut_shakespeare_char_depth_s012_v1"
 VARIANTS = {
     "smoke-mixed-v32-d2": {
         "result_id": "bitplane_shakespeare_smoke_mixed_v32_d2_s0",
@@ -49,6 +50,14 @@ VARIANTS = {
         "decision": "screen",
     },
 }
+REPEAT_RESULT_IDS = {
+    ("causal-v64-d2", 0): "bitplane_shakespeare_causal_v64_d2_s0",
+    ("causal-v64-d2", 1): "bitplane_shakespeare_causal_v64_d2_s1",
+    ("causal-v64-d2", 2): "bitplane_shakespeare_causal_v64_d2_s2",
+    ("causal-v64-d4", 0): "bitplane_shakespeare_causal_v64_d4_s0",
+    ("causal-v64-d4", 1): "bitplane_shakespeare_causal_v64_d4_s1",
+    ("causal-v64-d4", 2): "bitplane_shakespeare_causal_v64_d4_s2",
+}
 
 
 def load_csv(path: Path) -> tuple[list[str], list[dict[str, str]]]:
@@ -73,7 +82,14 @@ def write_capacity_csv(
 
 
 def build_result(
-    source: dict[str, str], protocol_sha256: str
+    source: dict[str, str],
+    protocol_sha256: str,
+    *,
+    protocol_id: str,
+    result_id: str | None = None,
+    seeds: str = "1",
+    aggregation: str = "single pre-registered feasibility seed",
+    decision: str | None = None,
 ) -> dict[str, str]:
     variant = source["variant"]
     if variant not in VARIANTS:
@@ -83,13 +99,13 @@ def build_result(
         raise ValueError(f"method mismatch for {variant}")
     sample_budget = "20000" if variant.startswith("smoke-") else "100000"
     return {
-        "result_id": identity["result_id"],
+        "result_id": result_id or identity["result_id"],
         "method_id": identity["method_id"],
         "dataset": "tiny_shakespeare_char",
-        "protocol_id": PROTOCOL_ID,
+        "protocol_id": protocol_id,
         "seed": source["seed"],
-        "seeds": "1",
-        "aggregation": "single pre-registered feasibility seed",
+        "seeds": seeds,
+        "aggregation": aggregation,
         "selection_split": "validation",
         "soft_acc": source["soft_acc"],
         "hard_acc": source["discrete_acc"],
@@ -108,7 +124,7 @@ def build_result(
         "float_tensor_count": "0",
         "audit_ops": source["audit_ops"],
         "training_health": "pass",
-        "decision": identity["decision"],
+        "decision": decision or identity["decision"],
         "evidence": (
             "../docs/repro/bitplane_lut_shakespeare_char_20260724/"
             f"runs/{source['run_id']}/result.json"
@@ -154,7 +170,8 @@ def main() -> None:
     protocols = json.loads(
         (REGISTRY / "protocols.json").read_text(encoding="utf-8")
     )["protocols"]
-    protocol_sha256 = canonical_sha256(protocols[PROTOCOL_ID])
+    screen_protocol_sha256 = canonical_sha256(protocols[SCREEN_PROTOCOL_ID])
+    depth_protocol_sha256 = canonical_sha256(protocols[DEPTH_PROTOCOL_ID])
     _, source_rows = load_csv(args.summary_dir / "required_results.csv")
     if not source_rows:
         raise ValueError("character-model summary is empty")
@@ -166,7 +183,41 @@ def main() -> None:
 
     results_path = REGISTRY / "results.csv"
     fields, existing = load_csv(results_path)
-    generated = [build_result(row, protocol_sha256) for row in source_rows]
+    repeat_path = args.summary_dir / "repeat_results.csv"
+    repeat_rows: list[dict[str, str]] = []
+    if repeat_path.is_file():
+        _, repeat_rows = load_csv(repeat_path)
+        observed = {
+            (row["variant"], int(row["seed"])) for row in repeat_rows
+        }
+        if observed != set(REPEAT_RESULT_IDS):
+            raise ValueError("character depth repeat matrix is incomplete")
+
+    repeated_variants = {"causal-v64-d2", "causal-v64-d4"}
+    generated = [
+        build_result(
+            row,
+            screen_protocol_sha256,
+            protocol_id=SCREEN_PROTOCOL_ID,
+        )
+        for row in source_rows
+        if row["variant"] not in repeated_variants or not repeat_rows
+    ]
+    for row in repeat_rows:
+        key = (row["variant"], int(row["seed"]))
+        generated.append(
+            build_result(
+                row,
+                depth_protocol_sha256,
+                protocol_id=DEPTH_PROTOCOL_ID,
+                result_id=REPEAT_RESULT_IDS[key],
+                seeds="3",
+                aggregation="paired seed",
+                decision=(
+                    "baseline" if row["variant"].endswith("d2") else "screen"
+                ),
+            )
+        )
     expected_fields = set(fields)
     for row in generated:
         if set(row) != expected_fields:
@@ -175,8 +226,10 @@ def main() -> None:
                 f"missing={sorted(expected_fields - set(row))}, "
                 f"extra={sorted(set(row) - expected_fields)}"
             )
-    generated_ids = {row["result_id"] for row in generated}
-    output = [row for row in existing if row["result_id"] not in generated_ids]
+    managed_ids = {
+        identity["result_id"] for identity in VARIANTS.values()
+    } | set(REPEAT_RESULT_IDS.values())
+    output = [row for row in existing if row["result_id"] not in managed_ids]
     output.extend(generated)
     with results_path.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=fields)
@@ -185,7 +238,11 @@ def main() -> None:
     update_capacity(source_rows)
     print(
         json.dumps(
-            {"generated": len(generated), "protocol_sha256": protocol_sha256},
+            {
+                "depth_protocol_sha256": depth_protocol_sha256,
+                "generated": len(generated),
+                "screen_protocol_sha256": screen_protocol_sha256,
+            },
             sort_keys=True,
         )
     )

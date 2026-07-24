@@ -225,13 +225,14 @@ def render_report(
         "Training shadows are real-valued; deployment payloads and audited",
         "execution contain no real-valued tensor or learned numeric matrix.",
         "",
-        "| variant | soft acc | hard acc | gap | train hard | test hard | hard loss | time | epochs | unused | gates | depth | fanout | vote support | class support | zero-support classes |",
-        "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
+        "| variant | soft acc | hard acc | acc gap | soft loss | hard loss | loss gap | train hard | test hard | time | epochs | unused | gates | depth | fanout | vote support | class support | zero-support classes |",
+        "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
     ]
     for row in rows:
         lines.append(
-            "| {variant} | {soft} | {hard} | {gap} | {train} | {test} | "
-            "{loss:.4f} | {time:.1f}s | {epochs} | {unused} | {gates} | "
+            "| {variant} | {soft} | {hard} | {gap} | {soft_loss:.4f} | "
+            "{hard_loss:.4f} | {loss_gap:.4f} | {train} | {test} | "
+            "{time:.1f}s | {epochs} | {unused} | {gates} | "
             "{depth} | {fanout} | {vote_support:.1f} | {class_support:.1f} | "
             "{zero_classes} |".format(
                 variant=row["variant"],
@@ -240,7 +241,9 @@ def render_report(
                 gap=percent(float(row["acc_gap"])),
                 train=percent(float(row["train_discrete_acc"])),
                 test=percent(float(row["test_discrete_acc"])),
-                loss=float(row["discrete_loss"]),
+                soft_loss=float(row["soft_loss"]),
+                hard_loss=float(row["discrete_loss"]),
+                loss_gap=float(row["loss_gap"]),
                 time=float(row["train_time_s"]),
                 epochs=row["epochs_ran"],
                 unused=percent(float(row["unused_gate_ratio"])),
@@ -286,7 +289,23 @@ def render_report(
             f"The seed-0 validation winner is `{best['variant']}` at "
             f"{percent(float(best['discrete_acc']))} hard accuracy. Its strict "
             f"training accuracy is {percent(float(best['train_discrete_acc']))}, "
-            f"so the remaining fit gap is measured rather than inferred.",
+            "and its soft-hard accuracy gap is only "
+            f"{percent(float(best['acc_gap']))}. The dominant ceiling is therefore "
+            "Boolean capacity/routing rather than discretization collapse.",
+            "Relative to spatial-v64-d2, the winner uses 8x as many gates for a "
+            "4.74 pp validation gain. At fixed v128 width, doubling depth adds "
+            "only 0.08 pp while unused gates rise by 4.07 pp.",
+            "In the winner, each final vote structurally depends on only "
+            f"{float(best['final_vote_input_support_mean']):.1f} of 24,576 "
+            "input planes on average "
+            f"({percent(float(best['final_vote_input_support_mean']) / 24576)}), "
+            "and each class aggregates "
+            f"{float(best['class_input_support_mean']):.1f} planes "
+            f"({percent(float(best['class_input_support_mean']) / 24576)}). "
+            "Exact truth-table dictionary encoding would cost "
+            f"{100 * float(best['truth_dictionary_ratio']):.1f}% of the raw "
+            "truth-bit store, so simple table deduplication is not a compression "
+            "solution.",
             "This is a capacity screen, not a promotion claim; the selected",
             "configuration requires the pre-registered seed-1/2 repeats.",
             "",

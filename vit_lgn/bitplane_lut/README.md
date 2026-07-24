@@ -110,3 +110,29 @@ at the same 4,160-gate budget. Unused gates fall from 2.21% to 1.68%, while the
 accuracy gap increases slightly from 2.74% to 3.08%. The candidate is still
 below the 38.21% integer trigram reference, so this result authorizes the full
 width ladder but is not a language-model promotion.
+
+The full ladder is now complete. Across seeds 0/1/2, exact hard-prefix
+continuation from v64-d2 to v64-d4 raises validation hard accuracy from
+36.242% +/- 0.053% to 40.213% +/- 0.248%, a 3.972-point mean gain with 3/3
+wins. V128-d4 reaches 40.815% on seed 0 at 33,280 gates. The v64 depth effect
+passes the paired registry gate; the v128 result remains a screen until its
+seed repeats complete. See
+`docs/repro/bitplane_lut_shakespeare_char_20260724/README.md`.
+
+## CIFAR-100 capacity ceiling
+
+The matched seed-0 CIFAR-100 ladder scales from spatial-v64-d2 at 17.08%
+validation hard accuracy and 12,800 gates to spatial-v256-d4 at 21.82% and
+102,400 gates. The winner's soft/hard gap is only 0.02 points, while training
+hard accuracy is 25.52%; discretization collapse is no longer the dominant
+failure. At fixed v128 width, doubling depth adds only 0.08 points and raises
+unused gates by 4.07 points. Each final winner vote structurally reaches only
+43.2 of 24,576 input planes on average, so fixed local candidate routing and
+weak hierarchical aggregation are the current ceiling.
+
+All five exported CIFAR-100 payloads contain zero floating tensors, learned
+numeric weights, or learned dense integer matrices under strict replay. The
+complete metrics and hashes are in
+`docs/repro/bitplane_lut_cifar100_scale_20260724/README.md`. This result is a
+single-seed capacity screen, not evidence that blind width/depth scaling is a
+viable high-accuracy image path.

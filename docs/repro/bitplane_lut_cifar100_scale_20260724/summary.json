@@ -1,0 +1,66 @@
+{
+  "all_strict_no_real": true,
+  "best_test_hard_acc_report_only": 0.2125999927520752,
+  "best_training_hard_acc": 0.2552,
+  "best_validation_hard_acc": 0.21819999814033508,
+  "best_variant": "spatial-v256-d4",
+  "comparisons": [
+    {
+      "acc_gap_delta": 0.0013999995946884225,
+      "baseline": "mixed-v64-d2",
+      "candidate": "spatial-v64-d2",
+      "class_zero_support_ratio_delta": 0.0,
+      "comparison": "routing_spatial_vs_mixed",
+      "gate_count_ratio": 1.0,
+      "test_hard_acc_delta_report_only": 0.014200001955032349,
+      "training_hard_acc_delta": 0.016022222222222243,
+      "unused_gate_ratio_delta": -0.005468750000000008,
+      "validation_hard_acc_delta": 0.01680000126361847,
+      "validation_scaling_success": true
+    },
+    {
+      "acc_gap_delta": 0.0021999972581863425,
+      "baseline": "spatial-v64-d2",
+      "candidate": "spatial-v128-d2",
+      "class_zero_support_ratio_delta": 0.0,
+      "comparison": "width_128_vs_64_d2",
+      "gate_count_ratio": 2.0,
+      "test_hard_acc_delta_report_only": 0.034299999475479126,
+      "training_hard_acc_delta": 0.04039999999999999,
+      "unused_gate_ratio_delta": 0.007109375000000001,
+      "validation_hard_acc_delta": 0.027400001883506775,
+      "validation_scaling_success": true
+    },
+    {
+      "acc_gap_delta": 0.004200001358985905,
+      "baseline": "spatial-v128-d2",
+      "candidate": "spatial-v128-d4",
+      "class_zero_support_ratio_delta": 0.0,
+      "comparison": "depth_4_vs_2_v128",
+      "gate_count_ratio": 2.0,
+      "test_hard_acc_delta_report_only": 0.0034999996423721313,
+      "training_hard_acc_delta": 0.006955555555555548,
+      "unused_gate_ratio_delta": 0.0406640625,
+      "validation_hard_acc_delta": 0.0007999986410140991,
+      "validation_scaling_success": true
+    },
+    {
+      "acc_gap_delta": -0.007599997186660767,
+      "baseline": "spatial-v128-d4",
+      "candidate": "spatial-v256-d4",
+      "class_zero_support_ratio_delta": 0.0,
+      "comparison": "width_256_vs_128_d4",
+      "gate_count_ratio": 2.0,
+      "test_hard_acc_delta_report_only": 0.005399987101554871,
+      "training_hard_acc_delta": 0.026155555555555543,
+      "unused_gate_ratio_delta": 0.010146484375,
+      "validation_hard_acc_delta": 0.019199997186660767,
+      "validation_scaling_success": true
+    }
+  ],
+  "protocol_sha256": "dba2b99788962cfd5e12479c8398bbf75986c9c1aae2ef6a697081e6de2d3481",
+  "runs": 5,
+  "selection_split": "validation",
+  "source_bundle_sha256": "8f5eff41ad00081c3a6052cb9738342aecf806aab4f3a368cc33b066bedbb26c",
+  "summarizer_sha256": "2ca25fb78f6cda2249451229514a90444d87ea7f4167f9886185411b2fa82388"
+}

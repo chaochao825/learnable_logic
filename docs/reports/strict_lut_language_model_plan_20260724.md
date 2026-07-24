@@ -92,11 +92,20 @@ gates from 4.01% to 4.60%, and raises mean class input support from 186.2 to
 bound is about 0.382 Mbit before lookup logic. The current result establishes a
 hard-accuracy depth gain, not superior storage efficiency.
 
-A support-only v128-d2 prefix runs in parallel on otherwise idle hardware. The
-tracked conditional launcher starts the registered v128-d4 continuation only
-if v128-d2 beats v64-d2 and its strict audit contains zero floating tensors or
-numeric matrices. The completed v64-d4 already passes the other gate checks:
-it beats both v64-d2 and trigram, and its exact prefix hash matches v64-d2.
+The support v128-d2 prefix and registered v128-d4 continuation are complete.
+V128-d2 reaches 37.450% validation and 36.725% report-only test hard accuracy.
+V128-d4 reaches 40.815% validation, 39.827% test, and 51.980% training hard
+accuracy with a 0.010-point soft/hard gap. It gains 3.365 validation points over
+its exact d2 prefix and 0.880 points over v64-d4, but requires 33,280 gates,
+twice the v64-d4 count. Its unused-gate ratio is 3.14%, and strict execution
+contains zero floating tensors, learned numeric weights, or dense integer
+matrices.
+
+The registered v64 depth repeat is also complete. Across seeds 0/1/2, v64-d2
+reaches 36.242% +/- 0.053% validation hard accuracy and v64-d4 reaches 40.213%
++/- 0.248%. The exact hard-prefix depth gain averages 3.972 points with 3/3
+validation wins; mean v64-d4 test accuracy is 39.694% +/- 0.329% and mean
+soft/hard gap is 0.095 points.
 
 ## Scaling path
 
@@ -130,9 +139,11 @@ component explicitly:
 | MLP | residual LUT blocks with protected planes | avoids identity and inactive collapse |
 | output head | hierarchical Boolean code/tree | vocabulary cost below flat GroupSum |
 
-This phase remains conditional. The seed-0 rolling model now beats trigram, but
-building Boolean attention before seed repeats and the v128 scale point would
-add large fixed logic without enough evidence that the gain is reproducible.
+This phase remains conditional. The v64 depth gain is now reproducible and the
+seed-0 v128 point scales further, so a bounded Boolean attention/routing screen
+is justified. It must remain separate from the rolling-model result and may
+advance only if it beats the matched LUT context model under the same strict
+payload boundary; a quantized Transformer is not an admissible substitute.
 
 ## Promotion and stop rules
 
@@ -142,10 +153,10 @@ failure. Every accepted run must also show finite training, exact strict replay,
 zero real-valued payload/runtime tensors, zero learned dense numeric matrices,
 payload hashes, gate/depth/fanout/unused metrics, and reproducible split hashes.
 
-The v64-d4 depth gate passes: hard validation accuracy improves, exceeds
-trigram, and does not show inactive or class-support collapse. Causal v128-d4
-is now conditional only on the running v128-d2 support prefix beating v64-d2
-and passing strict replay. Stop or redirect the branch if v128 regresses, if
-seed-1/2 do not reproduce the gain, or if the larger vocabulary/output-tree
-stage fails. The next fallback is hierarchical output coding or a
-task-margin-aware hard refit, not a larger imitation Transformer.
+The v64-d4 depth gate passes the registry promotion test: mean validation hard
+accuracy improves by 3.972 points with 3/3 wins, the mean gap falls by 0.367
+points, and every strict payload passes audit. Causal v128-d4 also passes its
+seed-0 width/depth screen, but it remains unpromoted until seeds 1/2 reproduce
+the gain. Stop or redirect the branch if those repeats regress or if a larger
+vocabulary/output-tree stage fails. The next fallback is hierarchical output
+coding or task-margin-aware hard fitting, not a larger imitation Transformer.

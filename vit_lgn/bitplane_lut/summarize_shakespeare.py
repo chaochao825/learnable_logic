@@ -7,6 +7,7 @@ import csv
 import hashlib
 import json
 from pathlib import Path
+import statistics
 
 
 CONFIGS = {
@@ -45,6 +46,32 @@ COMPARISONS = (
     ("depth_4_vs_2_v64", "causal-v64-d2", "causal-v64-d4"),
     ("width_128_vs_64_d4", "causal-v64-d4", "causal-v128-d4"),
 )
+REPEAT_CONFIGS = {
+    "full-causal-v64-d2-s0": (
+        "bitplane_lut_sequence_causal_argmax",
+        "causal-v64-d2",
+    ),
+    "full-causal-v64-d4-s0": (
+        "bitplane_lut_sequence_causal_argmax",
+        "causal-v64-d4",
+    ),
+    "repeat-causal-v64-d2-s1": (
+        "bitplane_lut_sequence_causal_argmax",
+        "causal-v64-d2",
+    ),
+    "repeat-causal-v64-d4-s1": (
+        "bitplane_lut_sequence_causal_argmax",
+        "causal-v64-d4",
+    ),
+    "repeat-causal-v64-d2-s2": (
+        "bitplane_lut_sequence_causal_argmax",
+        "causal-v64-d2",
+    ),
+    "repeat-causal-v64-d4-s2": (
+        "bitplane_lut_sequence_causal_argmax",
+        "causal-v64-d4",
+    ),
+}
 
 
 def sha256_file(path: Path) -> str:
@@ -251,12 +278,126 @@ def write_csv(path: Path, rows: list[dict[str, object]]) -> None:
         writer.writerows(rows)
 
 
+def mean(rows: list[dict[str, object]], key: str) -> float:
+    return statistics.fmean(float(row[key]) for row in rows)
+
+
+def sample_std(rows: list[dict[str, object]], key: str) -> float:
+    values = [float(row[key]) for row in rows]
+    return statistics.stdev(values) if len(values) > 1 else 0.0
+
+
+def validate_repeat_rows(rows: list[dict[str, object]]) -> None:
+    expected = {
+        (variant, seed)
+        for variant in ("causal-v64-d2", "causal-v64-d4")
+        for seed in (0, 1, 2)
+    }
+    observed = {(str(row["variant"]), int(row["seed"])) for row in rows}
+    if observed != expected:
+        raise RuntimeError(
+            f"incomplete character repeat matrix: {sorted(observed)}"
+        )
+    for field in (
+        "protocol_sha256",
+        "core_source_bundle_sha256",
+        "corpus_sha256",
+        "vocab_sha256",
+        "train_split_sha256",
+        "validation_split_sha256",
+        "test_split_sha256",
+    ):
+        if len({row[field] for row in rows}) != 1:
+            raise RuntimeError(f"mismatched repeat provenance: {field}")
+    by_key = {
+        (str(row["variant"]), int(row["seed"])): row for row in rows
+    }
+    for seed in (0, 1, 2):
+        d2 = by_key[("causal-v64-d2", seed)]
+        d4 = by_key[("causal-v64-d4", seed)]
+        if int(d4["prefix_blocks"]) != 2:
+            raise RuntimeError(f"seed {seed} d4 run has no two-block prefix")
+        if d4["prefix_payload_sha256"] != d2["payload_sha256"]:
+            raise RuntimeError(f"seed {seed} d4 prefix differs from d2 payload")
+
+
+def aggregate_repeats(
+    rows: list[dict[str, object]],
+) -> list[dict[str, object]]:
+    output = []
+    for variant in ("causal-v64-d2", "causal-v64-d4"):
+        group = [row for row in rows if row["variant"] == variant]
+        if len(group) != 3:
+            raise RuntimeError(f"incomplete repeat aggregate: {variant}")
+        output.append(
+            {
+                "method": group[0]["method"],
+                "variant": variant,
+                "seeds": 3,
+                "validation_soft_acc_mean": mean(group, "soft_acc"),
+                "validation_soft_acc_std": sample_std(group, "soft_acc"),
+                "validation_discrete_acc_mean": mean(group, "discrete_acc"),
+                "validation_discrete_acc_std": sample_std(
+                    group, "discrete_acc"
+                ),
+                "validation_acc_gap_mean": mean(group, "acc_gap"),
+                "validation_acc_gap_std": sample_std(group, "acc_gap"),
+                "validation_soft_loss_mean": mean(group, "soft_loss"),
+                "validation_discrete_loss_mean": mean(group, "discrete_loss"),
+                "validation_loss_gap_mean": mean(group, "loss_gap"),
+                "test_discrete_acc_mean": mean(group, "test_discrete_acc"),
+                "test_discrete_acc_std": sample_std(
+                    group, "test_discrete_acc"
+                ),
+                "train_time_s_mean": mean(group, "train_time_s"),
+                "unused_gate_ratio_mean": mean(group, "unused_gate_ratio"),
+                "inactive_vote_ratio_mean": mean(group, "inactive_vote_ratio"),
+                "gate_count": group[0]["gate_count"],
+                "depth": group[0]["depth"],
+                "fanout_max_mean": mean(group, "fanout_max"),
+                "hard_payload_bits": group[0]["hard_payload_bits"],
+            }
+        )
+    return output
+
+
+def repeat_deltas(rows: list[dict[str, object]]) -> list[dict[str, object]]:
+    by_key = {
+        (str(row["variant"]), int(row["seed"])): row for row in rows
+    }
+    output = []
+    for seed in (0, 1, 2):
+        baseline = by_key[("causal-v64-d2", seed)]
+        candidate = by_key[("causal-v64-d4", seed)]
+        output.append(
+            {
+                "seed": seed,
+                "validation_hard_acc_delta": float(candidate["discrete_acc"])
+                - float(baseline["discrete_acc"]),
+                "test_hard_acc_delta_report_only": float(
+                    candidate["test_discrete_acc"]
+                )
+                - float(baseline["test_discrete_acc"]),
+                "acc_gap_delta": float(candidate["acc_gap"])
+                - float(baseline["acc_gap"]),
+                "unused_gate_ratio_delta": float(
+                    candidate["unused_gate_ratio"]
+                )
+                - float(baseline["unused_gate_ratio"]),
+            }
+        )
+    return output
+
+
 def percent(value: float) -> str:
     return f"{100 * value:.2f}%"
 
 
 def render_report(
-    rows: list[dict[str, object]], comparison_rows: list[dict[str, object]]
+    rows: list[dict[str, object]],
+    comparison_rows: list[dict[str, object]],
+    repeat_aggregates: list[dict[str, object]],
+    repeat_comparisons: list[dict[str, object]],
 ) -> str:
     best = max(rows, key=lambda row: float(row["discrete_acc"]))
     lines = [
@@ -335,15 +476,62 @@ def render_report(
             )
     else:
         lines.append("No matched comparison is complete yet.")
+    if repeat_aggregates:
+        lines.extend(
+            [
+                "",
+                "## Three-seed depth repeat",
+                "",
+                "The d4 run reuses the exact hardened d2 payload for each seed.",
+                "All six deployment payloads pass the zero-real operator audit.",
+                "",
+                "| variant | validation hard mean +/- sd | test hard mean +/- sd | gap mean | unused mean | gates | depth |",
+                "| --- | ---: | ---: | ---: | ---: | ---: | ---: |",
+            ]
+        )
+        for row in repeat_aggregates:
+            lines.append(
+                "| {variant} | {valid} +/- {valid_sd} | {test} +/- "
+                "{test_sd} | {gap} | {unused} | {gates} | {depth} |".format(
+                    variant=row["variant"],
+                    valid=percent(
+                        float(row["validation_discrete_acc_mean"])
+                    ),
+                    valid_sd=percent(
+                        float(row["validation_discrete_acc_std"])
+                    ),
+                    test=percent(float(row["test_discrete_acc_mean"])),
+                    test_sd=percent(float(row["test_discrete_acc_std"])),
+                    gap=percent(float(row["validation_acc_gap_mean"])),
+                    unused=percent(float(row["unused_gate_ratio_mean"])),
+                    gates=row["gate_count"],
+                    depth=row["depth"],
+                )
+            )
+        mean_depth_delta = statistics.fmean(
+            float(row["validation_hard_acc_delta"])
+            for row in repeat_comparisons
+        )
+        wins = sum(
+            float(row["validation_hard_acc_delta"]) > 0
+            for row in repeat_comparisons
+        )
+        lines.extend(
+            [
+                "",
+                f"The d4 depth step improves validation hard accuracy by "
+                f"{percent(mean_depth_delta)} on average with {wins}/3 wins.",
+            ]
+        )
     lines.extend(
         [
             "",
             "## Screen conclusion",
             "",
             f"The current validation winner is `{best['variant']}` at "
-            f"{percent(float(best['discrete_acc']))} hard accuracy. This remains "
-            "a seed-0 feasibility screen; no language-model method is promoted "
-            "without the registered seed-1/2 repeats.",
+            f"{percent(float(best['discrete_acc']))} hard accuracy. The v64 "
+            "depth effect has a complete three-seed repeat, but the v128 winner "
+            "remains a seed-0 feasibility result rather than a promotion claim.",
             "",
         ]
     )
@@ -369,6 +557,25 @@ def main() -> None:
         if len({row[field] for row in rows}) != 1:
             raise RuntimeError(f"mismatched ladder provenance: {field}")
     comparison_rows = deltas(rows)
+    repeat_rows = []
+    repeat_ids = [
+        run_id for run_id in REPEAT_CONFIGS if run_id.startswith("repeat-")
+    ]
+    if any((args.runs_root / run_id / "result.json").is_file() for run_id in repeat_ids):
+        missing = [
+            run_id
+            for run_id in REPEAT_CONFIGS
+            if not (args.runs_root / run_id / "result.json").is_file()
+        ]
+        if missing:
+            raise RuntimeError(f"incomplete character repeats: {missing}")
+        repeat_rows = [
+            flatten_run(args.runs_root, run_id, method, variant)
+            for run_id, (method, variant) in REPEAT_CONFIGS.items()
+        ]
+        validate_repeat_rows(repeat_rows)
+    repeat_aggregates = aggregate_repeats(repeat_rows) if repeat_rows else []
+    repeat_comparisons = repeat_deltas(repeat_rows) if repeat_rows else []
     best = max(rows, key=lambda row: float(row["discrete_acc"]))
     summary = {
         "runs": len(rows),
@@ -379,6 +586,8 @@ def main() -> None:
         "best_test_hard_acc_report_only": best["test_discrete_acc"],
         "all_strict_no_real": True,
         "comparisons": comparison_rows,
+        "repeat_aggregates": repeat_aggregates,
+        "repeat_comparisons": repeat_comparisons,
         "protocol_sha256": best["protocol_sha256"],
         "source_bundle_sha256": best["source_bundle_sha256"],
         "source_bundle_sha256_values": sorted(
@@ -391,11 +600,21 @@ def main() -> None:
     write_csv(args.out_dir / "required_results.csv", rows)
     if comparison_rows:
         write_csv(args.out_dir / "scale_deltas.csv", comparison_rows)
+    if repeat_rows:
+        write_csv(args.out_dir / "repeat_results.csv", repeat_rows)
+        write_csv(args.out_dir / "repeat_aggregate.csv", repeat_aggregates)
+        write_csv(args.out_dir / "repeat_deltas.csv", repeat_comparisons)
     (args.out_dir / "summary.json").write_text(
         json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
     (args.out_dir / "README.md").write_text(
-        render_report(rows, comparison_rows), encoding="utf-8"
+        render_report(
+            rows,
+            comparison_rows,
+            repeat_aggregates,
+            repeat_comparisons,
+        ),
+        encoding="utf-8",
     )
     print(json.dumps(summary, sort_keys=True))
 

@@ -14,7 +14,8 @@ from vit_lgn.bitplane_lut.analyze_cifar100_payloads import (
 
 
 RUN_PATTERN = re.compile(
-    r"^(?:smoke|full)-(?:mixed|causal)-v(?:8|32|64|128)-d(?:1|2|4)-s\d+$"
+    r"^(?:smoke|full|support|repeat)-(?:mixed|causal)-"
+    r"v(?:8|32|64|128)-d(?:1|2|4)-s\d+$"
 )
 
 

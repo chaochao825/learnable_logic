@@ -78,6 +78,16 @@
       "selection": "best validation hard accuracy within each block; test is evaluated only after every block is frozen; seed 0 is a screen and seeds 1/2 are mandatory before promotion",
       "seeds": [0]
     },
+    "bitplane_lut_shakespeare_char_depth_s012_v1": {
+      "architecture": "64 causal A8 character IDs as 512 protected Boolean planes; 64 learned votes per 65 characters; matched 2/4-block networks; one 4-input LUT per vote plane per block; 16 fixed candidate wires per LUT input; fixed interleaved integer GroupSum",
+      "budget": "100000 fixed train windows; at most 20 epochs per block, minimum 6, validation hard-accuracy patience 4, batch 256",
+      "dataset": "Tiny Shakespeare SHA-256 pinned corpus; identical contiguous 90/5/5 train/validation/test streams and sampled windows for all seeds; context 64; test is report-only",
+      "declared_variables": "Boolean depth in {2, 4}; every d4 run continues from the exact hardened d2 payload for the same seed",
+      "deployment": "Boolean protected/state planes, Boolean 4-input truth tables, integer source indices, fixed integer GroupSum; zero embedding, attention, MLP, learned dense integer matrix, learned numeric weight, or real-valued operator",
+      "optimizer": "AdamW lr0.03 cosine on training-only truth/wiring shadows; hard-ST forward; direct argmax and per-block hard freeze",
+      "selection": "best validation hard accuracy within each block; paired depth comparison on seeds 0/1/2; test is evaluated only after every block is frozen",
+      "seeds": [0, 1, 2]
+    },
     "bitplane_lut_digits_abc_dc2_k4_s012_v1": {
       "source": "all 18 hard payloads from bitplane_lut_digits_scale_s012_v2",
       "scope": "two learned LUT/wiring blocks from 512 raw Boolean inputs to final vote bits; GroupSum and argmax excluded",
