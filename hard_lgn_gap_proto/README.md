@@ -3,6 +3,23 @@
 PyTorch prototype for comparing standard differentiable logic gate networks
 against block-wise hard refitting.
 
+## Strict hard-network boundary
+
+`boolean_executor.py` is the deployable hard path. It accepts only CPU
+`torch.bool` features, stores wiring and truth-table IDs as integers, keeps
+every intermediate gate output Boolean, and returns `torch.int64` class
+counts. `BooleanRuntimeAudit` intercepts every Torch operator and raises if a
+floating or complex tensor appears. Its source-level test also rejects float
+literals, true division, and floating activation calls.
+
+Continuous logits, softmax/Gumbel, STE, optimizers, refit objectives, and
+cross-entropy remain real-valued training or measurement tools. They are not
+part of the exported hard network. In particular, `discrete_acc` is computed
+directly from integer class-count argmax; `discrete_loss` converts those counts
+to metric logits only after audited hard inference. New result rows record
+`hard_runtime_domain=bool_int`, the audit operation count, and a required zero
+floating-tensor count.
+
 The completed scaled comparison and its conservative verdict are in
 [`docs/reports/mind_gap_scaled_hard_lgn_results_20260723.md`](../docs/reports/mind_gap_scaled_hard_lgn_results_20260723.md).
 The exact requested output schema is retained in

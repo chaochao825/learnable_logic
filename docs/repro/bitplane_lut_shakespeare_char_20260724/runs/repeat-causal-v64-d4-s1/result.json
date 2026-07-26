@@ -1,0 +1,491 @@
+{
+  "acc_gap": 0.0006499999999999839,
+  "block_results": [
+    {
+      "best_epoch": 11,
+      "block": 0,
+      "block_train_seconds": 1128.1739105600282,
+      "changed_truth_ratio": 0.0,
+      "changed_wiring_ratio": 0.0,
+      "epochs_ran": 15,
+      "epochs_to_90pct_best": 2,
+      "post_refit_acc_gap": 0.0,
+      "post_refit_hard_acc": 0.2889,
+      "post_refit_hard_loss": 2.686469482421875,
+      "post_refit_loss_gap": 0.0,
+      "post_refit_soft_acc": 0.2889,
+      "post_refit_soft_loss": 2.686469482421875,
+      "pre_refit_acc_gap": 0.008099999999999996,
+      "pre_refit_hard_acc": 0.2889,
+      "pre_refit_hard_loss": 2.686469482421875,
+      "pre_refit_loss_gap": 0.04481453399658175,
+      "pre_refit_soft_acc": 0.2808,
+      "pre_refit_soft_loss": 2.731284016418457,
+      "refit_address_coverage": 0.0,
+      "refit_bit_error": 0.3248218894004822,
+      "state_diagnostics": {
+        "a8_symbol_entropy_mean": 5.268218117421621,
+        "a8_symbol_unique_mean": 77.91095890410959,
+        "bit_entropy_mean": 0.7186042070388794,
+        "bit_entropy_min": 2.497332388884388e-06,
+        "inactive_bit_ratio": 0.1444777399301529,
+        "input_output_bit_flip_ratio": 0.4141841530799866,
+        "joint_unique_state_ratio": 1.0,
+        "joint_unique_states": 512,
+        "per_plane_active_ratio": [
+          0.8886986374855042,
+          0.9109588861465454,
+          0.8647260069847107,
+          0.8972602486610413,
+          0.8647260069847107,
+          0.8595890402793884,
+          0.784246563911438,
+          0.7739726305007935
+        ],
+        "per_plane_entropy": [
+          0.762568473815918,
+          0.7753095030784607,
+          0.7213334441184998,
+          0.7546776533126831,
+          0.7273426055908203,
+          0.7157022356987,
+          0.6540257930755615,
+          0.6378742456436157
+        ]
+      },
+      "vote_state_diagnostics": {
+        "a8_symbol_entropy_mean": 5.337802392932085,
+        "a8_symbol_unique_mean": 81.79038461538461,
+        "bit_entropy_mean": 0.7174931168556213,
+        "bit_entropy_min": 2.497332388884388e-06,
+        "inactive_bit_ratio": 0.13149037957191467,
+        "input_output_bit_flip_ratio": 0.46516066789627075,
+        "joint_unique_state_ratio": 1.0,
+        "joint_unique_states": 512,
+        "per_plane_active_ratio": [
+          0.875,
+          0.8999999761581421,
+          0.8480769395828247,
+          0.8846153616905212,
+          0.8480769395828247,
+          0.8423076868057251,
+          0.8807692527770996,
+          0.8692307472229004
+        ],
+        "per_plane_entropy": [
+          0.7384967803955078,
+          0.7484301924705505,
+          0.689296305179596,
+          0.7246248722076416,
+          0.6949871778488159,
+          0.6932072043418884,
+          0.7345209717750549,
+          0.7163816094398499
+        ]
+      }
+    },
+    {
+      "best_epoch": 6,
+      "block": 1,
+      "block_train_seconds": 759.0477510369965,
+      "changed_truth_ratio": 0.0,
+      "changed_wiring_ratio": 0.0,
+      "epochs_ran": 10,
+      "epochs_to_90pct_best": 1,
+      "post_refit_acc_gap": 0.0,
+      "post_refit_hard_acc": 0.3618,
+      "post_refit_hard_loss": 2.3219804433822633,
+      "post_refit_loss_gap": 0.0,
+      "post_refit_soft_acc": 0.3618,
+      "post_refit_soft_loss": 2.3219804433822633,
+      "pre_refit_acc_gap": 0.0044500000000000095,
+      "pre_refit_hard_acc": 0.3618,
+      "pre_refit_hard_loss": 2.3219804433822633,
+      "pre_refit_loss_gap": 0.03822908020019522,
+      "pre_refit_soft_acc": 0.35735,
+      "pre_refit_soft_loss": 2.3602095235824585,
+      "refit_address_coverage": 0.0,
+      "refit_bit_error": 0.21995817124843597,
+      "state_diagnostics": {
+        "a8_symbol_entropy_mean": 4.474863984813429,
+        "a8_symbol_unique_mean": 63.2208904109589,
+        "bit_entropy_mean": 0.6233953833580017,
+        "bit_entropy_min": 2.497332388884388e-06,
+        "inactive_bit_ratio": 0.11301369965076447,
+        "input_output_bit_flip_ratio": 0.2628575265407562,
+        "joint_unique_state_ratio": 1.0,
+        "joint_unique_states": 512,
+        "per_plane_active_ratio": [
+          0.9160959124565125,
+          0.8989726305007935,
+          0.9195205569267273,
+          0.914383590221405,
+          0.9023972749710083,
+          0.9229452013969421,
+          0.8133561611175537,
+          0.8082191944122314
+        ],
+        "per_plane_entropy": [
+          0.650554358959198,
+          0.6484666466712952,
+          0.6557627320289612,
+          0.6609863042831421,
+          0.6477901935577393,
+          0.6484875679016113,
+          0.5364995002746582,
+          0.5386155247688293
+        ]
+      },
+      "vote_state_diagnostics": {
+        "a8_symbol_entropy_mean": 4.446804674772116,
+        "a8_symbol_unique_mean": 65.29230769230769,
+        "bit_entropy_mean": 0.6105661988258362,
+        "bit_entropy_min": 2.497332388884388e-06,
+        "inactive_bit_ratio": 0.09615384787321091,
+        "input_output_bit_flip_ratio": 0.29520919919013977,
+        "joint_unique_state_ratio": 1.0,
+        "joint_unique_states": 512,
+        "per_plane_active_ratio": [
+          0.9057692289352417,
+          0.8865384459495544,
+          0.9096153974533081,
+          0.9038461446762085,
+          0.8903846144676208,
+          0.9134615659713745,
+          0.9134615659713745,
+          0.9076923131942749
+        ],
+        "per_plane_entropy": [
+          0.6126962304115295,
+          0.6059759259223938,
+          0.6156553626060486,
+          0.6194022297859192,
+          0.6056436896324158,
+          0.6177198886871338,
+          0.6025298237800598,
+          0.6049062609672546
+        ]
+      }
+    },
+    {
+      "best_epoch": 10,
+      "block": 2,
+      "block_train_seconds": 1060.6804196669837,
+      "changed_truth_ratio": 0.0,
+      "changed_wiring_ratio": 0.0,
+      "epochs_ran": 14,
+      "epochs_to_90pct_best": 1,
+      "post_refit_acc_gap": 0.0,
+      "post_refit_hard_acc": 0.38645,
+      "post_refit_hard_loss": 2.1764059797286985,
+      "post_refit_loss_gap": 0.0,
+      "post_refit_soft_acc": 0.38645,
+      "post_refit_soft_loss": 2.1764059797286985,
+      "pre_refit_acc_gap": 0.0021500000000000408,
+      "pre_refit_hard_acc": 0.38645,
+      "pre_refit_hard_loss": 2.1764059797286985,
+      "pre_refit_loss_gap": 0.0043334985733034515,
+      "pre_refit_soft_acc": 0.3843,
+      "pre_refit_soft_loss": 2.180739478302002,
+      "refit_address_coverage": 0.0,
+      "refit_bit_error": 0.1818418800830841,
+      "state_diagnostics": {
+        "a8_symbol_entropy_mean": 4.112303281483585,
+        "a8_symbol_unique_mean": 59.66095890410959,
+        "bit_entropy_mean": 0.5729877948760986,
+        "bit_entropy_min": 2.497332388884388e-06,
+        "inactive_bit_ratio": 0.08797089010477066,
+        "input_output_bit_flip_ratio": 0.1718018352985382,
+        "joint_unique_state_ratio": 1.0,
+        "joint_unique_states": 512,
+        "per_plane_active_ratio": [
+          0.9349315166473389,
+          0.9417808055877686,
+          0.943493127822876,
+          0.9366438388824463,
+          0.9297945499420166,
+          0.9452054500579834,
+          0.8270547986030579,
+          0.8373287916183472
+        ],
+        "per_plane_entropy": [
+          0.5965668559074402,
+          0.6058076024055481,
+          0.6028278470039368,
+          0.605880856513977,
+          0.5929515957832336,
+          0.5991016030311584,
+          0.49133139848709106,
+          0.4894351661205292
+        ]
+      },
+      "vote_state_diagnostics": {
+        "a8_symbol_entropy_mean": 4.039621115647829,
+        "a8_symbol_unique_mean": 61.29423076923077,
+        "bit_entropy_mean": 0.5539547204971313,
+        "bit_entropy_min": 2.497332388884388e-06,
+        "inactive_bit_ratio": 0.06802884489297867,
+        "input_output_bit_flip_ratio": 0.1929466873407364,
+        "joint_unique_state_ratio": 1.0,
+        "joint_unique_states": 512,
+        "per_plane_active_ratio": [
+          0.9269230961799622,
+          0.9346153736114502,
+          0.9365384578704834,
+          0.9288461804389954,
+          0.9211538434028625,
+          0.9384615421295166,
+          0.9288461804389954,
+          0.9403846263885498
+        ],
+        "per_plane_entropy": [
+          0.5520641803741455,
+          0.5580664873123169,
+          0.5562053918838501,
+          0.5575145483016968,
+          0.544055700302124,
+          0.5622557401657104,
+          0.5518026351928711,
+          0.5496730804443359
+        ]
+      }
+    },
+    {
+      "best_epoch": 15,
+      "block": 3,
+      "block_train_seconds": 1444.2438433589996,
+      "changed_truth_ratio": 0.0,
+      "changed_wiring_ratio": 0.0,
+      "epochs_ran": 19,
+      "epochs_to_90pct_best": 1,
+      "post_refit_acc_gap": 0.0,
+      "post_refit_hard_acc": 0.40295,
+      "post_refit_hard_loss": 2.1127701416015623,
+      "post_refit_loss_gap": 0.0,
+      "post_refit_soft_acc": 0.40295,
+      "post_refit_soft_loss": 2.1127701416015623,
+      "pre_refit_acc_gap": 0.0006499999999999839,
+      "pre_refit_hard_acc": 0.40295,
+      "pre_refit_hard_loss": 2.1127701416015623,
+      "pre_refit_loss_gap": 0.004462973976135043,
+      "pre_refit_soft_acc": 0.4023,
+      "pre_refit_soft_loss": 2.1083071676254272,
+      "refit_address_coverage": 0.0,
+      "refit_bit_error": 0.16179053485393524,
+      "state_diagnostics": {
+        "a8_symbol_entropy_mean": 3.8630872970982773,
+        "a8_symbol_unique_mean": 55.88356164383562,
+        "bit_entropy_mean": 0.5374369621276855,
+        "bit_entropy_min": 2.497332388884388e-06,
+        "inactive_bit_ratio": 0.08839897066354752,
+        "input_output_bit_flip_ratio": 0.1276872158050537,
+        "joint_unique_state_ratio": 1.0,
+        "joint_unique_states": 512,
+        "per_plane_active_ratio": [
+          0.9383561611175537,
+          0.9400684833526611,
+          0.9400684833526611,
+          0.9400684833526611,
+          0.9366438388824463,
+          0.9400684833526611,
+          0.8253424763679504,
+          0.8321917653083801
+        ],
+        "per_plane_entropy": [
+          0.5582828521728516,
+          0.5633370280265808,
+          0.561841607093811,
+          0.5728941559791565,
+          0.5613134503364563,
+          0.5616423487663269,
+          0.46278104186058044,
+          0.457403302192688
+        ]
+      },
+      "vote_state_diagnostics": {
+        "a8_symbol_entropy_mean": 3.759732394722792,
+        "a8_symbol_unique_mean": 57.051923076923075,
+        "bit_entropy_mean": 0.5140283703804016,
+        "bit_entropy_min": 2.497332388884388e-06,
+        "inactive_bit_ratio": 0.06850961595773697,
+        "input_output_bit_flip_ratio": 0.1434025764465332,
+        "joint_unique_state_ratio": 1.0,
+        "joint_unique_states": 512,
+        "per_plane_active_ratio": [
+          0.9307692050933838,
+          0.932692289352417,
+          0.932692289352417,
+          0.932692289352417,
+          0.9288461804389954,
+          0.932692289352417,
+          0.9269230961799622,
+          0.9346153736114502
+        ],
+        "per_plane_entropy": [
+          0.5090681910514832,
+          0.510368824005127,
+          0.5101748108863831,
+          0.5204678773880005,
+          0.50852370262146,
+          0.5201861262321472,
+          0.5197384357452393,
+          0.5136988759040833
+        ]
+      }
+    }
+  ],
+  "candidate_policy": "sequence_causal",
+  "context_length": 64,
+  "continuation_train_time_s": 2506.3946728960145,
+  "dataset": "tiny_shakespeare_char",
+  "epochs_to_target": 5,
+  "greedy_generation": "rance ta'en\nAs shall with either part's agreement stand?\n\nBAPTIS:\nNor the of the be the be the be the for the with and and the with the for the be the for the with and the be the with hear the",
+  "hard_acc": 0.40295,
+  "hard_loss": 2.112770120048523,
+  "hard_payload_bytes": 564229,
+  "hard_payload_sha256": "2a29fbba27136f7584e373deabd20db893f87364aa2a2cd04453cc7c519977c6",
+  "integer_ngram_references": {
+    "bigram": {
+      "test": {
+        "hard_acc": 0.27063512802124023,
+        "hard_top5_acc": 0.6561411697124188
+      },
+      "validation": {
+        "hard_acc": 0.26785001158714294,
+        "hard_top5_acc": 0.6557
+      }
+    },
+    "trigram": {
+      "test": {
+        "hard_acc": 0.375812292098999,
+        "hard_top5_acc": 0.7519297741715435
+      },
+      "validation": {
+        "hard_acc": 0.38214999437332153,
+        "hard_top5_acc": 0.76995
+      }
+    },
+    "unigram": {
+      "test": {
+        "hard_acc": 0.14599864184856415,
+        "hard_top5_acc": 0.3927225074498259
+      },
+      "validation": {
+        "hard_acc": 0.15344999730587006,
+        "hard_top5_acc": 0.403
+      }
+    }
+  },
+  "loss_gap": 0.00446295242309569,
+  "method_id": "bitplane_lut_sequence_causal_argmax",
+  "prefix": {
+    "blocks": 2,
+    "exact_strict_logit_match": true,
+    "manifest_file_sha256": "2040ffb4269857a046481c24e3188b0360a5db4db6d12163940dcd792398795f",
+    "manifest_sha256": "47584d28f8a5b77cad1aacad0ce81045484cdf1ac035650396b8db2155a812da",
+    "payload_sha256": "2e40f824e7450d1c9790c4583a6a40783ed6f03330af80feee7eb3cd24bf19a3",
+    "result_sha256": "0c0bc0f6f6a3b2dafb816e5287880f3e7d160328272dc891b32a001d9e8f8090",
+    "run_dir": "/home/wangmeiqi/bitplane_lut_shakespeare_20260724_v1/runs/repeat-causal-v64-d2-s1"
+  },
+  "prefix_train_time_s": 1888.6413842649781,
+  "run_manifest_sha256": "074d4b5c91499e0eb49638227fcd473fd2d00368164501e769abffde2371c744",
+  "seed": 1,
+  "soft_acc": 0.4023,
+  "soft_loss": 2.1083071676254272,
+  "state_bits": 4672,
+  "strict_runtime": {
+    "audit_operations": 113808,
+    "compliance": "operator_audited_bool_int",
+    "exact_carrier_logit_match": true,
+    "float_tensor_count": 0
+  },
+  "structure": {
+    "candidate_policy": "sequence_causal",
+    "fanout_max": 181,
+    "gate_count": 16640,
+    "layers": [
+      {
+        "constant_gate_ratio": 0.04302884638309479,
+        "fanout_max": 181,
+        "gate_count": 4160,
+        "literal_gate_ratio": 0.05024038627743721,
+        "logical_payload_bits": 282880,
+        "nontrivial_gate_ratio": 0.9067307710647583,
+        "reverse_layer_index": 3,
+        "selected_source_ratio": 0.945633590221405
+      },
+      {
+        "constant_gate_ratio": 0.011538461782038212,
+        "fanout_max": 34,
+        "gate_count": 4160,
+        "literal_gate_ratio": 0.04350961372256279,
+        "logical_payload_bits": 282880,
+        "nontrivial_gate_ratio": 0.9449519515037537,
+        "reverse_layer_index": 2,
+        "selected_source_ratio": 0.9045376777648926
+      },
+      {
+        "constant_gate_ratio": 0.002644230844452977,
+        "fanout_max": 15,
+        "gate_count": 4160,
+        "literal_gate_ratio": 0.04374999925494194,
+        "logical_payload_bits": 282880,
+        "nontrivial_gate_ratio": 0.9536057710647583,
+        "reverse_layer_index": 1,
+        "selected_source_ratio": 0.9083904027938843
+      },
+      {
+        "constant_gate_ratio": 0.002884615445509553,
+        "fanout_max": 15,
+        "gate_count": 4160,
+        "literal_gate_ratio": 0.04038461670279503,
+        "logical_payload_bits": 282880,
+        "nontrivial_gate_ratio": 0.9567307829856873,
+        "reverse_layer_index": 0,
+        "selected_source_ratio": 0.9201626777648926
+      }
+    ],
+    "learned_dense_integer_matrix_count": 0,
+    "learned_logic_depth": 4,
+    "learned_numeric_weight_count": 0,
+    "learned_payload_bits": 1131520,
+    "learned_vote_bits": 4160,
+    "preserved_input_bits": 512,
+    "state_bits": 4672,
+    "state_symbols": 584,
+    "total_logical_payload_bits": 1202688,
+    "unused_gate_ratio": 0.04753605769230769
+  },
+  "test_acc_gap": 0.0014361110113811915,
+  "test_hard_acc": 0.396258930815352,
+  "test_hard_metrics": {
+    "hard_acc": 0.396258930815352,
+    "hard_bits_per_character": 3.0897826972581677,
+    "hard_loss": 2.141674165147402,
+    "hard_perplexity": 8.513679009021713,
+    "hard_top5_acc": 0.7322909560909058
+  },
+  "test_soft_acc": 0.3976950418267332,
+  "train_hard_metrics": {
+    "hard_acc": 0.46462,
+    "hard_bits_per_character": 2.6544899249969633,
+    "hard_loss": 1.8399522073364258,
+    "hard_perplexity": 6.296237339882834,
+    "hard_top5_acc": 0.80596
+  },
+  "train_time_s": 4395.036057160993,
+  "training_health": {
+    "finite_gradients": true,
+    "late_validation_drop": 0.0
+  },
+  "validation_hard_metrics": {
+    "hard_acc": 0.40295,
+    "hard_bits_per_character": 3.048082974732384,
+    "hard_loss": 2.112770120048523,
+    "hard_perplexity": 8.271121579124395,
+    "hard_top5_acc": 0.7342
+  },
+  "vocab_size": 65,
+  "vote_bits": 4160,
+  "votes_per_class": 64
+}

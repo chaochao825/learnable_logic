@@ -6,6 +6,7 @@ import torch
 import torch.nn.functional as F
 from torch.utils.data import TensorDataset
 
+from vit_lgn.bitstate.analyze_count_messages import merge_gate_usage
 from vit_lgn.bitstate.blocks import BinaryTopKBlock, LocalBitLogicBlock
 from vit_lgn.bitstate.encoder import RedundantPredicatePatchEncoder, ThermometerPatchEncoder
 from vit_lgn.bitstate.gates import (
@@ -61,6 +62,25 @@ def contains_float_tensor(value: object) -> bool:
 
 
 class BitStateTest(unittest.TestCase):
+    def test_merge_usage_distinguishes_state_and_message_dependencies(self) -> None:
+        model = BitStateViT(small_config())
+        merge = model.global_blocks[0].merge
+        operations = torch.full((merge.out_dim,), 3, dtype=torch.long)
+        operations[:4] = torch.tensor([3, 5, 1, 0])
+        with torch.no_grad():
+            merge.logits.fill_(-10.0)
+            merge.logits.scatter_(1, operations[:, None], 10.0)
+        usage = merge_gate_usage(model)["aggregate"]
+        self.assertEqual(usage["gate_count"], 16)
+        self.assertEqual(usage["uses_state"], 14)
+        self.assertEqual(usage["uses_message"], 2)
+        self.assertEqual(usage["state_only"], 13)
+        self.assertEqual(usage["message_only"], 1)
+        self.assertEqual(usage["both"], 1)
+        self.assertEqual(usage["neither"], 1)
+        self.assertEqual(usage["identity_state"], 13)
+        self.assertEqual(usage["identity_message"], 1)
+
     def test_gumbel_st_matches_pytorch_hard_gumbel_gradients(self) -> None:
         layer = HardSTGateLayer(
             3,
@@ -367,6 +387,56 @@ class BitStateTest(unittest.TestCase):
         bit_output, bit_indices = block.forward_bits(bits, return_indices=True)
         torch.testing.assert_close(carrier.bool(), bit_output)
         torch.testing.assert_close(block._last_indices, bit_indices)
+
+    def test_count_threshold_message_is_bit_exact_and_preserves_levels(self) -> None:
+        block = BinaryTopKBlock(
+            state_width=16,
+            num_tokens=5,
+            heads=2,
+            qk_bits=3,
+            topk=4,
+            seed=4,
+            message_mode="count_threshold_hybrid",
+            message_count_thresholds=(1, 2, 3, 4),
+            message_count_fraction=0.5,
+        )
+        counts = torch.zeros(1, 2, 1, 8, dtype=torch.int32)
+        counts[:, 0, :, 0] = 2
+        counts[:, 1, :, 0] = 4
+        encoded = block._encode_hard_counts(counts)
+        self.assertEqual(encoded.dtype, torch.bool)
+        self.assertEqual(encoded.shape, counts.shape)
+        torch.testing.assert_close(
+            encoded[0, 0, 0, :4],
+            torch.tensor([True, True, False, False]),
+        )
+        torch.testing.assert_close(
+            encoded[0, 1, 0, :4],
+            torch.tensor([True, True, True, True]),
+        )
+
+        bits = torch.randint(0, 2, (2, 5, 16), dtype=torch.bool)
+        carrier = block(bits.float(), mode="hard")
+        bit_output = block.forward_bits(bits)
+        torch.testing.assert_close(carrier.bool(), bit_output)
+        payload = block.deployment_payload()
+        self.assertEqual(payload["message_mode"], "count_threshold_hybrid")
+        self.assertFalse(contains_float_tensor(payload))
+
+    def test_full_count_message_model_matches_boolean_reference(self) -> None:
+        config = BitStateConfig(
+            **{
+                **small_config().__dict__,
+                "topk": 2,
+                "message_mode": "count_threshold_hybrid",
+                "message_count_thresholds": (1, 2),
+                "message_count_fraction": 0.5,
+            }
+        )
+        model = BitStateViT(config).eval()
+        images = torch.randint(0, 256, (3, 1, 4, 4), dtype=torch.uint8)
+        model.assert_bit_exact(images)
+        self.assertFalse(contains_float_tensor(model.deployment_payload()))
 
     def test_full_model_matches_integer_reference_at_every_boundary(self) -> None:
         model = BitStateViT(small_config()).eval()

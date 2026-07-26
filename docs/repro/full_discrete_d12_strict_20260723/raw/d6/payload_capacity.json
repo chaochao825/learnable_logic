@@ -1,0 +1,416 @@
+{
+  "artifact": {
+    "contains_real_values": false,
+    "inspector_source_sha256": "80f4ec377cf60cefa622ec4d031d8056fae73ac6e967f4f8535ade2a44358934",
+    "path": "deployment_payload.pt",
+    "serialized_bytes": 42812426,
+    "sha256": "03fa9915f0fe4130843f2eb5a171a2457173339f7ea25cd275051038958e8e5e"
+  },
+  "capacity": {
+    "dense_fanin_max": 768,
+    "dense_nonzero_fanout_max": 768,
+    "general_matrix_multipliers": 0,
+    "logical_bitpacked_weight_bits": 28400640,
+    "logical_weight_coefficients": 3550080,
+    "shift_add_layer_count": 32,
+    "tensor_bits": 341840272,
+    "tensor_bytes": 42730034,
+    "tensor_element_inventory": {
+      "int16": 3582092,
+      "int32": 16130,
+      "int64": 42,
+      "uint8": 35500994
+    },
+    "transformer_block_depth": 6
+  },
+  "largest_tensors": [
+    {
+      "dtype": "uint8",
+      "elements": 1032192,
+      "path": "payload.shift_add_layers[3].weight_magnitude_planes_lsb_first",
+      "shape": [
+        768,
+        192,
+        7
+      ],
+      "tensor_bits": 8257536
+    },
+    {
+      "dtype": "uint8",
+      "elements": 1032192,
+      "path": "payload.shift_add_layers[4].weight_magnitude_planes_lsb_first",
+      "shape": [
+        768,
+        192,
+        7
+      ],
+      "tensor_bits": 8257536
+    },
+    {
+      "dtype": "uint8",
+      "elements": 1032192,
+      "path": "payload.shift_add_layers[5].weight_magnitude_planes_lsb_first",
+      "shape": [
+        192,
+        768,
+        7
+      ],
+      "tensor_bits": 8257536
+    },
+    {
+      "dtype": "uint8",
+      "elements": 1032192,
+      "path": "payload.shift_add_layers[8].weight_magnitude_planes_lsb_first",
+      "shape": [
+        768,
+        192,
+        7
+      ],
+      "tensor_bits": 8257536
+    },
+    {
+      "dtype": "uint8",
+      "elements": 1032192,
+      "path": "payload.shift_add_layers[9].weight_magnitude_planes_lsb_first",
+      "shape": [
+        768,
+        192,
+        7
+      ],
+      "tensor_bits": 8257536
+    },
+    {
+      "dtype": "uint8",
+      "elements": 1032192,
+      "path": "payload.shift_add_layers[10].weight_magnitude_planes_lsb_first",
+      "shape": [
+        192,
+        768,
+        7
+      ],
+      "tensor_bits": 8257536
+    },
+    {
+      "dtype": "uint8",
+      "elements": 1032192,
+      "path": "payload.shift_add_layers[13].weight_magnitude_planes_lsb_first",
+      "shape": [
+        768,
+        192,
+        7
+      ],
+      "tensor_bits": 8257536
+    },
+    {
+      "dtype": "uint8",
+      "elements": 1032192,
+      "path": "payload.shift_add_layers[14].weight_magnitude_planes_lsb_first",
+      "shape": [
+        768,
+        192,
+        7
+      ],
+      "tensor_bits": 8257536
+    },
+    {
+      "dtype": "uint8",
+      "elements": 1032192,
+      "path": "payload.shift_add_layers[15].weight_magnitude_planes_lsb_first",
+      "shape": [
+        192,
+        768,
+        7
+      ],
+      "tensor_bits": 8257536
+    },
+    {
+      "dtype": "uint8",
+      "elements": 1032192,
+      "path": "payload.shift_add_layers[18].weight_magnitude_planes_lsb_first",
+      "shape": [
+        768,
+        192,
+        7
+      ],
+      "tensor_bits": 8257536
+    },
+    {
+      "dtype": "uint8",
+      "elements": 1032192,
+      "path": "payload.shift_add_layers[19].weight_magnitude_planes_lsb_first",
+      "shape": [
+        768,
+        192,
+        7
+      ],
+      "tensor_bits": 8257536
+    },
+    {
+      "dtype": "uint8",
+      "elements": 1032192,
+      "path": "payload.shift_add_layers[20].weight_magnitude_planes_lsb_first",
+      "shape": [
+        192,
+        768,
+        7
+      ],
+      "tensor_bits": 8257536
+    },
+    {
+      "dtype": "uint8",
+      "elements": 1032192,
+      "path": "payload.shift_add_layers[23].weight_magnitude_planes_lsb_first",
+      "shape": [
+        768,
+        192,
+        7
+      ],
+      "tensor_bits": 8257536
+    },
+    {
+      "dtype": "uint8",
+      "elements": 1032192,
+      "path": "payload.shift_add_layers[24].weight_magnitude_planes_lsb_first",
+      "shape": [
+        768,
+        192,
+        7
+      ],
+      "tensor_bits": 8257536
+    },
+    {
+      "dtype": "uint8",
+      "elements": 1032192,
+      "path": "payload.shift_add_layers[25].weight_magnitude_planes_lsb_first",
+      "shape": [
+        192,
+        768,
+        7
+      ],
+      "tensor_bits": 8257536
+    },
+    {
+      "dtype": "uint8",
+      "elements": 1032192,
+      "path": "payload.shift_add_layers[28].weight_magnitude_planes_lsb_first",
+      "shape": [
+        768,
+        192,
+        7
+      ],
+      "tensor_bits": 8257536
+    },
+    {
+      "dtype": "uint8",
+      "elements": 1032192,
+      "path": "payload.shift_add_layers[29].weight_magnitude_planes_lsb_first",
+      "shape": [
+        768,
+        192,
+        7
+      ],
+      "tensor_bits": 8257536
+    },
+    {
+      "dtype": "uint8",
+      "elements": 1032192,
+      "path": "payload.shift_add_layers[30].weight_magnitude_planes_lsb_first",
+      "shape": [
+        192,
+        768,
+        7
+      ],
+      "tensor_bits": 8257536
+    },
+    {
+      "dtype": "uint8",
+      "elements": 774144,
+      "path": "payload.shift_add_layers[1].weight_magnitude_planes_lsb_first",
+      "shape": [
+        576,
+        192,
+        7
+      ],
+      "tensor_bits": 6193152
+    },
+    {
+      "dtype": "uint8",
+      "elements": 774144,
+      "path": "payload.shift_add_layers[6].weight_magnitude_planes_lsb_first",
+      "shape": [
+        576,
+        192,
+        7
+      ],
+      "tensor_bits": 6193152
+    },
+    {
+      "dtype": "uint8",
+      "elements": 774144,
+      "path": "payload.shift_add_layers[11].weight_magnitude_planes_lsb_first",
+      "shape": [
+        576,
+        192,
+        7
+      ],
+      "tensor_bits": 6193152
+    },
+    {
+      "dtype": "uint8",
+      "elements": 774144,
+      "path": "payload.shift_add_layers[16].weight_magnitude_planes_lsb_first",
+      "shape": [
+        576,
+        192,
+        7
+      ],
+      "tensor_bits": 6193152
+    },
+    {
+      "dtype": "uint8",
+      "elements": 774144,
+      "path": "payload.shift_add_layers[21].weight_magnitude_planes_lsb_first",
+      "shape": [
+        576,
+        192,
+        7
+      ],
+      "tensor_bits": 6193152
+    },
+    {
+      "dtype": "uint8",
+      "elements": 774144,
+      "path": "payload.shift_add_layers[26].weight_magnitude_planes_lsb_first",
+      "shape": [
+        576,
+        192,
+        7
+      ],
+      "tensor_bits": 6193152
+    },
+    {
+      "dtype": "int16",
+      "elements": 147456,
+      "path": "payload.shift_add_layers[3].weight_code",
+      "shape": [
+        768,
+        192
+      ],
+      "tensor_bits": 2359296
+    },
+    {
+      "dtype": "uint8",
+      "elements": 294912,
+      "path": "payload.shift_add_layers[3].weight_magnitude_chunks_u4_lsb_first",
+      "shape": [
+        768,
+        192,
+        2
+      ],
+      "tensor_bits": 2359296
+    },
+    {
+      "dtype": "int16",
+      "elements": 147456,
+      "path": "payload.shift_add_layers[4].weight_code",
+      "shape": [
+        768,
+        192
+      ],
+      "tensor_bits": 2359296
+    },
+    {
+      "dtype": "uint8",
+      "elements": 294912,
+      "path": "payload.shift_add_layers[4].weight_magnitude_chunks_u4_lsb_first",
+      "shape": [
+        768,
+        192,
+        2
+      ],
+      "tensor_bits": 2359296
+    },
+    {
+      "dtype": "int16",
+      "elements": 147456,
+      "path": "payload.shift_add_layers[5].weight_code",
+      "shape": [
+        192,
+        768
+      ],
+      "tensor_bits": 2359296
+    },
+    {
+      "dtype": "uint8",
+      "elements": 294912,
+      "path": "payload.shift_add_layers[5].weight_magnitude_chunks_u4_lsb_first",
+      "shape": [
+        192,
+        768,
+        2
+      ],
+      "tensor_bits": 2359296
+    }
+  ],
+  "schema_version": 6,
+  "source": {
+    "checkpoint_step": 50000,
+    "model_type": "EnhancedFullDiscreteViT",
+    "protocol_sha256": "b0389ebb920bea1125ccebfa87179eeea18b7d1c7b0fbc3433d5b82f8c1b22a9",
+    "training_state_included": false
+  },
+  "tensor_bits_by_leaf_name": {
+    "code": 202752,
+    "magnitude_chunk_shift": 512,
+    "magnitude_chunk_valid_bits": 512,
+    "possible_weights": 192,
+    "product_rom_int16": 65536,
+    "scale_exponent": 1056,
+    "table_uint16_carried_as_int32": 516160,
+    "threshold_fraction_denominator_shift": 336,
+    "threshold_fraction_numerator": 2688,
+    "weight_code": 56801280,
+    "weight_magnitude_chunks_u4_lsb_first": 56801280,
+    "weight_magnitude_planes_lsb_first": 198804480,
+    "weight_scale_exponent": 242848,
+    "weight_sign": 28400640
+  },
+  "tensor_bits_by_top_level": {
+    "arithmetic_contract": 65536,
+    "attention": 3216,
+    "parameters": 203808,
+    "rms_luts": 516160,
+    "shift_add_layers": 341051552
+  },
+  "topology": {
+    "activation_bits": 8,
+    "block_order": [
+      "blocks.0",
+      "blocks.1",
+      "blocks.2",
+      "blocks.3",
+      "blocks.4",
+      "blocks.5"
+    ],
+    "classes": 10,
+    "classifier": "head",
+    "depth": 6,
+    "embedding_dim": 192,
+    "final_norm_kind": "rms_lut",
+    "global_mixer_mode": "attention",
+    "head_dim": 32,
+    "heads": 6,
+    "input_channels": 3,
+    "input_denominator": 255,
+    "input_encoding": "uint8_numerator_over_constant_denominator",
+    "input_numerator": 1,
+    "model_type": "EnhancedFullDiscreteViT",
+    "norm_kind": "rms_lut",
+    "patch_feature_order": "channel_then_patch_row_then_patch_column",
+    "patch_size": 4,
+    "patch_tokens": 64,
+    "qk_lanes": 7,
+    "sequence_tokens": 65,
+    "topk": 8
+  }
+}

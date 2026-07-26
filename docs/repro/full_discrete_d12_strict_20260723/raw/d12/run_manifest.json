@@ -1,0 +1,176 @@
+{
+  "artifacts": {
+    "environment.json": {
+      "bytes": 355,
+      "sha256": "0dc1e83fbb938b778ad25c4ab54db7538d28cf617b9b8be151c59c0eb2201749"
+    },
+    "integer_vs_carrier_limit20_full_source.json": {
+      "bytes": 2618,
+      "sha256": "3a987c56b19265e3c17d2f16ca90610e506db4a243e9b80d5c3ae402c3c1e9b8"
+    },
+    "payload_capacity.json": {
+      "bytes": 9718,
+      "sha256": "4d3e6ff98b1a30942783755c775868bb9d774134c80862e31a6f978b2a3487b8"
+    },
+    "protocol.json": {
+      "bytes": 568,
+      "sha256": "484dac6ec33ddc53f974e22d0e9e5f01d30f7b30d7ea8155ee3e6da66e17e7f8"
+    },
+    "strict_integer_validation5000.json": {
+      "bytes": 1899,
+      "sha256": "f630015f74751b3c8c0eb061198da1e8c5cb5752689bb4a59fe592676af5e551"
+    },
+    "strict_integer_validation5000.log": {
+      "bytes": 2991,
+      "sha256": "fce09e6ddfdadcc2b30956004098b5f9b0127a127470e08bd6ffe6397a13aa5e"
+    },
+    "tests.log": {
+      "bytes": 189,
+      "sha256": "b5630c6c2975da79933f5f71c2a9eec8b9bc763a3c9abe184215d964cae034bf"
+    }
+  },
+  "base_commit": "47e0250cdbeb327925891ec6cf6bd436eca35dbb",
+  "capacity": {
+    "dense_fanin_max": 768,
+    "dense_nonzero_fanout_max": 768,
+    "general_matrix_multipliers": 0,
+    "logical_bitpacked_weight_bits": 56712192,
+    "logical_weight_coefficients": 7089024,
+    "shift_add_layer_count": 62,
+    "tensor_bits": 681822688,
+    "tensor_bytes": 85227836,
+    "tensor_element_inventory": {
+      "int16": 7136012,
+      "int32": 16130,
+      "int64": 84,
+      "uint8": 70890620
+    },
+    "transformer_block_depth": 12
+  },
+  "config_id": "d12e192",
+  "deployment_payload": {
+    "contains_real_values": false,
+    "inspector_source_sha256": "80f4ec377cf60cefa622ec4d031d8056fae73ac6e967f4f8535ade2a44358934",
+    "path": "deployment_payload.pt",
+    "serialized_bytes": 85381242,
+    "sha256": "51ccd7bbfab9877c9cefdc070d836620be0fbc2b985fb517c7a7ada16f28a60a"
+  },
+  "environment": {
+    "cpu_model": "Intel(R) Xeon(R) Gold 6348 CPU @ 2.60GHz",
+    "cuda_runtime": "12.1",
+    "host_profile": "434",
+    "logical_cpus": 112,
+    "platform": "Linux-5.4.0-163-generic-x86_64-with-glibc2.29",
+    "python": "3.8.10",
+    "strict_replay": {
+      "batch_size": 64,
+      "linear_backend": "int_matmul",
+      "torch_threads": 48
+    },
+    "torch": "2.4.1+cu121"
+  },
+  "exact_carrier_verification": {
+    "checkpoint_bytes": 85694858,
+    "checkpoint_sha256": "02d22b92d520a3c7e18f97186a0d594a804aeabcf6168e022d4730b949db4181",
+    "checkpoint_step": 50000,
+    "cifar_source_sha256": {
+      "batches.meta": "f962466ef690d46b226450fb9aadc74ba4bc64a76aa526b5827fe4bc5c7125cb",
+      "data_batch_1": "54636561a3ce25bd3e19253c6b0d8538147b0ae398331ac4a2d86c6d987368cd",
+      "data_batch_2": "766b2cef9fbc745cf056b3152224f7cf77163b330ea9a15f9392beb8b89bc5a8",
+      "data_batch_3": "0f00d98ebfb30b3ec0ad19f9756dc2630b89003e10525f5e148445e82aa6a1f9",
+      "data_batch_4": "3f7bb240661948b8f4d53e36ec720d8306f5668bd0071dcb4e6c947f78e9682b",
+      "data_batch_5": "d91802434d8376bbaeeadf58a737e3a1b12ac839077e931237e0dcd43adcb154"
+    },
+    "count": 20,
+    "exact_logit_rows": 20,
+    "executor_source_sha256": {
+      "enhanced_model.py": "0b277ca8b066d5f6fb0aa2770cfb2e575d856e125a2e39f8ef1b334c6d81e1d3",
+      "enhancements_expert.py": "bb5bdf59ff2601dc499df511f22f22673b4c9e5cebbf332c9cdc9b3f3cad8885",
+      "enhancements_global_lut.py": "81fe86b82d71a6b088d61244da02b05b7ec44e4ec80c9a2d657c5bd63fdc932d",
+      "enhancements_hadamard.py": "c830a6a4ebcc66eee718b9cfea79aebf54236ebc0e166259606134736553e40e",
+      "enhancements_logic_tree.py": "cf828073c5279ed58be7da730c02d708f4643279f67706bf82718d039b2c2dcf",
+      "enhancements_lut.py": "21bf594009bb2608679c97339b14d7bac8bc3d79aa6d4167eddfe20ab0a41e9b",
+      "enhancements_spatial.py": "ff07894866109e388d5ce22371d43a7cb716d40d8bbf9eca5c27eb5a45967cc4",
+      "evaluate_integer_checkpoint.py": "3188ee093bf94845943eb188c14a32d7e3332794371aea58e2c2d24409f677e7",
+      "export_logic_payload.py": "5f05c9c4a8a75564e9dbba8014e6197b613c5c782b3150ee71beef4e4e18436f",
+      "integer_executor.py": "d5d42ff6377b6fb70dddb3f43c84d3fff11152e9db62f9a53238b983f1c0f6db",
+      "logic_backend.py": "d467aa228c05cc10b9450c392f0ddec0394465d159d67a167f886bcdfcf9ff9a",
+      "model.py": "a3e501c74fdbb67719900a4ff26ee27b0aa1819a7378b39f70969cb37d566e6e",
+      "shiftadd.py": "d44638f5f1e978ce9df9a57643dd786ff672753dae551939d38c329c4a4d2c4a",
+      "verify_integer_checkpoint.py": "2e8e66667dc60dc60bc1b2cc111601bac3a9b4a4189d0e440c06c1f5de5cc199"
+    },
+    "float_reference_is_offline_verification_only": true,
+    "integer_correct": 15,
+    "maximum_absolute_logit_difference": 0,
+    "payload_contains_real_values": false,
+    "payload_tensor_element_inventory": {
+      "int16": 7136012,
+      "int32": 16130,
+      "int64": 84,
+      "uint8": 70890620
+    },
+    "prediction_mismatches": 0,
+    "reference_correct": 15,
+    "strict_runtime_audit_operations": 135891,
+    "strict_runtime_floating_tensor_count": 0,
+    "validation_order_seed": 20260711
+  },
+  "method_id": "full_discrete_a8",
+  "protocol_id": "full_discrete_d12e192_strict_validation5000",
+  "protocol_sha256": "72c4f07bbdd533906e0b026d213ecb20768de65ddcf087a1a5fc8d4fec05bd53",
+  "runtime_result": {
+    "accuracy": 0.761,
+    "checkpoint_step": 50000,
+    "cifar_source_sha256": {
+      "batches.meta": "f962466ef690d46b226450fb9aadc74ba4bc64a76aa526b5827fe4bc5c7125cb",
+      "data_batch_1": "54636561a3ce25bd3e19253c6b0d8538147b0ae398331ac4a2d86c6d987368cd",
+      "data_batch_2": "766b2cef9fbc745cf056b3152224f7cf77163b330ea9a15f9392beb8b89bc5a8",
+      "data_batch_3": "0f00d98ebfb30b3ec0ad19f9756dc2630b89003e10525f5e148445e82aa6a1f9",
+      "data_batch_4": "3f7bb240661948b8f4d53e36ec720d8306f5668bd0071dcb4e6c947f78e9682b",
+      "data_batch_5": "d91802434d8376bbaeeadf58a737e3a1b12ac839077e931237e0dcd43adcb154"
+    },
+    "correct": 3805,
+    "count": 5000,
+    "elapsed_seconds": 1754.6828534728847,
+    "executor_source_sha256": {
+      "evaluate_integer_checkpoint.py": "6205625d2b6c743f6dbd19e41d87674edd939b72ed8a1afd883b9a479007fc59",
+      "export_logic_payload.py": "5f05c9c4a8a75564e9dbba8014e6197b613c5c782b3150ee71beef4e4e18436f",
+      "integer_executor.py": "d5d42ff6377b6fb70dddb3f43c84d3fff11152e9db62f9a53238b983f1c0f6db",
+      "logic_backend.py": "d467aa228c05cc10b9450c392f0ddec0394465d159d67a167f886bcdfcf9ff9a"
+    },
+    "images_per_second": 2.849517786136653,
+    "input_dtype": "torch.uint8",
+    "linear_backend": "int_matmul",
+    "logit_code_dtype": "torch.int64",
+    "logit_exponent_dtype": "torch.int32",
+    "model_type": "EnhancedFullDiscreteViT",
+    "payload_contains_real_values": false,
+    "payload_tensor_element_inventory": {
+      "int16": 7136012,
+      "int32": 16130,
+      "int64": 84,
+      "uint8": 70890620
+    },
+    "runtime_audit_operations": 1960214,
+    "runtime_floating_tensor_count": 0,
+    "schema_version": 6,
+    "source_artifact_bytes": 85381242,
+    "source_artifact_kind": "payload",
+    "source_artifact_sha256": "51ccd7bbfab9877c9cefdc070d836620be0fbc2b985fb517c7a7ada16f28a60a",
+    "split": "validation",
+    "training_or_export_float_state_is_not_runtime": true,
+    "validation_order_seed": 20260711
+  },
+  "schema_version": 1,
+  "tests": {
+    "command": "python -m unittest discover -s vit_lgn/full_discrete -p test_*.py",
+    "failed": 0,
+    "passed": 90
+  },
+  "training_checkpoint": {
+    "bytes": 85694858,
+    "deployment_artifact": false,
+    "sha256": "02d22b92d520a3c7e18f97186a0d594a804aeabcf6168e022d4730b949db4181",
+    "training_only_real_shadows": true
+  }
+}

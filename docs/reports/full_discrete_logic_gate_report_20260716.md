@@ -1,5 +1,14 @@
 # Full-discrete ViT / ScaleLogic audit
 
+> Follow-up: the local0/local4 50k pair later completed. Validated final
+> curves and the current epoch-scaling analysis are in
+> [`../repro/scalelogic_50k_complete_20260723/`](../repro/scalelogic_50k_complete_20260723/README.md).
+> A later schema-v6 follow-up also resolves the transaction-level
+> accumulator/residual requantizer with a standalone integer executor. Its
+> strict checkpoint replay and zero-real-tensor audit are in
+> [`../repro/strict_integer_runtime_20260723/`](../repro/strict_integer_runtime_20260723/README.md).
+> The missing-item list below records the state of the 2026-07-16 snapshot.
+
 Date: 2026-07-16
 
 Source: `/data2/wangmeiqi/learnable_logic_hadamard_mixer_20260716` on server 34

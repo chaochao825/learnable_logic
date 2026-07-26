@@ -18,3 +18,17 @@ checkpoints/
 *.so
 *.launched
 *.log
+
+# Registered A8 bit-plane evidence is small and must survive a Git clone.
+!docs/repro/bitplane_lut_digits_v2_20260724/runs/
+docs/repro/bitplane_lut_digits_v2_20260724/runs/*
+!docs/repro/bitplane_lut_digits_v2_20260724/runs/v2_*/
+!docs/repro/bitplane_lut_digits_v2_20260724/runs/v2_*/*
+
+# Formal synthesis logs are compact registered evidence.
+!docs/repro/bitplane_lut_abc_20260724/abc/logs/
+!docs/repro/bitplane_lut_abc_20260724/abc/logs/*.log
+
+# Frozen d12 manifests hash these compact runtime/test logs.
+!docs/repro/full_discrete_d12_strict_20260723/raw/d12/strict_integer_validation5000.log
+!docs/repro/full_discrete_d12_strict_20260723/raw/d12/tests.log

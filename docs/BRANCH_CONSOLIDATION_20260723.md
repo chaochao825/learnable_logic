@@ -1,5 +1,25 @@
 # Branch consolidation audit (2026-07-23)
 
+## Complete public re-audit
+
+The table below records the earlier merge transaction. A second fetch and
+ancestry audit after that transaction found ten public branches in
+`chaochao825/learnable_logic`. Current `main` and
+`codex/integrate-bitstate-hard-lgn-20260723` both point to
+`325f2498d85469a95bd82bf113c350f0890a9710`; every other public branch head is
+an ancestor of that commit. No learnable-logic source branch remains to be
+merged, and rerunning an old branch as though it were a new method is not
+permitted. The authoritative machine-readable inventory is
+[`../research_registry/branches.csv`](../research_registry/branches.csv).
+
+`Vector-GitHub/ViT-LGN` has two public heads. `COMBINE` at `85dfd458...` and
+`Width_Expansion` at `a9253762...` diverge from merge base `9fd8fe3...` and are
+kept as external evidence, not merged blindly. COMBINE is a useful
+hard-forward training baseline but retains a floating carrier. Width Expansion
+widens only after an 18-bit patch bottleneck and has no matched strict result.
+Their method dispositions and capacity bottlenecks are in
+[`../research_registry/METHOD_TABLE.md`](../research_registry/METHOD_TABLE.md).
+
 ## Scope
 
 The integration branch starts from `origin/main` at `8aa65fb` and merges

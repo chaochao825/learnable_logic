@@ -1,0 +1,13 @@
+repository,branch,head,relationship,current_disposition,evidence
+chaochao825/learnable_logic,main,325f2498d85469a95bd82bf113c350f0890a9710,current integrated history,reference,../docs/BRANCH_CONSOLIDATION_20260723.md
+chaochao825/learnable_logic,agent/add-full-discrete-scalelogic,516561f89e9f0f6a0cf8419d806be7f0e0f05f8d,ancestor of current main,integrated,../docs/BRANCH_CONSOLIDATION_20260723.md
+chaochao825/learnable_logic,codex/full-discrete-enhancements,47e0250cdbeb327925891ec6cf6bd436eca35dbb,ancestor of current main,integrated,../docs/BRANCH_CONSOLIDATION_20260723.md
+chaochao825/learnable_logic,codex/full-discrete-results-20260715,2b61262d01f58e3f5791a12a23660e29cf481514,ancestor of current main,integrated,../docs/BRANCH_CONSOLIDATION_20260723.md
+chaochao825/learnable_logic,codex/full-discrete-scale,2984167c3b32aa0b3d85962c3cf1cbf9b5dc49bb,ancestor of current main,integrated,../docs/BRANCH_CONSOLIDATION_20260723.md
+chaochao825/learnable_logic,codex/integrate-bitstate-hard-lgn-20260723,325f2498d85469a95bd82bf113c350f0890a9710,same head as current main,integrated,../docs/BRANCH_CONSOLIDATION_20260723.md
+chaochao825/learnable_logic,codex/logic-gate-backend,4523f31d85b9e996f166d3c9b2c4468731cbccaa,ancestor of current main,integrated,../docs/BRANCH_CONSOLIDATION_20260723.md
+chaochao825/learnable_logic,codex/logic-hadamard-mixer,cae858ed8a1013c3313aa1c9b84f8504aec9db64,merged into current main,integrated negative ablation,../docs/BRANCH_CONSOLIDATION_20260723.md
+chaochao825/learnable_logic,codex/logic-tree-conv,376aba42a693ef62673ae35f3d5c474b12862b96,ancestor of current main,integrated negative ablation,../docs/BRANCH_CONSOLIDATION_20260723.md
+chaochao825/learnable_logic,vit-lgn-merge-20260710-145556,398b041a55df26bd23fc6f34188d056bccdde8b4,ancestor of current main,integrated historical ViT-LGN evidence,../docs/BRANCH_CONSOLIDATION_20260723.md
+Vector-GitHub/ViT-LGN,COMBINE,85dfd45865a3679c2f8c59ab09ef95337a0da4d4,diverged from 9fd8fe3,external hard-forward baseline,https://github.com/Vector-GitHub/ViT-LGN/commit/85dfd45865a3679c2f8c59ab09ef95337a0da4d4
+Vector-GitHub/ViT-LGN,Width_Expansion,a9253762b39b2e37a4ad7300a1cc9f7f0066e6e7,diverged from 9fd8fe3,external unvalidated width ablation,https://github.com/Vector-GitHub/ViT-LGN/commit/a9253762b39b2e37a4ad7300a1cc9f7f0066e6e7

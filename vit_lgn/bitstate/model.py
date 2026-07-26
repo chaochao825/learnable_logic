@@ -35,6 +35,9 @@ class BitStateConfig:
     update_fraction: float = 0.5
     attention_temperature: float = 0.25
     exclude_self: bool = False
+    message_mode: str = "majority"
+    message_count_thresholds: tuple[int, ...] = (1, 3, 5, 7)
+    message_count_fraction: float = 0.25
     seed: int = 0
 
     def __post_init__(self) -> None:
@@ -77,6 +80,17 @@ class BitStateConfig:
             raise ValueError(self.update_fraction)
         if self.attention_temperature <= 0.0:
             raise ValueError(self.attention_temperature)
+        if self.message_mode not in {"majority", "count_threshold_hybrid"}:
+            raise ValueError(self.message_mode)
+        thresholds = tuple(int(value) for value in self.message_count_thresholds)
+        object.__setattr__(self, "message_count_thresholds", thresholds)
+        if not 0.0 < self.message_count_fraction <= 1.0:
+            raise ValueError(self.message_count_fraction)
+        if self.message_mode == "count_threshold_hybrid":
+            if not thresholds or tuple(sorted(set(thresholds))) != thresholds:
+                raise ValueError(thresholds)
+            if thresholds[0] < 1 or thresholds[-1] > self.topk:
+                raise ValueError((thresholds, self.topk))
         if self.topk > self.num_tokens - int(self.exclude_self):
             raise ValueError((self.topk, self.num_tokens, self.exclude_self))
 
@@ -148,6 +162,9 @@ class BitStateViT(nn.Module):
                 attention_temperature=config.attention_temperature,
                 exclude_self=config.exclude_self,
                 gate_init_strength=global_init_strength,
+                message_mode=config.message_mode,
+                message_count_thresholds=config.message_count_thresholds,
+                message_count_fraction=config.message_count_fraction,
             )
             for block_id in range(config.global_depth)
         )

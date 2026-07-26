@@ -1,0 +1,46 @@
+{
+  "attention_reference": {
+    "best_step": 150000,
+    "best_validation_accuracy": 0.7913265228271484,
+    "final_test": [
+      0.7893,
+      0.7893,
+      0.7546
+    ],
+    "name": "h6_k8_defaulttemp_d6e192_aug_const_200k_20260630.log"
+  },
+  "d6_to_d12e384_status": "historical reference; source set differs",
+  "depth_reference": {
+    "argument_differences": [
+      "data_root",
+      "depth",
+      "out_dir"
+    ],
+    "dataset_archive_identical": true,
+    "runs": [
+      "d6_reference",
+      "d12e192_depth_reference"
+    ],
+    "runtime_identical": false,
+    "source_files_identical": true
+  },
+  "input_sha256": {
+    "d12e192_protocol.json": "635f6df2cf2eeb07a4b9b4a1bfeedce89301f8ee06dcd8aebb8344b24b87f868",
+    "d12e192_result.json": "1179eb96fd68320d58d49f59409efdc8eee651734474644128294c3d4002ec84",
+    "d6_protocol.json": "91b3ad52433edf9cfc1f97245f3a96cf2e570a5cfd7e2c24740ec85016b9f1a7",
+    "d6_result.json": "d8da134d8d2edc432e320eb43410b6dc700cfcc5d6419380fbc11070b5a6314d",
+    "local0_protocol.json": "47bc88adbf00f9d1574fe4237891be574944d0ed62a701c3435904d3dcb62e38",
+    "local0_result.json": "ea948f7b2d7af1a05f7a45a70201a475dfb6b603e95941e8cd15041885843c15",
+    "local4_protocol.json": "9ead7c40f5536e829153ce00ab08aff5fe40b052bee52814e204bf5c97bcc13e",
+    "local4_result.json": "bdf727f90413fefc0a6bde3f16b7f02cbcf4d47ee73762dafe5e50e2762d5b47"
+  },
+  "status": "passed",
+  "strict_pair": [
+    "d12_local0",
+    "d12_local4"
+  ],
+  "strict_pair_differences": [
+    "local_layers",
+    "out_dir"
+  ]
+}

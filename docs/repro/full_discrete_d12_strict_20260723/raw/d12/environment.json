@@ -1,0 +1,14 @@
+{
+  "cpu_model": "Intel(R) Xeon(R) Gold 6348 CPU @ 2.60GHz",
+  "cuda_runtime": "12.1",
+  "host_profile": "434",
+  "logical_cpus": 112,
+  "platform": "Linux-5.4.0-163-generic-x86_64-with-glibc2.29",
+  "python": "3.8.10",
+  "strict_replay": {
+    "batch_size": 64,
+    "linear_backend": "int_matmul",
+    "torch_threads": 48
+  },
+  "torch": "2.4.1+cu121"
+}

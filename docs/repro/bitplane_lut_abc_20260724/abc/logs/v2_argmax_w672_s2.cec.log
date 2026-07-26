@@ -1,0 +1,3 @@
+
+======== ABC command line "cec /home/spco/sow_linear/bitplane_lut_abc_20260724_v1/export/blif/v2_argmax_w672_s2.blif /home/spco/sow_linear/bitplane_lut_abc_20260724_v1/abc/optimized_blif/v2_argmax_w672_s2.dc2_k4.blif"
+Networks are equivalent.  Time =     0.07 sec

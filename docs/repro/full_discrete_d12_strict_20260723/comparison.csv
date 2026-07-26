@@ -1,0 +1,3 @@
+model,parameters,train_time_s,best_validation_accuracy,best_step,final_validation_accuracy,strict_accuracy,strict_runtime_s,strict_audit_ops,runtime_floating_tensor_count,steps_to_75pct,steps_to_76pct
+d6,3562752,8699.64703084901,0.7534,40000,0.753,0.753,1038.1952972388826,14319802,0,35000,
+d12,7101696,14838.189028637018,0.763,40000,0.761,0.761,1754.6828534728847,1960214,0,35000,40000

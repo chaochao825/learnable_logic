@@ -1,0 +1,58 @@
+{
+  "date": "2026-07-23",
+  "full_discrete": {
+    "d6_validation": {
+      "accuracy": 0.753,
+      "audited_operations": 14319802,
+      "count": 5000,
+      "floating_tensor_count": 0
+    },
+    "d6_reference_check": {
+      "count": 100,
+      "exact_logit_rows": 100,
+      "maximum_absolute_logit_difference": 0,
+      "prediction_mismatches": 0
+    },
+    "local4_prefix_validation": {
+      "accuracy": 0.72,
+      "audited_operations": 614916,
+      "count": 100,
+      "floating_tensor_count": 0
+    },
+    "local4_reference_check": {
+      "count": 20,
+      "exact_logit_rows": 20,
+      "maximum_absolute_logit_difference": 0,
+      "prediction_mismatches": 0
+    }
+  },
+  "hard_lgn": {
+    "datasets": [
+      "majority7",
+      "parity6",
+      "random_sparse8"
+    ],
+    "maximum_floating_tensor_count": 0,
+    "methods": [
+      "block_hard_refit",
+      "block_relaxed",
+      "dlgn",
+      "gumbel_st"
+    ],
+    "minimum_audited_operations": 30,
+    "rows": 12,
+    "runtime_domain": "bool_int"
+  },
+  "sha256": {
+    "fd_control_seed42_integer_vs_carrier_limit100.json": "3f44c87da984a749a9c88dc9b362defbd14d7934e0b77d123fe16bdf9e176c10",
+    "fd_control_seed42_strict_integer_validation5000.json": "1d280174e1ab0fe067d551c9aeb777fe530b344c262b1aa183a6441bb19b5cfa",
+    "hard_lgn_strict_bool_smoke_results.csv": "7a2981952e1b9dd2686aca5b48dc904f7ff19f2f0aab6e7f9e60f163b48625d9",
+    "hard_lgn_strict_bool_smoke_summary.md": "059f417c7a5e1774d6e665e4d910497bb4d6ee8bd4d0f32f182a8c00bc48ffd2",
+    "scalelogic_local4_integer_vs_carrier_limit20.json": "d71802f6af35727f6f9f83e3c826fc514d9b52c2f786cfd8519056309e2c7d30",
+    "scalelogic_local4_strict_integer_limit100.json": "8ee80af60e52a5275583e8d74e7cd3b27835d7097610c20dcdb0d476661810ce"
+  },
+  "tests": {
+    "full_discrete_passed": 140,
+    "hard_lgn_passed": 11
+  }
+}

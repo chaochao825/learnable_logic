@@ -28,6 +28,11 @@ from torch import nn
 from torch.utils.data import DataLoader, TensorDataset
 
 try:
+    from .boolean_executor import BooleanRuntimeAudit, StrictBooleanLogicExecutor
+except ImportError:  # Direct execution from the package directory.
+    from boolean_executor import BooleanRuntimeAudit, StrictBooleanLogicExecutor
+
+try:
     from sklearn.datasets import load_digits
     from sklearn.model_selection import train_test_split
 except Exception:  # pragma: no cover - only used when sklearn is unavailable.
@@ -125,6 +130,9 @@ class MetricsRow:
     discrete_inference_samples_per_sec: float
     inference_bench_repeats: int
     activation_inactive_gate_ratio: float = math.nan
+    hard_runtime_domain: str = "bool_int"
+    hard_runtime_audit_operations: int = 0
+    hard_runtime_floating_tensor_count: int = 0
 
 
 def set_seed(seed: int) -> None:
@@ -624,6 +632,68 @@ def evaluate(
     return correct / total, torch.stack(losses).sum().item() / total
 
 
+def strict_boolean_input(x: torch.Tensor) -> torch.Tensor:
+    """Validate a binary dataset and cross the deployment boundary as bool."""
+
+    value = x.detach().cpu()
+    if not bool(((value == 0) | (value == 1)).all()):
+        raise ValueError("strict hard inference requires binary input features")
+    return value.to(torch.bool)
+
+
+@torch.no_grad()
+def evaluate_strict_hard(
+    layers: Iterable[nn.Module],
+    x: torch.Tensor,
+    y: torch.Tensor,
+    batch_size: int,
+    num_classes: int,
+    group_tau: float,
+) -> tuple[float, float, int]:
+    """Evaluate a hard net with Boolean state and integer GroupSum counts.
+
+    Cross entropy is computed after the audited executor returns. It is a
+    real-valued research metric, not an operation in the deployable decision
+    path; predictions are argmax over the exact integer class counts.
+    """
+
+    if batch_size < 1 or group_tau <= 0:
+        raise ValueError((batch_size, group_tau))
+    executor = StrictBooleanLogicExecutor(list(layers), num_classes)
+    features = strict_boolean_input(x)
+    labels = y.detach().cpu().to(torch.int64)
+    count_chunks = []
+    audit = BooleanRuntimeAudit()
+    with audit:
+        for start in range(0, features.shape[0], batch_size):
+            count_chunks.append(executor.class_counts(features[start : start + batch_size]))
+    counts = torch.cat(count_chunks, dim=0)
+    predictions = counts.argmax(dim=-1)
+    accuracy = (predictions == labels).to(torch.int64).sum().item() / labels.numel()
+    metric_logits = counts.to(torch.float32) / group_tau
+    loss = F.cross_entropy(metric_logits, labels).item()
+    return float(accuracy), float(loss), audit.operations
+
+
+@torch.no_grad()
+def collect_strict_layer_outputs(
+    layers: Iterable[nn.Module],
+    x: torch.Tensor,
+    batch_size: int,
+) -> tuple[list[torch.Tensor], int]:
+    layer_list = list(layers)
+    executor = StrictBooleanLogicExecutor(layer_list)
+    features = strict_boolean_input(x)
+    chunks: list[list[torch.Tensor]] = [[] for _ in layer_list]
+    audit = BooleanRuntimeAudit()
+    with audit:
+        for start in range(0, features.shape[0], batch_size):
+            outputs = executor.layer_outputs(features[start : start + batch_size])
+            for layer_id, output in enumerate(outputs):
+                chunks[layer_id].append(output)
+    return [torch.cat(parts, dim=0) for parts in chunks], audit.operations
+
+
 @torch.no_grad()
 def benchmark_inference_samples_per_sec(
     model: LogicNet,
@@ -662,6 +732,33 @@ def benchmark_inference_samples_per_sec(
     return (x_device.shape[0] * repeats) / max(elapsed, 1e-12)
 
 
+@torch.no_grad()
+def benchmark_strict_boolean_samples_per_sec(
+    layers: Iterable[nn.Module],
+    x: torch.Tensor,
+    batch_size: int,
+    num_classes: int,
+    repeats: int,
+    warmup: int,
+) -> float:
+    if repeats <= 0:
+        return math.nan
+    executor = StrictBooleanLogicExecutor(list(layers), num_classes)
+    features = strict_boolean_input(x)
+
+    def run_once() -> None:
+        for start in range(0, features.shape[0], batch_size):
+            executor.class_counts(features[start : start + batch_size])
+
+    for _ in range(max(warmup, 0)):
+        run_once()
+    start_time = time.perf_counter()
+    for _ in range(repeats):
+        run_once()
+    elapsed = time.perf_counter() - start_time
+    return (features.shape[0] * repeats) / max(elapsed, 1e-12)
+
+
 def resolve_inference_bench_device(args: argparse.Namespace) -> torch.device:
     if args.inference_bench_device == "cuda" and torch.cuda.is_available():
         return torch.device("cuda")
@@ -688,13 +785,11 @@ def maybe_benchmark_inference_pair(
         args.inference_bench_repeats,
         args.inference_bench_warmup,
     )
-    hard_throughput = benchmark_inference_samples_per_sec(
-        hard_model,
+    hard_throughput = benchmark_strict_boolean_samples_per_sec(
+        list(hard_model.layers),
         x,
         args.eval_batch_size,
-        bench_device,
-        "hard",
-        1.0,
+        hard_model.group_sum.num_classes,
         args.inference_bench_repeats,
         args.inference_bench_warmup,
     )
@@ -763,6 +858,18 @@ def compute_unused_gate_ratio(
     for y in outputs:
         total += y.shape[1]
         inactive += ((y.max(dim=0).values - y.min(dim=0).values) < 1e-6).sum().item()
+    return inactive / max(total, 1)
+
+
+def compute_strict_activation_inactive_ratio(
+    layers: Iterable[nn.Module], x: torch.Tensor, batch_size: int
+) -> float:
+    outputs, _ = collect_strict_layer_outputs(layers, x, batch_size)
+    inactive = 0
+    total = 0
+    for output in outputs:
+        total += output.shape[1]
+        inactive += int(((~output.any(dim=0)) | output.all(dim=0)).sum().item())
     return inactive / max(total, 1)
 
 
@@ -837,15 +944,16 @@ def layer_gap_diagnostics(
     soft_tau: float = 1.0,
 ) -> list[dict[str, float | int | str]]:
     soft_outputs = collect_layer_outputs(soft_layers, x, batch_size, device, mode="soft", tau=soft_tau)
-    hard_outputs = collect_layer_outputs(hard_layers, x, batch_size, device, mode="hard", tau=1.0)
+    hard_outputs, _ = collect_strict_layer_outputs(hard_layers, x, batch_size)
     if len(soft_outputs) != len(hard_outputs):
         raise ValueError((len(soft_outputs), len(hard_outputs)))
 
     rows: list[dict[str, float | int | str]] = []
-    for layer_id, (soft_y, hard_y) in enumerate(zip(soft_outputs, hard_outputs, strict=True)):
+    for layer_id, (soft_y, hard_bool) in enumerate(zip(soft_outputs, hard_outputs, strict=True)):
+        hard_y = hard_bool.to(soft_y.dtype)
         diff = (soft_y - hard_y).abs()
         soft_inactive = ((soft_y.max(dim=0).values - soft_y.min(dim=0).values) < 1e-6).float().mean().item()
-        hard_inactive = ((hard_y.max(dim=0).values - hard_y.min(dim=0).values) < 1e-6).float().mean().item()
+        hard_inactive = ((~hard_bool.any(dim=0)) | hard_bool.all(dim=0)).float().mean().item()
         rows.append(
             {
                 "method": method,
@@ -857,7 +965,7 @@ def layer_gap_diagnostics(
                 "mean_abs_diff": float(diff.mean().item()),
                 "max_abs_diff": float(diff.max().item()),
                 "mse": float((diff.square()).mean().item()),
-                "binary_flip_ratio": float(((soft_y >= 0.5) != (hard_y >= 0.5)).float().mean().item()),
+                "binary_flip_ratio": float(((soft_y >= 0.5) != hard_bool).float().mean().item()),
                 "soft_inactive_ratio": float(soft_inactive),
                 "hard_inactive_ratio": float(hard_inactive),
             }
@@ -1130,7 +1238,15 @@ def train_end_to_end(
                     ).mean().item()
                 )
         soft_acc, soft_loss = evaluate(model, dataset.x_test, dataset.y_test, args.eval_batch_size, device, "soft", tau)
-        disc_acc, disc_loss = evaluate(model, dataset.x_test, dataset.y_test, args.eval_batch_size, device, "hard", tau)
+        epoch_hard_layers = [argmax_hard_layer(layer) for layer in model.soft_layers()]
+        disc_acc, disc_loss, _ = evaluate_strict_hard(
+            epoch_hard_layers,
+            dataset.x_test,
+            dataset.y_test,
+            args.eval_batch_size,
+            dataset.num_classes,
+            args.group_tau,
+        )
         if method in {"hard_st", "hard_st_cage"}:
             native_acc, native_loss = disc_acc, disc_loss
         else:
@@ -1169,13 +1285,20 @@ def train_end_to_end(
     elif method in {"hard_st_cage", "gumbel_st_cage"}:
         final_tau = tau
     soft_acc, soft_loss = evaluate(model, dataset.x_test, dataset.y_test, args.eval_batch_size, device, "soft", final_tau)
-    disc_acc, disc_loss = evaluate(model, dataset.x_test, dataset.y_test, args.eval_batch_size, device, "hard", final_tau)
+    layers = list(model.layers)
+    hard_layers = [argmax_hard_layer(layer) for layer in model.soft_layers()]
+    disc_acc, disc_loss, hard_audit_operations = evaluate_strict_hard(
+        hard_layers,
+        dataset.x_test,
+        dataset.y_test,
+        args.eval_batch_size,
+        dataset.num_classes,
+        args.group_tau,
+    )
     if method in {"hard_st", "hard_st_cage"}:
         path_soft_acc, path_soft_loss = disc_acc, disc_loss
     else:
         path_soft_acc, path_soft_loss = soft_acc, soft_loss
-    layers = list(model.layers)
-    hard_layers = [argmax_hard_layer(layer) for layer in model.soft_layers()]
     hard_model = LogicNet(hard_layers, dataset.num_classes, args.group_tau)
     soft_throughput, discrete_throughput, inference_repeats = maybe_benchmark_inference_pair(
         args,
@@ -1210,9 +1333,10 @@ def train_end_to_end(
         soft_inference_samples_per_sec=soft_throughput,
         discrete_inference_samples_per_sec=discrete_throughput,
         inference_bench_repeats=inference_repeats,
-        activation_inactive_gate_ratio=compute_unused_gate_ratio(
-            layers, dataset.x_train, args.eval_batch_size, device
+        activation_inactive_gate_ratio=compute_strict_activation_inactive_ratio(
+            hard_layers, dataset.x_train, args.eval_batch_size
         ),
+        hard_runtime_audit_operations=hard_audit_operations,
     )
     layer_diag_rows = layer_gap_diagnostics(
         method,
@@ -1854,14 +1978,13 @@ def train_blockwise(
             "soft",
             1.0,
         )
-        hard_block_acc, hard_block_loss = evaluate(
-            hard_prefix_model,
+        hard_block_acc, hard_block_loss, _ = evaluate_strict_hard(
+            list(hard_prefix_model.layers),
             dataset.x_test,
             dataset.y_test,
             args.eval_batch_size,
-            device,
-            "hard",
-            1.0,
+            dataset.num_classes,
+            args.group_tau,
         )
         block_diag_rows.append(
             {
@@ -1897,7 +2020,14 @@ def train_blockwise(
 
     total_train_time = time.perf_counter() - start_total
     soft_acc, soft_loss = evaluate(soft_model, dataset.x_test, dataset.y_test, args.eval_batch_size, device, "soft", 1.0)
-    disc_acc, disc_loss = evaluate(hard_model, dataset.x_test, dataset.y_test, args.eval_batch_size, device, "hard", 1.0)
+    disc_acc, disc_loss, hard_audit_operations = evaluate_strict_hard(
+        list(hard_model.layers),
+        dataset.x_test,
+        dataset.y_test,
+        args.eval_batch_size,
+        dataset.num_classes,
+        args.group_tau,
+    )
     path_soft_acc, path_soft_loss = evaluate(
         path_soft_model,
         dataset.x_test,
@@ -1944,9 +2074,10 @@ def train_blockwise(
         soft_inference_samples_per_sec=soft_throughput,
         discrete_inference_samples_per_sec=discrete_throughput,
         inference_bench_repeats=inference_repeats,
-        activation_inactive_gate_ratio=compute_unused_gate_ratio(
-            hard_layers_for_stats, dataset.x_train, args.eval_batch_size, device
+        activation_inactive_gate_ratio=compute_strict_activation_inactive_ratio(
+            hard_layers_for_stats, dataset.x_train, args.eval_batch_size
         ),
+        hard_runtime_audit_operations=hard_audit_operations,
     )
     layer_diag_rows = layer_gap_diagnostics(
         method,
@@ -2030,6 +2161,9 @@ def write_summary(path: Path, rows: list[MetricsRow], args: argparse.Namespace, 
         "discrete_inference_samples_per_sec",
         "inference_bench_repeats",
         "activation_inactive_gate_ratio",
+        "hard_runtime_domain",
+        "hard_runtime_audit_operations",
+        "hard_runtime_floating_tensor_count",
     ]
     lines = [
         "# Hard-LGN Gap Prototype Summary",
@@ -2039,12 +2173,13 @@ def write_summary(path: Path, rows: list[MetricsRow], args: argparse.Namespace, 
         "Metric notes:",
         "",
         "- `soft_acc`/`soft_loss` evaluate all trained relaxed blocks in soft mode.",
-        "- `discrete_acc`/`discrete_loss` evaluate the corresponding hard network: argmax gates for DLGN-style methods and fitted gates for block-hard methods.",
+        "- `discrete_acc` uses the strict Boolean/integer executor: argmax gates for DLGN-style methods and fitted gates for block-hard methods. `discrete_loss` materializes integer class counts only after audited inference for external cross-entropy measurement.",
         "- `path_*` metrics evaluate the method-native training path. Hard-ST uses the deterministic hard forward; block-hard methods use hard frozen prefixes plus the final relaxed block.",
         f"- `unused_gate_ratio` follows Mind the Gap: logit entropy above the deterministic N(0,1) initialization 2.5% threshold ({mind_gap_entropy_threshold():.6f}).",
         "- `activation_inactive_gate_ratio` retains the older data-dependent statistic: hard gate outputs that are constant on the training set.",
         "- `layer_diagnostics.csv` tracks relaxed-path versus hard-path representation mismatch after each layer prefix for depth-wise gap accumulation checks.",
-        "- `*_inference_samples_per_sec` are optional PyTorch forward-pass throughput measurements from `--inference-bench`; they are not bit-packed Boolean inference kernels.",
+        "- Hard inference throughput uses Boolean gate tensors and integer class counts. It remains an unpacked PyTorch transaction reference, not a bit-packed kernel.",
+        "- `hard_runtime_floating_tensor_count=0` is enforced dynamically; a BooleanRuntimeAudit violation raises instead of producing a row.",
         "- For block-wise methods, `epochs_to_target` is conservative: total block epochs if the final hard model reaches the dataset target, otherwise `-1`.",
         "- `time_to_target` is wall-clock seconds to first discrete target hit for end-to-end methods; for block-wise methods it is conservative final train time if the final hard model reaches target, otherwise `-1`.",
         "",

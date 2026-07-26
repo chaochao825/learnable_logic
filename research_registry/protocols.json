@@ -1,0 +1,168 @@
+{
+  "schema_version": 1,
+  "protocols": {
+    "attention_clean_aug_200k_s0": {
+      "budget": "200000 steps",
+      "dataset": "CIFAR-10",
+      "role": "noncompliant accuracy ceiling",
+      "selection": "validation checkpoint then test",
+      "seeds": [0]
+    },
+    "bitstate_count_token_10k_8e_s0": {
+      "architecture": "width4096 local2 global2 heads8 qk64 topk8",
+      "budget": "8 epochs on 10000 train examples",
+      "dataset": "CIFAR-10",
+      "selection": "best hard validation checkpoint then one test",
+      "seeds": [0]
+    },
+    "bitstate_count_message_10k_8e_s012": {
+      "architecture": "width4096 local2 global2 heads8 qk64 topk8 redundant-predicate identity192",
+      "budget": "8 epochs on 10000 train examples",
+      "dataset": "CIFAR-10 with augmentation and fixed 2000 validation/2000 test limits",
+      "declared_variable": "global block message_mode only",
+      "optimizer": "AdamW lr0.002 cosine warmup2 hard-ST after epoch4 scale16",
+      "selection": "best hard validation checkpoint then one test",
+      "seeds": [0, 1, 2]
+    },
+    "bitstate_full_w4096_30e_s0": {
+      "architecture": "width4096 local2 global2 heads8 qk64 topk8",
+      "budget": "30 epochs full train split",
+      "dataset": "CIFAR-10",
+      "selection": "best hard validation checkpoint then one test",
+      "seeds": [0]
+    },
+    "bitstate_full_w8192_30e_s0": {
+      "architecture": "width8192 local2 global2 heads8 qk64 topk8",
+      "budget": "30 epochs full train split",
+      "dataset": "CIFAR-10",
+      "selection": "best hard validation checkpoint then one test",
+      "seeds": [0]
+    },
+    "bitplane_lut_digits_scale_s012_v1": {
+      "architecture": "64 unsigned A8 inputs; state widths 640/1280; two state-preserving blocks; one 4-input LUT per output plane per block; 16 candidate wires per LUT input; fixed interleaved GroupSum",
+      "budget": "40 epochs per block, batch 128, validation-only checkpoint selection",
+      "dataset": "sklearn digits stratified 70/15/15 split seed 20260724",
+      "declared_variables": "state width and hardening mode in {argmax, truth_refit, wiring_truth_refit}",
+      "deployment": "Boolean input/state, uint8 truth tables, integer source indices, integer GroupSum; no learned dense integer or real-valued matrix",
+      "optimizer": "AdamW on training-only LUT and candidate-wiring logits",
+      "selection": "best validation hard accuracy within each block, then one final test replay",
+      "seeds": [0, 1, 2]
+    },
+    "bitplane_lut_digits_scale_s012_v2": {
+      "architecture": "512 protected raw input planes; state widths 672/832 with 160/320 learned vote planes; two sequential blocks; one 4-input LUT per vote plane per block; 16 candidate wires per LUT input; fixed interleaved vote GroupSum",
+      "budget": "40 epochs per block, batch 128, validation-only checkpoint selection",
+      "dataset": "sklearn digits stratified 70/15/15 split seed 20260724",
+      "declared_variables": "learned vote width and hardening mode in {argmax, truth_refit, wiring_truth_refit}",
+      "deployment": "Boolean protected/state planes, uint8 truth tables, integer source indices, integer GroupSum; no learned dense integer or real-valued matrix",
+      "optimizer": "AdamW lr0.03 cosine on training-only LUT and candidate-wiring logits; class-balanced code loss and integer-weighted empirical refit",
+      "selection": "best validation hard accuracy within each block, then one final test replay",
+      "seeds": [0, 1, 2]
+    },
+    "bitplane_lut_cifar100_scale_s0_v1": {
+      "architecture": "24,576 protected raw A8 bit planes; 6,400/12,800/25,600 learned class-vote planes per layer; 2/4 sequential blocks; one 4-input LUT per vote plane per block; 16 fixed candidate wires per LUT input; fixed interleaved integer GroupSum",
+      "budget": "at most 30 epochs per block, minimum 8, validation hard-accuracy patience 5, batch 128",
+      "dataset": "CIFAR-100 official train stratified 45,000/5,000 split seed 20260724; official 10,000 test report-only; raw uint8 with integer crop/flip augmentation",
+      "declared_variables": "candidate routing in {mixed, image_spatial}, votes per class in {64, 128, 256}, and Boolean depth in {2, 4}",
+      "deployment": "Boolean protected/state planes, Boolean 4-input truth tables, integer source indices, fixed integer GroupSum; zero learned dense integer matrices and zero learned numeric weights",
+      "optimizer": "AdamW lr0.03 cosine on training-only truth/wiring shadows; hard-ST forward; direct argmax and per-block hard freeze",
+      "selection": "best validation hard accuracy within each block; test is evaluated only after every block is frozen",
+      "seeds": [0]
+    },
+    "bitplane_lut_shakespeare_char_scale_s0_v1": {
+      "architecture": "64 causal A8 character IDs as 512 protected Boolean planes; 32/64/128 learned votes per 65 characters; 2/4 blocks; one 4-input LUT per vote plane per block; 16 fixed candidate wires per LUT input; fixed interleaved integer GroupSum",
+      "budget": "matched routing smoke: 20000 fixed train windows and 4 epochs per block; full ladder: 100000 fixed train windows, at most 20 epochs per block, minimum 6, validation hard-accuracy patience 4, batch 256",
+      "dataset": "Tiny Shakespeare SHA-256 pinned corpus; contiguous 90/5/5 train/validation/test streams; context 64; validation uses 20000 fixed windows and test uses every held-out window",
+      "declared_variables": "candidate routing in {mixed, sequence_causal}, votes per character in {32, 64, 128}, and Boolean depth in {2, 4}",
+      "deployment": "Boolean protected/state planes, Boolean 4-input truth tables, integer source indices, fixed integer GroupSum; zero embedding, attention, MLP, learned dense integer matrix, learned numeric weight, or real-valued operator",
+      "optimizer": "AdamW lr0.03 cosine on training-only truth/wiring shadows; hard-ST forward; direct argmax and per-block hard freeze",
+      "selection": "best validation hard accuracy within each block; test is evaluated only after every block is frozen; seed 0 is a screen and seeds 1/2 are mandatory before promotion",
+      "seeds": [0]
+    },
+    "bitplane_lut_shakespeare_char_depth_s012_v1": {
+      "architecture": "64 causal A8 character IDs as 512 protected Boolean planes; 64 learned votes per 65 characters; matched 2/4-block networks; one 4-input LUT per vote plane per block; 16 fixed candidate wires per LUT input; fixed interleaved integer GroupSum",
+      "budget": "100000 fixed train windows; at most 20 epochs per block, minimum 6, validation hard-accuracy patience 4, batch 256",
+      "dataset": "Tiny Shakespeare SHA-256 pinned corpus; identical contiguous 90/5/5 train/validation/test streams and sampled windows for all seeds; context 64; test is report-only",
+      "declared_variables": "Boolean depth in {2, 4}; every d4 run continues from the exact hardened d2 payload for the same seed",
+      "deployment": "Boolean protected/state planes, Boolean 4-input truth tables, integer source indices, fixed integer GroupSum; zero embedding, attention, MLP, learned dense integer matrix, learned numeric weight, or real-valued operator",
+      "optimizer": "AdamW lr0.03 cosine on training-only truth/wiring shadows; hard-ST forward; direct argmax and per-block hard freeze",
+      "selection": "best validation hard accuracy within each block; paired depth comparison on seeds 0/1/2; test is evaluated only after every block is frozen",
+      "seeds": [0, 1, 2]
+    },
+    "bitplane_lut_digits_abc_dc2_k4_s012_v1": {
+      "source": "all 18 hard payloads from bitplane_lut_digits_scale_s012_v2",
+      "scope": "two learned LUT/wiring blocks from 512 raw Boolean inputs to final vote bits; GroupSum and argmax excluded",
+      "export_verification": "257 deterministic random Boolean vectors per payload exactly match the strict payload executor",
+      "synthesis": "ABC 1.01; read_blif; strash; dc2; if -K 4; write_blif",
+      "equivalence": "ABC combinational equivalence checking between every source and optimized BLIF",
+      "metrics": "effective truth-table support, unique table dictionary cost, AIG AND nodes, mapped K4 nodes/depth/fanout/payload, synthesis runtime",
+      "seeds": [0, 1, 2]
+    },
+    "boolean_w128_d4_120e_s012": {
+      "architecture": "width128 depth4 fixed matched wiring",
+      "budget": "120 full-dataset epochs",
+      "dataset": "parity8 majority9 random_sparse10",
+      "selection": "per-seed final evaluation",
+      "seeds": [0, 1, 2]
+    },
+    "combine_stage598_30k_s_selected": {
+      "architecture": "COMBINE Stage598",
+      "budget": "30001 steps",
+      "dataset": "CIFAR-10",
+      "selection": "best full validation checkpoint then one official test",
+      "seeds": [0]
+    },
+    "direct_lut_mnist_w800_d3_80e_s0": {
+      "architecture": "b3 width800 depth3",
+      "budget": "80 epochs 12000/3000 split",
+      "dataset": "binarized MNIST",
+      "selection": "historical single-seed test",
+      "seeds": [0]
+    },
+    "full_discrete_d12e192_50k_s42": {
+      "architecture": "d12 e192 h6 Wmag7 A8",
+      "budget": "50000 steps batch128",
+      "dataset": "CIFAR-10",
+      "selection": "fixed 5000 validation split",
+      "seeds": [42]
+    },
+    "full_discrete_d12e192_strict_validation5000": {
+      "checkpoint_sha256": "02d22b92d520a3c7e18f97186a0d594a804aeabcf6168e022d4730b949db4181",
+      "dataset": "CIFAR-10 fixed training-derived validation split",
+      "deployment_payload_sha256": "51ccd7bbfab9877c9cefdc070d836620be0fbc2b985fb517c7a7ada16f28a60a",
+      "executor": "schema-v6 StrictIntegerExecutor int_matmul backend",
+      "input_dtype": "uint8",
+      "runtime": "batch64 threads48 full operator dtype audit",
+      "selection": "all 5000 rows in torch.randperm seed 20260711 prefix",
+      "source_training_protocol": "full_discrete_d12e192_50k_s42",
+      "valid_size": 5000
+    },
+    "full_discrete_d6e192_50k_s42": {
+      "architecture": "d6 e192 h6 Wmag7 A8",
+      "budget": "50000 steps batch128",
+      "dataset": "CIFAR-10",
+      "selection": "fixed 5000 validation split",
+      "seeds": [42]
+    },
+    "full_discrete_logic_tree_50k_s42": {
+      "architecture": "d6 e192 plus one shared local logic-tree layer",
+      "budget": "50000 steps batch128",
+      "dataset": "CIFAR-10",
+      "selection": "fixed validation split",
+      "seeds": [42]
+    },
+    "full_k_mnist_k16_capture": {
+      "architecture": "K16 full-count expansion",
+      "budget": "captured historical run",
+      "dataset": "binarized MNIST",
+      "selection": "historical test",
+      "seeds": [0]
+    },
+    "scalelogic_d12e384_50k_s42": {
+      "architecture": "d12 e384 h12 Wmag7 A8 paired local0/local4",
+      "budget": "50000 steps batch128",
+      "dataset": "CIFAR-10",
+      "selection": "same fixed validation split",
+      "seeds": [42]
+    }
+  }
+}

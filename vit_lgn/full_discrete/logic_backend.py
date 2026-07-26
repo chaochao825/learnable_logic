@@ -17,8 +17,9 @@ defines the arithmetic that an RTL/bit-packed implementation must reproduce:
   integer arithmetic and round-to-nearest, ties-to-even; index zero aliases
   index one by default.  (The value 1.0 is encoded as ``0x8000``.)
 
-No cycle timing, reset, valid, scale/exponent alignment, or output requantizer
-is modeled here.  Those belong to a future cycle-accurate wrapper.
+No cycle timing, reset, or valid protocol is modeled here. Scale/exponent
+alignment and output requantization are modeled by ``integer_executor.py``;
+fixed-width cycle control remains a later RTL concern.
 """
 
 from __future__ import annotations

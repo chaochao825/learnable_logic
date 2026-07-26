@@ -1,0 +1,25 @@
+{
+  "accepted_input_dtypes": [
+    "uint8"
+  ],
+  "bytes": 4591229,
+  "classifier_output_dtype": "int32",
+  "contains_real_values": false,
+  "exporter_source_sha256": "c41d1548b85a5ccc12869ef149926d33f7c35b53b64ed6d5cf43f86293355134",
+  "path": "deployment_payload.pt",
+  "persistent_state_dtype": "bool",
+  "sha256": "a35068ae3374da395fc446c6a319e5e40b584b3a8085d4a17d7d34674e449107",
+  "source_checkpoint": "checkpoint.pt",
+  "source_checkpoint_sha256": "9b702c9c5de60dd09d649098abb09815bd0a9eca92dfbc40002d0790a7b8d180",
+  "tensor_element_inventory": {
+    "bool": 3904,
+    "int32": 1138504,
+    "uint8": 18884
+  },
+  "verification": {
+    "exact_logits": true,
+    "floating_tensor_count": 0,
+    "operator_audit_operations": 219,
+    "samples": 1
+  }
+}

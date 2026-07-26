@@ -1,0 +1,6 @@
+
+======== ABC command line "read_blif /home/spco/sow_linear/bitplane_lut_abc_20260724_v1/export/blif/v2_argmax_w672_s0.blif; print_stats; strash; print_stats; dc2; print_stats; if -K 4; print_stats; write_blif /home/spco/sow_linear/bitplane_lut_abc_20260724_v1/abc/optimized_blif/v2_argmax_w672_s0.dc2_k4.blif"
+[1;37mbitplane_lut                  :[0m i/o =  512/  160  lat =    0  nd =   320  edge =   1275  cube =  1959  lev = 2
+[1;37mbitplane_lut                  :[0m i/o =  512/  160  lat =    0  and =   1848  lev = 13
+[1;37mbitplane_lut                  :[0m i/o =  512/  160  lat =    0  and =   1134  lev =  9
+[1;37mbitplane_lut                  :[0m i/o =  512/  160  lat =    0  nd =   312  edge =   1146  aig  =  1147  lev = 3
